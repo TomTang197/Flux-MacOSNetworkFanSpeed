@@ -9,9 +9,18 @@ import SwiftUI
 
 @main
 struct NetworkSpeedMeterApp: App {
+    @StateObject private var sharedViewModel = NetworkViewModel()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(viewModel: sharedViewModel)
         }
+
+        MenuBarExtra {
+            SettingsView(viewModel: sharedViewModel)
+        } label: {
+            MenuBarView(viewModel: sharedViewModel)
+        }
+        .menuBarExtraStyle(.window)
     }
 }
