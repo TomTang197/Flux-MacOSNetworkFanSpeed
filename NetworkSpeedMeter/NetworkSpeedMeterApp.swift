@@ -12,6 +12,11 @@ struct NetworkSpeedMeterApp: App {
     @StateObject private var networkViewModel = NetworkViewModel()
     @StateObject private var fanViewModel = FanViewModel()
 
+    init() {
+        // Set as accessory app (no dock icon, menu bar only)
+        NSApplication.shared.setActivationPolicy(.accessory)
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView(networkViewModel: networkViewModel, fanViewModel: fanViewModel)

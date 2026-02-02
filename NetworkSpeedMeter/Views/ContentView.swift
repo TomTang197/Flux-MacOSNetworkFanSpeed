@@ -88,6 +88,15 @@ struct ContentView: View {
         }
         .padding(.vertical, 30)
         .frame(minWidth: 900, minHeight: 500)
+        .onAppear {
+            // Show Dock icon when window appears
+            NSApplication.shared.setActivationPolicy(.regular)
+            NSApplication.shared.activate(ignoringOtherApps: true)
+        }
+        .onDisappear {
+            // Hide Dock icon when window closes (becomes an accessory app)
+            NSApplication.shared.setActivationPolicy(.accessory)
+        }
         .sheet(isPresented: $fanViewModel.isShowingThermalDetails) {
             ThermalDetailView(fanViewModel: fanViewModel)
         }

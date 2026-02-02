@@ -20,8 +20,11 @@ final class NetworkViewModel: ObservableObject {
     @Published var rawDownload: Double = 0
     @Published var rawUpload: Double = 0
 
-    @Published var displayMode: DisplayMode = .both {
-        didSet { UserDefaults.standard.set(displayMode.rawValue, forKey: "DisplayMode") }
+    @Published var enabledMetrics: Set<MetricType> = [.download, .upload] {
+        didSet {
+            let encoded = enabledMetrics.map { $0.rawValue }
+            UserDefaults.standard.set(encoded, forKey: "EnabledMetrics")
+        }
     }
 
     @Published var refreshInterval: Double = 1.0 {
@@ -42,10 +45,9 @@ final class NetworkViewModel: ObservableObject {
 
     init() {
         // Load persisted settings
-        if let modeString = UserDefaults.standard.string(forKey: "DisplayMode"),
-            let mode = DisplayMode(rawValue: modeString)
-        {
-            self.displayMode = mode
+        if let savedMetrics = UserDefaults.standard.stringArray(forKey: "EnabledMetrics") {
+            let metrics = savedMetrics.compactMap { MetricType(rawValue: $0) }
+            self.enabledMetrics = Set(metrics)
         }
 
         let interval = UserDefaults.standard.double(forKey: "RefreshInterval")

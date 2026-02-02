@@ -6,7 +6,14 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		C22C2B622F30B13600F46443 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = C22C2B602F30B13600F46443 /* LICENSE */; };
+		C22C2B632F30B13600F46443 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = C22C2B612F30B13600F46443 /* README.md */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		C22C2B602F30B13600F46443 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		C22C2B612F30B13600F46443 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		C2BEB9C32F2B504D00DAC1DD /* NetworkSpeedMeter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NetworkSpeedMeter.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -32,6 +39,8 @@
 		C2BEB9BA2F2B504D00DAC1DD = {
 			isa = PBXGroup;
 			children = (
+				C22C2B602F30B13600F46443 /* LICENSE */,
+				C22C2B612F30B13600F46443 /* README.md */,
 				C2BEB9C52F2B504D00DAC1DD /* NetworkSpeedMeter */,
 				C2BEB9C42F2B504D00DAC1DD /* Products */,
 			);
@@ -109,6 +118,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C22C2B622F30B13600F46443 /* LICENSE in Resources */,
+				C22C2B632F30B13600F46443 /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

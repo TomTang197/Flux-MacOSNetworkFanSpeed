@@ -335,30 +335,62 @@ class SMCService {
     }
 
     func setFanMode(_ index: Int, manual: Bool) {
+        // 1. Set per-fan mode (legacy/Intel)
+        // Some chips respond to F{i}Md, some to bitmask, some to both.
         var val = SMCVal()
         val.dataSize = 1
         val.dataType = stringToKey("ui8 ")
         val.bytes[0] = manual ? 1 : 0
         _ = writeKey("F\(index)Md", val: val)
+
+        // 2. Set System Force bitmask (Apple Silicon override)
+        // This key (FS! ) is typically a 2-byte (16-bit) bitmask.
+        if let currentFS = readKey("FS! ") {
+            var newFS = currentFS
+            // Safety: Ensure it's at least 2 bytes if we expect a mask for multiple fans
+            if newFS.dataSize < 2 { newFS.dataSize = 2 }
+
+            let mask = UInt16(1 << index)
+            var currentMask = UInt16(newFS.bytes[0]) << 8 | UInt16(newFS.bytes[1])
+
+            if manual {
+                currentMask |= mask
+            } else {
+                currentMask &= ~mask
+            }
+
+            newFS.bytes[0] = UInt8((currentMask >> 8) & 0xFF)
+            newFS.bytes[1] = UInt8(currentMask & 0xFF)
+            _ = writeKey("FS! ", val: newFS)
+            print("🚀 SMC: FS! bitmask updated to \(String(format: "%04X", currentMask))")
+        }
     }
 
     func setFanTargetRPM(_ index: Int, rpm: Int) {
-        guard let info = getInfo("F\(index)Tg") else { return }
+        // Find metadata for target RPM key
+        let targetKey = "F\(index)Tg"
+        guard let info = getInfo(targetKey) else {
+            print("⚠️ SMC: Could not find metadata for \(targetKey)")
+            return
+        }
 
         var val = SMCVal()
         val.dataSize = info.size
         val.dataType = info.type
 
         if info.type == stringToKey("fpe2") {
+            // Unsigned 14.2 fixed point
             let encoded = UInt16(rpm << 2)
-            val.bytes[0] = UInt8(encoded >> 8)
+            val.bytes[0] = UInt8((encoded >> 8) & 0xFF)
             val.bytes[1] = UInt8(encoded & 0xFF)
         } else {
-            val.bytes[0] = UInt8((rpm) >> 8)
-            val.bytes[1] = UInt8((rpm) & 0xFF)
+            // Assume raw UI16
+            val.bytes[0] = UInt8((rpm >> 8) & 0xFF)
+            val.bytes[1] = UInt8(rpm & 0xFF)
         }
 
-        _ = writeKey("F\(index)Tg", val: val)
+        let res = writeKey(targetKey, val: val)
+        print("🚀 SMC: Set \(targetKey) to \(rpm) RPM (Result: \(res))")
     }
 
     func getTemperature(_ key: String) -> Double? {
