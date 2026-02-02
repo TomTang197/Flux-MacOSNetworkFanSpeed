@@ -198,7 +198,7 @@ struct SensorCategoryColumn: View {
 
             if sensors.isEmpty {
                 VStack(spacing: 8) {
-                    Image(systemName: "thermometer.slash")
+                    Image(systemName: "thermometer")
                         .font(.system(size: 24))
                         .foregroundColor(.secondary.opacity(0.3))
                     Text("No sensors")
