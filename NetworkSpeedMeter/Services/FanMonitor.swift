@@ -73,19 +73,12 @@ class FanMonitor: ObservableObject {
         for sensor in keys {
             if let temp = smc.getTemperature(sensor.key) {
                 if temp > 0 && temp < 150 {
-                    print(
-                        "  ✅ Sensor found: \(sensor.name) (\(sensor.key)) = \(String(format: "%.1f", temp))°C"
-                    )
                     sensors.append(
                         SensorInfo(id: sensor.key, name: sensor.name, temperature: temp, isEnabled: true)
                     )
                 } else {
                     print("  ⚠️ Sensor filtered (out of range): \(sensor.name) (\(sensor.key)) = \(temp)°C")
                 }
-            } else {
-                print(
-                    "Sensor Filter Not Found (smc.getTemperature(key)): \(String(describing: smc.getTemperature(sensor.key)))"
-                )
             }
         }
 

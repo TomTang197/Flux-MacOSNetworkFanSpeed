@@ -76,8 +76,13 @@ final class FanViewModel: ObservableObject {
             let newSensors = self.monitor.getSensors()
 
             DispatchQueue.main.async {
+                let fansChanged = self.fans.isEmpty && !newFans.isEmpty
                 self.fans = newFans
                 self.sensors = newSensors
+
+                if fansChanged {
+                    self.applyPreset()
+                }
             }
         }
     }
@@ -88,14 +93,16 @@ final class FanViewModel: ObservableObject {
     }
 
     var primaryTemp: String {
-        // Try to find a Performance or Core sensor first
-        let bestSensor =
-            sensors.first { $0.name.contains("Performance") }
-            ?? sensors.first { $0.name.contains("Core") }
-            ?? sensors.first
+        // Calculate average of all CPU-related sensors
+        let cpuSensors = sensors.filter { sensor in
+            sensor.name.contains("P-Core") || sensor.name.contains("E-Core")
+                || sensor.name.contains("CPU Core") || sensor.name.contains("CPU Package")
+        }
 
-        guard let sensor = bestSensor else { return "0°C" }
-        return String(format: "%.0f°C", sensor.temperature)
+        guard !cpuSensors.isEmpty else { return "0°C" }
+
+        let avgTemp = cpuSensors.reduce(0.0) { $0 + $1.temperature } / Double(cpuSensors.count)
+        return String(format: "%.0f°C", avgTemp)
     }
 
 }

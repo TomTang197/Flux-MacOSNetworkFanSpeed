@@ -221,12 +221,12 @@ class SMCService {
             val.dataType = info?.type ?? inputStruct.dataType
             val.bytes = withUnsafeBytes(of: inputStruct.bytes) { Array($0) }
             print(
-                "  ✅ Read success: \(val.bytes.prefix(Int(val.dataSize)).map { String(format: "%02X", $0) }.joined(separator: " "))"
+                "✅ Read success: \(val.bytes.prefix(Int(val.dataSize)).map { String(format: "%02X", $0) }.joined(separator: " "))"
             )
             return val
         }
 
-        print("  ❌ Read failed (Result: \(result), SMC: \(inputStruct.result))")
+        print("❌ Read failed (Result: \(result), SMC: \(inputStruct.result))")
 
         // Blind fallback for common data sizes
         if info == nil {
