@@ -9,23 +9,73 @@
 /* Begin PBXBuildFile section */
 		C22C2B622F30B13600F46443 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = C22C2B602F30B13600F46443 /* LICENSE */; };
 		C22C2B632F30B13600F46443 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = C22C2B612F30B13600F46443 /* README.md */; };
+		C22F70002F32123400AAAAAA /* com.bandan.me.MacOSNetworkFanSpeed.FanService.plist in CopyFiles */ = {isa = PBXBuildFile; fileRef = C22F6FFF2F32123400AAAAAA /* com.bandan.me.MacOSNetworkFanSpeed.FanService.plist */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C22F655A2F3208E80043993C /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		C22F70012F32123400AAAAAA /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Library/LaunchServices;
+			dstSubfolderSpec = 1;
+			files = (
+				C22F70002F32123400AAAAAA /* com.bandan.me.MacOSNetworkFanSpeed.FanService.plist in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		C22C2B602F30B13600F46443 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		C22C2B612F30B13600F46443 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		C22F655C2F3208E80043993C /* FanPrivilegedHelper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = FanPrivilegedHelper; sourceTree = BUILT_PRODUCTS_DIR; };
+		C22F6FFF2F32123400AAAAAA /* com.bandan.me.MacOSNetworkFanSpeed.FanService.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = com.bandan.me.MacOSNetworkFanSpeed.FanService.plist; sourceTree = "<group>"; };
 		C2BEB9C32F2B504D00DAC1DD /* FluxBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FluxBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C22F65B62F3216DC0043993C /* Exceptions for "MacOSNetworkFanSpeed" folder in "MacOSNetworkFanSpeed" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = C2BEB9C22F2B504D00DAC1DD /* MacOSNetworkFanSpeed */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		C22F655D2F3208E80043993C /* FanPrivilegedHelper */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = FanPrivilegedHelper;
+			sourceTree = "<group>";
+		};
 		C2BEB9C52F2B504D00DAC1DD /* MacOSNetworkFanSpeed */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C22F65B62F3216DC0043993C /* Exceptions for "MacOSNetworkFanSpeed" folder in "MacOSNetworkFanSpeed" target */,
+			);
 			path = MacOSNetworkFanSpeed;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		C22F65592F3208E80043993C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C2BEB9C02F2B504D00DAC1DD /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -41,7 +91,9 @@
 			children = (
 				C22C2B602F30B13600F46443 /* LICENSE */,
 				C22C2B612F30B13600F46443 /* README.md */,
+				C22F6FFF2F32123400AAAAAA /* com.bandan.me.MacOSNetworkFanSpeed.FanService.plist */,
 				C2BEB9C52F2B504D00DAC1DD /* MacOSNetworkFanSpeed */,
+				C22F655D2F3208E80043993C /* FanPrivilegedHelper */,
 				C2BEB9C42F2B504D00DAC1DD /* Products */,
 			);
 			sourceTree = "<group>";
@@ -50,6 +102,7 @@
 			isa = PBXGroup;
 			children = (
 				C2BEB9C32F2B504D00DAC1DD /* FluxBar.app */,
+				C22F655C2F3208E80043993C /* FanPrivilegedHelper */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -57,6 +110,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		C22F655B2F3208E80043993C /* FanPrivilegedHelper */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C22F65602F3208E80043993C /* Build configuration list for PBXNativeTarget "FanPrivilegedHelper" */;
+			buildPhases = (
+				C22F65582F3208E80043993C /* Sources */,
+				C22F65592F3208E80043993C /* Frameworks */,
+				C22F655A2F3208E80043993C /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				C22F655D2F3208E80043993C /* FanPrivilegedHelper */,
+			);
+			name = FanPrivilegedHelper;
+			packageProductDependencies = (
+			);
+			productName = FanPrivilegedHelper;
+			productReference = C22F655C2F3208E80043993C /* FanPrivilegedHelper */;
+			productType = "com.apple.product-type.tool";
+		};
 		C2BEB9C22F2B504D00DAC1DD /* MacOSNetworkFanSpeed */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = C2BEB9CE2F2B504F00DAC1DD /* Build configuration list for PBXNativeTarget "MacOSNetworkFanSpeed" */;
@@ -64,6 +139,7 @@
 				C2BEB9BF2F2B504D00DAC1DD /* Sources */,
 				C2BEB9C02F2B504D00DAC1DD /* Frameworks */,
 				C2BEB9C12F2B504D00DAC1DD /* Resources */,
+				C22F70012F32123400AAAAAA /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -89,6 +165,9 @@
 				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
+					C22F655B2F3208E80043993C = {
+						CreatedOnToolsVersion = 26.2;
+					};
 					C2BEB9C22F2B504D00DAC1DD = {
 						CreatedOnToolsVersion = 26.2;
 					};
@@ -109,6 +188,7 @@
 			projectRoot = "";
 			targets = (
 				C2BEB9C22F2B504D00DAC1DD /* MacOSNetworkFanSpeed */,
+				C22F655B2F3208E80043993C /* FanPrivilegedHelper */,
 			);
 		};
 /* End PBXProject section */
@@ -126,6 +206,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		C22F65582F3208E80043993C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C2BEB9BF2F2B504D00DAC1DD /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -136,6 +223,40 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		C22F65612F3208E80043993C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PVNL55D2Y2;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bandan.me.MacOSNetworkFanSpeed.FanService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		C22F65622F3208E80043993C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PVNL55D2Y2;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bandan.me.MacOSNetworkFanSpeed.FanService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 		C2BEB9CC2F2B504F00DAC1DD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -265,11 +386,12 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = PVNL55D2Y2;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MacOSNetworkFanSpeed/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FluxBar;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -278,7 +400,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = cam.bandan.me.MacOSNetworkFanSpeed;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bandan.me.MacOSNetworkFanSpeed;
 				PRODUCT_NAME = FluxBar;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -299,11 +421,12 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = PVNL55D2Y2;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MacOSNetworkFanSpeed/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FluxBar;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -312,7 +435,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = cam.bandan.me.MacOSNetworkFanSpeed;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bandan.me.MacOSNetworkFanSpeed;
 				PRODUCT_NAME = FluxBar;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -327,6 +450,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		C22F65602F3208E80043993C /* Build configuration list for PBXNativeTarget "FanPrivilegedHelper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C22F65612F3208E80043993C /* Debug */,
+				C22F65622F3208E80043993C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		C2BEB9BE2F2B504D00DAC1DD /* Build configuration list for PBXProject "MacOSNetworkFanSpeed" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

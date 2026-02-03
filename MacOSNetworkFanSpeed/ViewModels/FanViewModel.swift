@@ -35,6 +35,7 @@ final class FanViewModel: ObservableObject {
 
     private let monitor = FanMonitor()
     private let smc = SMCService.shared
+    private let fanControl: FanControlProviding = FanControlClient.shared
     private var timer: AnyCancellable?
     private var refreshInterval: Double = 2.0
 
@@ -56,11 +57,12 @@ final class FanViewModel: ObservableObject {
 
         guard !currentFans.isEmpty else { return }
 
-        DispatchQueue.global(qos: .userInitiated).async { [smc] in
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
             for fan in currentFans {
-                smc.setFanMode(fan.id, manual: isFullBlast)
+                self.fanControl.setFanMode(index: fan.id, manual: isFullBlast)
                 if isFullBlast {
-                    smc.setFanTargetRPM(fan.id, rpm: fan.maxRPM)
+                    self.fanControl.setFanTargetRPM(index: fan.id, rpm: fan.maxRPM)
                 }
             }
         }
@@ -72,9 +74,10 @@ final class FanViewModel: ObservableObject {
             activePreset = "Manual"
         }
 
-        DispatchQueue.global(qos: .userInitiated).async { [smc] in
-            smc.setFanMode(fanID, manual: true)
-            smc.setFanTargetRPM(fanID, rpm: rpm)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            self.fanControl.setFanMode(index: fanID, manual: true)
+            self.fanControl.setFanTargetRPM(index: fanID, rpm: rpm)
         }
     }
 
