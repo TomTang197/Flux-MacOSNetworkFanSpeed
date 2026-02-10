@@ -12,6 +12,7 @@ struct SettingsView: View {
     @ObservedObject var networkViewModel: NetworkViewModel
     @ObservedObject var fanViewModel: FanViewModel
     var showWindowButton: Bool = true
+    var preferredWidth: CGFloat? = 280
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -56,6 +57,22 @@ struct SettingsView: View {
                     label: AppStrings.upload,
                     value: networkViewModel.uploadSpeed,
                     color: .green
+                )
+                .padding(.vertical, 4)
+
+                StatRow(
+                    icon: AppImages.diskRead,
+                    label: AppStrings.diskRead,
+                    value: networkViewModel.diskReadSpeed,
+                    color: .teal
+                )
+                .padding(.vertical, 4)
+
+                StatRow(
+                    icon: AppImages.diskWrite,
+                    label: AppStrings.diskWrite,
+                    value: networkViewModel.diskWriteSpeed,
+                    color: .mint
                 )
                 .padding(.vertical, 4)
 
@@ -145,7 +162,13 @@ struct SettingsView: View {
                     .font(.system(size: 10, weight: .bold))
                     .foregroundColor(.secondary)
 
-                Picker("", selection: $fanViewModel.activePreset) {
+                Picker(
+                    "",
+                    selection: Binding(
+                        get: { fanViewModel.activePreset },
+                        set: { fanViewModel.setActivePreset($0) }
+                    )
+                ) {
                     Text(AppStrings.presetAutomatic).tag("Automatic")
                     Text(AppStrings.presetManual).tag("Manual")
                     Text(AppStrings.presetFullBlast).tag("Full Blast")
@@ -155,27 +178,11 @@ struct SettingsView: View {
 
                 if fanViewModel.activePreset == "Manual" {
                     ForEach(fanViewModel.fans) { fan in
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text("\(fan.name)")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                                Text("\(Int(fan.targetRPM ?? fan.currentRPM)) \(AppStrings.rpmUnit)")
-                                    .font(.system(size: 10, design: .monospaced))
-                            }
-
-                            Slider(
-                                value: Binding(
-                                    get: { Double(fan.targetRPM ?? fan.currentRPM) },
-                                    set: { newValue in
-                                        fanViewModel.setManualRPM(fanID: fan.id, rpm: Int(newValue))
-                                    }
-                                ),
-                                in: Double(fan.minRPM)...Double(fan.maxRPM),
-                                step: 100
-                            )
-                            .controlSize(.small)
+                        ManualFanControlRow(
+                            fan: fan,
+                            initialRPM: fanViewModel.manualDisplayRPM(for: fan.id, fallback: fan.currentRPM)
+                        ) { rpm in
+                            fanViewModel.setManualRPM(fanID: fan.id, rpm: rpm)
                         }
                         .padding(.top, 4)
                     }
@@ -220,6 +227,55 @@ struct SettingsView: View {
                         .font(.system(size: 9))
                         .foregroundColor(.secondary)
                 }
+
+                Divider().opacity(0.2)
+
+                HStack {
+                    Label(AppStrings.privilegedHelper, systemImage: AppImages.helper)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Circle()
+                        .fill(fanViewModel.helperInstalled ? Color.green : Color.orange)
+                        .frame(width: 8, height: 8)
+                }
+
+                Text(fanViewModel.helperStatusMessage)
+                    .font(.system(size: 9))
+                    .foregroundColor(fanViewModel.helperInstalled ? .secondary : .orange)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    Button {
+                        fanViewModel.installHelper()
+                    } label: {
+                        if fanViewModel.isInstallingHelper {
+                            HStack(spacing: 6) {
+                                ProgressView()
+                                    .controlSize(.small)
+                                Text(AppStrings.installing)
+                            }
+                            .frame(maxWidth: .infinity)
+                        } else {
+                            Text(fanViewModel.helperInstalled ? AppStrings.reinstallHelper : AppStrings.installHelper)
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(fanViewModel.isInstallingHelper)
+
+                    Button {
+                        fanViewModel.refreshHelperStatus()
+                    } label: {
+                        Text(AppStrings.refresh)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(fanViewModel.isInstallingHelper)
+                }
             }
 
             Divider().opacity(0.3)
@@ -242,7 +298,8 @@ struct SettingsView: View {
             .tint(.red.opacity(0.8))
         }
         .padding(16)
-        .frame(width: 280)
+        .frame(width: preferredWidth, alignment: .leading)
+        .frame(maxWidth: preferredWidth == nil ? .infinity : preferredWidth, alignment: .leading)
     }
 
     private func openOrFocusDashboard() {
@@ -258,11 +315,47 @@ struct SettingsView: View {
             window.makeKeyAndOrderFront(nil)
             window.orderFrontRegardless()
         } else {
-            NSApp.sendAction(
-                #selector(NSApplication.newWindowForTab(_:)),
-                to: nil,
-                from: nil
+            openWindow(id: "dashboard")
+        }
+    }
+}
+
+private struct ManualFanControlRow: View {
+    let fan: FanInfo
+    let onRPMChange: (Int) -> Void
+    @State private var sliderRPM: Double
+
+    init(fan: FanInfo, initialRPM: Int, onRPMChange: @escaping (Int) -> Void) {
+        self.fan = fan
+        self.onRPMChange = onRPMChange
+        let clampedInitial = min(max(initialRPM, fan.minRPM), fan.maxRPM)
+        _sliderRPM = State(initialValue: Double(clampedInitial))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(fan.name)
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text("\(Int(sliderRPM)) \(AppStrings.rpmUnit)")
+                    .font(.system(size: 10, design: .monospaced))
+            }
+
+            Slider(
+                value: Binding(
+                    get: { sliderRPM },
+                    set: { newValue in
+                        let clamped = min(max(newValue, Double(fan.minRPM)), Double(fan.maxRPM))
+                        sliderRPM = clamped
+                        onRPMChange(Int(clamped.rounded()))
+                    }
+                ),
+                in: Double(fan.minRPM)...Double(fan.maxRPM),
+                step: 100
             )
+            .controlSize(.small)
         }
     }
 }
@@ -280,10 +373,14 @@ private struct StatRow: View {
                 .font(.title3)
             Text(label)
                 .font(.subheadline)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             Spacer()
             Text(value)
                 .font(.system(.body, design: .monospaced))
                 .fontWeight(.bold)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
         }
     }
 }

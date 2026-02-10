@@ -12,17 +12,30 @@ struct ThermalDetailView: View {
     @Environment(\.dismiss) var dismiss
     var isEmbedded: Bool = false
 
-    var performanceCores: [SensorInfo] {
-        fanViewModel.sensors.filter { $0.name.contains(AppStrings.pCoreFilter) }
+    private var cpuSensors: [SensorInfo] {
+        fanViewModel.sensors.filter { isCPUSensor($0) }
     }
 
-    var efficiencyCores: [SensorInfo] {
-        fanViewModel.sensors.filter { $0.name.contains(AppStrings.eCoreFilter) }
+    private var gpuSensors: [SensorInfo] {
+        let sensors = fanViewModel.sensors.filter { isGPUSensor($0) }
+        return sortGPUSensors(sensors)
     }
 
-    var otherSensors: [SensorInfo] {
+    private var otherSensors: [SensorInfo] {
         fanViewModel.sensors.filter {
-            !$0.name.contains(AppStrings.pCoreFilter) && !$0.name.contains(AppStrings.eCoreFilter)
+            !isCPUSensor($0) && !isGPUSensor($0)
+        }
+    }
+
+    private var hasNormalizedCPUCores: Bool {
+        fanViewModel.sensors.contains {
+            $0.name.hasPrefix("P-Core Sensor ") || $0.name.hasPrefix("E-Core Sensor ")
+        }
+    }
+
+    private var hasNormalizedGPUCores: Bool {
+        fanViewModel.sensors.contains {
+            $0.name.hasPrefix("GPU Core Sensor ")
         }
     }
 
@@ -64,15 +77,73 @@ struct ThermalDetailView: View {
 
             ScrollView {
                 HStack(alignment: .top, spacing: 1) {
-                    SensorCategoryColumn(title: AppStrings.pCores, sensors: performanceCores, color: .orange)
+                    SensorCategoryColumn(
+                        title: "\(AppStrings.cpu) (\(cpuSensors.count))",
+                        sensors: cpuSensors,
+                        color: .orange
+                    )
                     Divider()
-                    SensorCategoryColumn(title: AppStrings.eCores, sensors: efficiencyCores, color: .green)
+                    SensorCategoryColumn(
+                        title: "\(AppStrings.gpu) (\(gpuSensors.count))",
+                        sensors: gpuSensors,
+                        color: .blue
+                    )
                     Divider()
-                    SensorCategoryColumn(title: AppStrings.system, sensors: otherSensors, color: .purple)
+                    SensorCategoryColumn(
+                        title: "\(AppStrings.system) (\(otherSensors.count))",
+                        sensors: otherSensors,
+                        color: .green
+                    )
                 }
             }
         }
         .frame(width: isEmbedded ? nil : 700, height: isEmbedded ? nil : 500)
+    }
+
+    private func isCPUSensor(_ sensor: SensorInfo) -> Bool {
+        if hasNormalizedCPUCores {
+            return sensor.name.hasPrefix("P-Core Sensor ")
+                || sensor.name.hasPrefix("E-Core Sensor ")
+        }
+
+        return sensor.name.contains(AppStrings.pCoreFilter)
+            || sensor.name.contains(AppStrings.eCoreFilter)
+            || sensor.name.contains("CPU")
+    }
+
+    private func isGPUSensor(_ sensor: SensorInfo) -> Bool {
+        if hasNormalizedGPUCores {
+            return sensor.name.hasPrefix("GPU Core Sensor ")
+        }
+
+        return sensor.id.hasPrefix("Tg")
+            || sensor.id.hasPrefix("TG")
+            || sensor.id == "vACC"
+            || sensor.name.contains("GPU")
+    }
+
+    private func sortGPUSensors(_ sensors: [SensorInfo]) -> [SensorInfo] {
+        sensors.sorted { lhs, rhs in
+            let leftIndex = gpuCoreIndex(from: lhs.name)
+            let rightIndex = gpuCoreIndex(from: rhs.name)
+
+            switch (leftIndex, rightIndex) {
+            case let (left?, right?) where left != right:
+                return left < right
+            case (.some, nil):
+                return true
+            case (nil, .some):
+                return false
+            default:
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
+        }
+    }
+
+    private func gpuCoreIndex(from name: String) -> Int? {
+        let prefix = "GPU Core Sensor "
+        guard name.hasPrefix(prefix) else { return nil }
+        return Int(name.dropFirst(prefix.count))
     }
 }
 
@@ -100,14 +171,15 @@ struct SensorCategoryColumn: View {
                     HStack {
                         Text(sensor.name)
                             .font(.system(size: 12, weight: .medium))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.5)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.75)
                             .layoutPriority(1)
                         Spacer(minLength: 6)
                         Text(String(format: AppStrings.temperatureFormat, sensor.temperature))
                             .lineLimit(1)
                             .minimumScaleFactor(0.75)
                             .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .frame(minWidth: 72, alignment: .trailing)
                     }
                     .padding(.horizontal, 6)
                     .padding(.vertical, 4)

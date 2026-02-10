@@ -13,72 +13,125 @@ struct MenuBarView: View {
     @ObservedObject var fanViewModel: FanViewModel
 
     var body: some View {
-        let metrics = MetricType.allCases.filter { networkViewModel.enabledMetrics.contains($0) }
+        let columns = groupedColumns()
 
-        if metrics.isEmpty {
+        if columns.isEmpty {
             Image(systemName: AppImages.rocket)
         } else {
-            let combinedImage = renderCombinedMetricsImage(metrics)
+            let combinedImage = renderGroupedMetricsImage(columns)
             Image(nsImage: combinedImage)
         }
     }
 
-    private func renderCombinedMetricsImage(_ metrics: [MetricType]) -> NSImage {
-        let config = NSImage.SymbolConfiguration(pointSize: 11, weight: .semibold)
-        let font = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .bold)
-        let attributes: [NSAttributedString.Key: Any] = [.font: font]
-        let spacing: CGFloat = 4
-        let dividerSpacing: CGFloat = 8
+    private struct MetricRow {
+        let symbol: String
+        let value: String
+    }
 
-        var totalWidth: CGFloat = 0
-        var items: [(image: NSImage, text: String, textSize: NSSize)] = []
+    private struct MetricColumn {
+        let top: MetricRow?
+        let bottom: MetricRow?
+    }
 
-        for metric in metrics {
-            let symbol = symbolForMetric(metric)
-            let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)!
-                .withSymbolConfiguration(config)!
-            let text = valueForMetric(metric)
-            let textSize = text.size(withAttributes: attributes)
+    private func groupedColumns() -> [MetricColumn] {
+        let enabled = networkViewModel.enabledMetrics
+        var columns: [MetricColumn] = []
 
-            items.append((image, text, textSize))
-            totalWidth += image.size.width + spacing + textSize.width
+        if let networkColumn = makePairedColumn(top: .download, bottom: .upload, enabled: enabled) {
+            columns.append(networkColumn)
+        }
+        if let diskColumn = makePairedColumn(top: .diskRead, bottom: .diskWrite, enabled: enabled) {
+            columns.append(diskColumn)
+        }
+        if let thermalColumn = makePairedColumn(top: .temperature, bottom: .fan, enabled: enabled) {
+            columns.append(thermalColumn)
         }
 
-        if items.count > 1 {
-            totalWidth += CGFloat(items.count - 1) * dividerSpacing
+        return columns
+    }
+
+    private func makePairedColumn(top: MetricType, bottom: MetricType, enabled: Set<MetricType>) -> MetricColumn?
+    {
+        let topEnabled = enabled.contains(top)
+        let bottomEnabled = enabled.contains(bottom)
+        guard topEnabled || bottomEnabled else { return nil }
+
+        if topEnabled && bottomEnabled {
+            return MetricColumn(top: metricRow(for: top), bottom: metricRow(for: bottom))
         }
 
-        let height: CGFloat = 18
+        if topEnabled {
+            return MetricColumn(top: metricRow(for: top), bottom: nil)
+        }
+
+        return MetricColumn(top: metricRow(for: bottom), bottom: nil)
+    }
+
+    private func metricRow(for metric: MetricType) -> MetricRow {
+        MetricRow(symbol: symbolForMetric(metric), value: valueForMetric(metric))
+    }
+
+    private func renderGroupedMetricsImage(_ columns: [MetricColumn]) -> NSImage {
+        let iconConfig = NSImage.SymbolConfiguration(pointSize: 8, weight: .bold)
+        let valueFont = NSFont.monospacedDigitSystemFont(ofSize: 8, weight: .bold)
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .right
+        paragraphStyle.lineBreakMode = .byTruncatingMiddle
+        let textAttributes: [NSAttributedString.Key: Any] = [
+            .font: valueFont,
+            .paragraphStyle: paragraphStyle,
+        ]
+
+        let rowHeight: CGFloat = 8
+        let rowSpacing: CGFloat = 2
+        let verticalPadding: CGFloat = 1
+        let columnWidth: CGFloat = 66
+        let dividerSpacing: CGFloat = 6
+        let iconSlotWidth: CGFloat = 10
+        let iconTextSpacing: CGFloat = 2
+        let textWidth = columnWidth - iconSlotWidth - iconTextSpacing
+        let height = rowHeight * 2 + rowSpacing + verticalPadding * 2
+        let totalWidth = CGFloat(columns.count) * columnWidth + CGFloat(max(columns.count - 1, 0)) * dividerSpacing
+
         let finalImage = NSImage(size: NSSize(width: totalWidth, height: height))
         finalImage.lockFocus()
 
-        var currentX: CGFloat = 0
-        for (index, item) in items.enumerated() {
-            let yOffset = (height - item.image.size.height) / 2
-            item.image.draw(
-                at: NSPoint(x: currentX, y: yOffset),
-                from: .zero,
-                operation: .sourceOver,
-                fraction: 1
+        for (index, column) in columns.enumerated() {
+            let xOrigin = CGFloat(index) * (columnWidth + dividerSpacing)
+            let topY = verticalPadding + rowHeight + rowSpacing
+            let bottomY = verticalPadding
+
+            drawRow(
+                column.top,
+                xOrigin: xOrigin,
+                yOrigin: topY,
+                rowHeight: rowHeight,
+                iconConfig: iconConfig,
+                iconSlotWidth: iconSlotWidth,
+                iconTextSpacing: iconTextSpacing,
+                textWidth: textWidth,
+                textAttributes: textAttributes
+            )
+            drawRow(
+                column.bottom,
+                xOrigin: xOrigin,
+                yOrigin: bottomY,
+                rowHeight: rowHeight,
+                iconConfig: iconConfig,
+                iconSlotWidth: iconSlotWidth,
+                iconTextSpacing: iconTextSpacing,
+                textWidth: textWidth,
+                textAttributes: textAttributes
             )
 
-            let textY = (height - item.textSize.height) / 2
-            item.text.draw(
-                at: NSPoint(x: currentX + item.image.size.width + spacing, y: textY),
-                withAttributes: attributes
-            )
-
-            currentX += item.image.size.width + spacing + item.textSize.width
-
-            if index < items.count - 1 {
-                currentX += dividerSpacing / 2
-                let dividerText = "|"
-                let divSize = dividerText.size(withAttributes: attributes)
-                dividerText.draw(
-                    at: NSPoint(x: currentX - divSize.width / 2, y: (height - divSize.height) / 2),
-                    withAttributes: attributes
-                )
-                currentX += dividerSpacing / 2
+            if index < columns.count - 1 {
+                let dividerX = xOrigin + columnWidth + dividerSpacing / 2
+                let path = NSBezierPath()
+                path.move(to: NSPoint(x: dividerX, y: verticalPadding))
+                path.line(to: NSPoint(x: dividerX, y: height - verticalPadding))
+                NSColor.labelColor.withAlphaComponent(0.25).setStroke()
+                path.lineWidth = 1
+                path.stroke()
             }
         }
 
@@ -87,19 +140,74 @@ struct MenuBarView: View {
         return finalImage
     }
 
+    private func drawRow(
+        _ row: MetricRow?,
+        xOrigin: CGFloat,
+        yOrigin: CGFloat,
+        rowHeight: CGFloat,
+        iconConfig: NSImage.SymbolConfiguration,
+        iconSlotWidth: CGFloat,
+        iconTextSpacing: CGFloat,
+        textWidth: CGFloat,
+        textAttributes: [NSAttributedString.Key: Any]
+    ) {
+        guard let row else { return }
+
+        let icon = configuredSymbolImage(named: row.symbol, config: iconConfig)
+        let iconY = yOrigin + max(0, (rowHeight - icon.size.height) / 2)
+        icon.draw(
+            at: NSPoint(x: xOrigin, y: iconY),
+            from: .zero,
+            operation: .sourceOver,
+            fraction: 1
+        )
+
+        let textRect = NSRect(
+            x: xOrigin + iconSlotWidth + iconTextSpacing,
+            y: yOrigin,
+            width: textWidth,
+            height: rowHeight
+        )
+
+        (row.value as NSString).draw(
+            in: textRect,
+            withAttributes: textAttributes
+        )
+    }
+
     private func symbolForMetric(_ metric: MetricType) -> String {
         switch metric {
         case .download: return AppImages.download
         case .upload: return AppImages.upload
+        case .diskRead: return AppImages.diskRead
+        case .diskWrite: return AppImages.diskWrite
         case .fan: return AppImages.fan
         case .temperature: return AppImages.temperature
         }
+    }
+
+    private func configuredSymbolImage(named symbol: String, config: NSImage.SymbolConfiguration) -> NSImage {
+        if let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
+            .withSymbolConfiguration(config)
+        {
+            return image
+        }
+
+        if let fallback = NSImage(systemSymbolName: "questionmark.circle", accessibilityDescription: nil)?
+            .withSymbolConfiguration(config)
+        {
+            return fallback
+        }
+
+        return NSImage(size: NSSize(width: 8, height: 8))
     }
 
     private func valueForMetric(_ metric: MetricType) -> String {
         switch metric {
         case .download: return networkViewModel.downloadSpeed
         case .upload: return networkViewModel.uploadSpeed
+        case .diskRead: return networkViewModel.diskReadSpeed
+        case .diskWrite: return networkViewModel.diskWriteSpeed
         case .fan: return fanViewModel.primaryFanRPM
         case .temperature: return fanViewModel.primaryTemp
         }

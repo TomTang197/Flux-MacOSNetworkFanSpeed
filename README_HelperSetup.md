@@ -6,17 +6,17 @@ This app is already structured so writes to fan-related SMC keys go through a si
 
 - **Create a new macOS Command Line Tool target** in Xcode (language Swift or Objective‑C).
 - Name it something like `FanPrivilegedHelper`.
-- Set its **Bundle Identifier** to a reverse-DNS string, e.g. `cam.bandan.me.MacOSNetworkFanSpeed.FanPrivilegedHelper`.
+- Set its **Bundle Identifier** to a reverse-DNS string, e.g. `com.bandan.me.MacOSNetworkFanSpeed.FanPrivilegedHelper`.
 - Ensure its product is installed into `/Library/PrivilegedHelperTools` (SMJobBless convention).
 
 ### 2. Configure SMJobBless
 
 Follow Apple's “EvenBetterAuthorizationSample” / SMJobBless documentation:
 
-- Add a **launchd property list** (e.g. `cam.bandan.me.MacOSNetworkFanSpeed.FanPrivilegedHelper.plist`) with:
+- Add a **launchd property list** (e.g. `com.bandan.me.MacOSNetworkFanSpeed.FanPrivilegedHelper.plist`) with:
   - `Label` matching the helper bundle ID.
   - `ProgramArguments` pointing at the helper executable.
-  - `MachServices` exposing a mach service name for XPC (e.g. `cam.bandan.me.MacOSNetworkFanSpeed.FanService`).
+  - `MachServices` exposing a mach service name for XPC (e.g. `com.bandan.me.MacOSNetworkFanSpeed.FanService`).
 - Embed this plist in the **main app bundle** under `Contents/Library/LaunchServices`.
 - Add the `SMPrivilegedExecutables` dictionary to the **main app's Info.plist**, mapping the helper bundle ID to the embedded launchd plist.
 
@@ -62,3 +62,23 @@ In `FanControlClient`:
 
 Once these steps are completed, the existing UI (`FanViewModel` + presets) will automatically use the helper via `FanControlClient`, enabling full-blast and manual fan control where the platform and hardware allow it.
 
+### Quick local install (development)
+
+For local testing without SMJobBless integration, use the scripts in `scripts/`:
+
+```bash
+# Build helper first
+xcodebuild -project MacOSNetworkFanSpeed.xcodeproj -scheme FanPrivilegedHelper -configuration Debug build
+
+# Install helper + launchd service
+sudo ./scripts/install_helper.sh
+
+# Verify
+launchctl print system/com.bandan.me.MacOSNetworkFanSpeed.FanService | head -n 40
+```
+
+To remove:
+
+```bash
+sudo ./scripts/uninstall_helper.sh
+```

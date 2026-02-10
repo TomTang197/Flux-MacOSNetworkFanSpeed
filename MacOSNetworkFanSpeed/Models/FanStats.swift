@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct FanInfo: Identifiable, Codable {
+struct FanInfo: Identifiable, Codable, Equatable {
     let id: Int
     let name: String
     var currentRPM: Int
@@ -17,13 +17,13 @@ struct FanInfo: Identifiable, Codable {
     var mode: FanMode
 }
 
-enum FanMode: String, Codable {
+enum FanMode: String, Codable, Equatable {
     case auto = "Auto"
     case manual = "Manual"
     case fullBlast = "Full Blast"
 }
 
-struct SensorInfo: Identifiable, Codable {
+struct SensorInfo: Identifiable, Codable, Equatable {
     let id: String
     let name: String
     var temperature: Double

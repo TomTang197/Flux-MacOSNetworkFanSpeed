@@ -42,30 +42,36 @@ final class NetworkMonitor {
             defer { ptr = ptr?.pointee.ifa_next }
 
             guard let interface = ptr?.pointee else { continue }
+            guard let address = interface.ifa_addr else { continue }
+
+            // Keep only active, non-loopback interfaces to avoid noise from down/inactive links.
+            let flags = Int32(interface.ifa_flags)
+            let isUp = (flags & IFF_UP) != 0
+            let isRunning = (flags & IFF_RUNNING) != 0
+            let isLoopback = (flags & IFF_LOOPBACK) != 0
+            guard isUp, isRunning, !isLoopback else { continue }
 
             // ifa_addr: Pointer to a sockaddr structure that contains the interface address.
             // sa_family: Address family (e.g., AF_INET, AF_INET6, AF_LINK).
             // AF_LINK: Link-level interface. This is where we get the data usage stats (I/O bytes).
-            let addrFamily = interface.ifa_addr.pointee.sa_family
+            let addrFamily = address.pointee.sa_family
+            guard addrFamily == UInt8(AF_LINK) else { continue }
 
-            if addrFamily == UInt8(AF_LINK) {
-                let name = String(cString: interface.ifa_name)
+            let name = String(cString: interface.ifa_name)
+            // Skip loopback interfaces as they don't represent external network traffic.
+            guard !name.hasPrefix("lo") else { continue }
 
-                // Skip loopback interfaces as they don't represent external network traffic.
-                if !name.hasPrefix("lo") {
-                    // ifa_data: Pointer to system-specific data. On macOS, this points to `if_data`.
-                    // if_data: Contains various interface statistics like packets in/out, bytes in/out, errors, etc.
-                    if let data = interface.ifa_data {
-                        // Cast the UnsafeMutableRawPointer to UnsafeMutablePointer<if_data>.
-                        let interfaceData = data.assumingMemoryBound(to: if_data.self)
+            // ifa_data: Pointer to system-specific data. On macOS, this points to `if_data`.
+            // if_data: Contains various interface statistics like packets in/out, bytes in/out, errors, etc.
+            guard let data = interface.ifa_data else { continue }
 
-                        // ifi_ibytes: Cumulative bytes received.
-                        // ifi_obytes: Cumulative bytes sent.
-                        stats.bytesIn += UInt64(interfaceData.pointee.ifi_ibytes)
-                        stats.bytesOut += UInt64(interfaceData.pointee.ifi_obytes)
-                    }
-                }
-            }
+            // Cast the UnsafeMutableRawPointer to UnsafeMutablePointer<if_data>.
+            let interfaceData = data.assumingMemoryBound(to: if_data.self)
+
+            // ifi_ibytes: Cumulative bytes received.
+            // ifi_obytes: Cumulative bytes sent.
+            stats.bytesIn += UInt64(interfaceData.pointee.ifi_ibytes)
+            stats.bytesOut += UInt64(interfaceData.pointee.ifi_obytes)
         }
 
         return stats

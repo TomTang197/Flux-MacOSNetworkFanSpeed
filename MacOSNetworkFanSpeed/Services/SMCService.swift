@@ -11,6 +11,7 @@ import IOKit
 class SMCService {
     static let shared = SMCService()
     private var connection: io_connect_t = 0
+    private var loggedNotPrivilegedWrite = false
     var isConnected: Bool { connection != 0 }
     var lastError: String?
 
@@ -76,7 +77,7 @@ class SMCService {
         val.dataType = stringToKey("ui8 ")
         val.bytes[0] = 1
 
-        let res = writeKey("Ftst", val: val)
+        let res = writeKey("Ftst", val: val, logFailures: false)
         if res == kIOReturnSuccess {
             print("💎 SMC: Diagnostic mode (Ftst) unlocked")
         } else {
@@ -288,7 +289,7 @@ class SMCService {
         return 0
     }
 
-    func writeKey(_ name: String, val: SMCVal) -> kern_return_t {
+    func writeKey(_ name: String, val: SMCVal, logFailures: Bool = true) -> kern_return_t {
         var inputStruct = SMCParamStruct()
         inputStruct.key = stringToKey(name)
         inputStruct.dataSize = val.dataSize
@@ -307,7 +308,17 @@ class SMCService {
         }
 
         let res = callSMC(.writeValue, inputStruct: &inputStruct)
-        if res != kIOReturnSuccess || inputStruct.result != 0 {
+        if res == kIOReturnNotPrivileged {
+            if logFailures && !loggedNotPrivilegedWrite {
+                print(
+                    "⚠️ SMC: Fan write requires privileged helper on this Mac (kIOReturnNotPrivileged)."
+                )
+                loggedNotPrivilegedWrite = true
+            }
+            return res
+        }
+
+        if logFailures && (res != kIOReturnSuccess || inputStruct.result != 0) {
             print("❌ SMC: Write to '\(name)' failed (Result: \(res), SMC: \(inputStruct.result))")
         }
         return res
@@ -316,12 +327,15 @@ class SMCService {
     // MARK: - High Level API
 
     func getFanRPM(_ index: Int) -> Int? {
-        // Try standard Intel-style key first, then Silicon-style
-        if let val = readKey("F\(index)Ac") {
-            return Int(bytesToFloat(val))
-        }
-        if let val = readKey("Fan\(index)") {
-            return Int(bytesToFloat(val))
+        // Try standard Intel-style key first, then Silicon-style.
+        // Treat non-positive values as invalid readings.
+        for key in ["F\(index)Ac", "Fan\(index)"] {
+            if let val = readKey(key) {
+                let rpm = Int(bytesToFloat(val))
+                if rpm > 0 {
+                    return rpm
+                }
+            }
         }
         return nil
     }

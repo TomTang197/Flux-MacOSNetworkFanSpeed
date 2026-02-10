@@ -15,10 +15,14 @@ final class NetworkViewModel: ObservableObject {
 
     @Published var downloadSpeed: String = "0 KB/s"
     @Published var uploadSpeed: String = "0 KB/s"
+    @Published var diskReadSpeed: String = "0 KB/s"
+    @Published var diskWriteSpeed: String = "0 KB/s"
     @Published var combinedSpeed: String = "0 KB/s"
 
     @Published var rawDownload: Double = 0
     @Published var rawUpload: Double = 0
+    @Published var rawDiskRead: Double = 0
+    @Published var rawDiskWrite: Double = 0
 
     @Published var enabledMetrics: Set<MetricType> = [.download, .upload] {
         didSet {
@@ -37,7 +41,9 @@ final class NetworkViewModel: ObservableObject {
     // MARK: - Private Properties
 
     private let monitor = NetworkMonitor()
+    private let diskMonitor = DiskMonitor()
     private var lastStats: NetworkMonitor.InterfaceStats?
+    private var lastDiskStats: DiskMonitor.DiskStats?
     private var lastTimestamp: Date?
     private var timer: AnyCancellable?
 
@@ -73,10 +79,21 @@ final class NetworkViewModel: ObservableObject {
 
     private func updateSpeed() {
         let currentStats = monitor.getNetworkUsage()
+        let currentDiskStats = diskMonitor.getDiskUsage()
         let currentTimestamp = Date()
 
-        if let lastStats = self.lastStats, let lastTimestamp = self.lastTimestamp {
+        if
+            let lastStats = self.lastStats,
+            let lastDiskStats = self.lastDiskStats,
+            let lastTimestamp = self.lastTimestamp
+        {
             let timeInterval = currentTimestamp.timeIntervalSince(lastTimestamp)
+            guard timeInterval > 0 else {
+                self.lastStats = currentStats
+                self.lastDiskStats = currentDiskStats
+                self.lastTimestamp = currentTimestamp
+                return
+            }
 
             // Speed = (Current Bytes - Last Bytes) / Time Interval
             // We use max(0, ...) to handle potential overflows or counter resets (rare).
@@ -96,9 +113,27 @@ final class NetworkViewModel: ObservableObject {
             self.downloadSpeed = formatSpeed(downBps)
             self.uploadSpeed = formatSpeed(upBps)
             self.combinedSpeed = formatSpeed(downBps + upBps)
+
+            let diskReadDiff = Double(
+                currentDiskStats.bytesRead >= lastDiskStats.bytesRead
+                    ? currentDiskStats.bytesRead - lastDiskStats.bytesRead : 0
+            )
+            let diskWriteDiff = Double(
+                currentDiskStats.bytesWritten >= lastDiskStats.bytesWritten
+                    ? currentDiskStats.bytesWritten - lastDiskStats.bytesWritten : 0
+            )
+
+            let diskReadBps = diskReadDiff / timeInterval
+            let diskWriteBps = diskWriteDiff / timeInterval
+
+            self.rawDiskRead = diskReadBps
+            self.rawDiskWrite = diskWriteBps
+            self.diskReadSpeed = formatSpeed(diskReadBps)
+            self.diskWriteSpeed = formatSpeed(diskWriteBps)
         }
 
         self.lastStats = currentStats
+        self.lastDiskStats = currentDiskStats
         self.lastTimestamp = currentTimestamp
     }
 
