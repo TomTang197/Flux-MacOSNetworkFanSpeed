@@ -11,6 +11,7 @@ import SwiftUI
 struct NetworkSpeedMeterApp: App {
     @StateObject private var networkViewModel = NetworkViewModel()
     @StateObject private var fanViewModel = FanViewModel()
+    @StateObject private var launchAtLoginManager = LaunchAtLoginManager()
 
     init() {
         // Set as accessory app (no dock icon, menu bar only)
@@ -19,13 +20,19 @@ struct NetworkSpeedMeterApp: App {
 
     var body: some Scene {
         Window(AppStrings.appName, id: "dashboard") {
-            ContentView(networkViewModel: networkViewModel, fanViewModel: fanViewModel)
+            ContentView(
+                networkViewModel: networkViewModel,
+                fanViewModel: fanViewModel,
+                launchAtLoginManager: launchAtLoginManager
+            )
         }
+        .defaultLaunchBehavior(.suppressed)
 
         MenuBarExtra {
             SettingsView(
                 networkViewModel: networkViewModel,
                 fanViewModel: fanViewModel,
+                launchAtLoginManager: launchAtLoginManager,
                 showWindowButton: true
             )
         } label: {

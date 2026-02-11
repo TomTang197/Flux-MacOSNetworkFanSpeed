@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "C2BEB9C22F2B504D00DAC1DD"
-               BuildableName = "FluxBar.app"
+               BuildableName = "AeroPulse.app"
                BlueprintName = "MacOSNetworkFanSpeed"
                ReferencedContainer = "container:MacOSNetworkFanSpeed.xcodeproj">
             </BuildableReference>
@@ -45,7 +45,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C2BEB9C22F2B504D00DAC1DD"
-            BuildableName = "FluxBar.app"
+            BuildableName = "AeroPulse.app"
             BlueprintName = "MacOSNetworkFanSpeed"
             ReferencedContainer = "container:MacOSNetworkFanSpeed.xcodeproj">
          </BuildableReference>
@@ -62,7 +62,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C2BEB9C22F2B504D00DAC1DD"
-            BuildableName = "FluxBar.app"
+            BuildableName = "AeroPulse.app"
             BlueprintName = "MacOSNetworkFanSpeed"
             ReferencedContainer = "container:MacOSNetworkFanSpeed.xcodeproj">
          </BuildableReference>

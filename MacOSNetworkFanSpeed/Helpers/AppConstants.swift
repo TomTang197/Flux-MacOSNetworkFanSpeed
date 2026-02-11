@@ -13,7 +13,7 @@ struct AppStrings {
         // $(TARGET_NAME)
         Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
             ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
-            ?? "FluxBar"
+            ?? "AeroPulse"
     }
     static let systemMonitor = "System Monitor"
 
@@ -22,6 +22,10 @@ struct AppStrings {
     static let upload = "Upload"
     static let diskRead = "Disk Read"
     static let diskWrite = "Disk Write"
+    static let diskCapacity = "Disk Capacity"
+    static let diskFree = "Free"
+    static let diskTotal = "Total"
+    static let diskUsed = "Used"
     static let fan = "Fan"
     static let systemTemp = "System Temp"
     static let cpuTemp = "CPU Temp"
@@ -49,6 +53,10 @@ struct AppStrings {
     static let fanControlPreset = "Fan Control Preset"
     static let hardwareConnection = "Hardware Connection"
     static let privilegedHelper = "Privileged Helper"
+    static let launchAtLogin = "Launch at Login"
+    static let launchAtLoginDescription = "Start after sign-in (menu bar only, dashboard stays hidden)."
+    static let launchAtLoginRefresh = "Recheck"
+    static let launchAtLoginErrorPrefix = "Launch at login failed:"
     static let helperInstalled = "Helper installed and launchd service registered."
     static let helperMissing = "Helper missing. Fan writes on Apple Silicon will stay read-only."
     static let helperUnhealthy = "Helper installed but not responding. Click Reinstall."
@@ -88,6 +96,7 @@ struct AppImages {
     static let upload = "arrow.up.circle.fill"
     static let diskRead = "internaldrive"
     static let diskWrite = "internaldrive.fill"
+    static let diskCapacity = "externaldrive.fill.badge.checkmark"
     static let fan = "fanblades.fill"
     static let temperature = "thermometer.medium"
 
@@ -103,6 +112,7 @@ struct AppImages {
     static let fanSettings = "fan.fill"
     static let cpu = "cpu"
     static let helper = "lock.shield"
+    static let launchAtLogin = "power.circle"
     static let power = "power.circle.fill"
     static let window = "macwindow"
     static let gauge = "gauge.with.dots.needle.bottom.50percent"

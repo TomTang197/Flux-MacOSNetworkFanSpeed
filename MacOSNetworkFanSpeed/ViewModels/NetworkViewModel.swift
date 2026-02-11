@@ -17,12 +17,9 @@ final class NetworkViewModel: ObservableObject {
     @Published var uploadSpeed: String = "0 KB/s"
     @Published var diskReadSpeed: String = "0 KB/s"
     @Published var diskWriteSpeed: String = "0 KB/s"
-    @Published var combinedSpeed: String = "0 KB/s"
-
-    @Published var rawDownload: Double = 0
-    @Published var rawUpload: Double = 0
-    @Published var rawDiskRead: Double = 0
-    @Published var rawDiskWrite: Double = 0
+    @Published var diskTotalCapacity: String = "--"
+    @Published var diskFreeCapacity: String = "--"
+    @Published var diskUsedPercent: String = "--"
 
     @Published var enabledMetrics: Set<MetricType> = [.download, .upload] {
         didSet {
@@ -45,7 +42,20 @@ final class NetworkViewModel: ObservableObject {
     private var lastStats: NetworkMonitor.InterfaceStats?
     private var lastDiskStats: DiskMonitor.DiskStats?
     private var lastTimestamp: Date?
+    private var lastDiskSampleTimestamp: Date?
+    private var lastCapacitySampleTimestamp: Date?
     private var timer: AnyCancellable?
+    private let diskSampleInterval: TimeInterval = 2.0
+    private let capacitySampleInterval: TimeInterval = 15.0
+    private static let capacityFormatter: ByteCountFormatter = {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        formatter.includesUnit = true
+        formatter.includesCount = true
+        formatter.isAdaptive = true
+        formatter.allowedUnits = [.useTB, .useGB, .useMB]
+        return formatter
+    }()
 
     // MARK: - Initializer
 
@@ -66,6 +76,7 @@ final class NetworkViewModel: ObservableObject {
 
     func startMonitoring() {
         restartTimer()
+        updateSpeed()
     }
 
     private func restartTimer() {
@@ -79,18 +90,15 @@ final class NetworkViewModel: ObservableObject {
 
     private func updateSpeed() {
         let currentStats = monitor.getNetworkUsage()
-        let currentDiskStats = diskMonitor.getDiskUsage()
         let currentTimestamp = Date()
 
         if
             let lastStats = self.lastStats,
-            let lastDiskStats = self.lastDiskStats,
             let lastTimestamp = self.lastTimestamp
         {
             let timeInterval = currentTimestamp.timeIntervalSince(lastTimestamp)
             guard timeInterval > 0 else {
                 self.lastStats = currentStats
-                self.lastDiskStats = currentDiskStats
                 self.lastTimestamp = currentTimestamp
                 return
             }
@@ -107,33 +115,50 @@ final class NetworkViewModel: ObservableObject {
             let downBps = diffIn / timeInterval
             let upBps = diffOut / timeInterval
 
-            self.rawDownload = downBps
-            self.rawUpload = upBps
+            setIfChanged(&self.downloadSpeed, formatSpeed(downBps))
+            setIfChanged(&self.uploadSpeed, formatSpeed(upBps))
+        }
 
-            self.downloadSpeed = formatSpeed(downBps)
-            self.uploadSpeed = formatSpeed(upBps)
-            self.combinedSpeed = formatSpeed(downBps + upBps)
+        if shouldSampleDisk(at: currentTimestamp) {
+            let currentDiskStats = diskMonitor.getDiskUsage()
+            if
+                let lastDiskStats = self.lastDiskStats,
+                let lastDiskSampleTimestamp = self.lastDiskSampleTimestamp
+            {
+                let diskInterval = currentTimestamp.timeIntervalSince(lastDiskSampleTimestamp)
+                if diskInterval > 0 {
+                    let diskReadDiff = Double(
+                        currentDiskStats.bytesRead >= lastDiskStats.bytesRead
+                            ? currentDiskStats.bytesRead - lastDiskStats.bytesRead : 0
+                    )
+                    let diskWriteDiff = Double(
+                        currentDiskStats.bytesWritten >= lastDiskStats.bytesWritten
+                            ? currentDiskStats.bytesWritten - lastDiskStats.bytesWritten : 0
+                    )
 
-            let diskReadDiff = Double(
-                currentDiskStats.bytesRead >= lastDiskStats.bytesRead
-                    ? currentDiskStats.bytesRead - lastDiskStats.bytesRead : 0
-            )
-            let diskWriteDiff = Double(
-                currentDiskStats.bytesWritten >= lastDiskStats.bytesWritten
-                    ? currentDiskStats.bytesWritten - lastDiskStats.bytesWritten : 0
-            )
+                    let diskReadBps = diskReadDiff / diskInterval
+                    let diskWriteBps = diskWriteDiff / diskInterval
 
-            let diskReadBps = diskReadDiff / timeInterval
-            let diskWriteBps = diskWriteDiff / timeInterval
+                    setIfChanged(&self.diskReadSpeed, formatSpeed(diskReadBps))
+                    setIfChanged(&self.diskWriteSpeed, formatSpeed(diskWriteBps))
+                }
+            }
 
-            self.rawDiskRead = diskReadBps
-            self.rawDiskWrite = diskWriteBps
-            self.diskReadSpeed = formatSpeed(diskReadBps)
-            self.diskWriteSpeed = formatSpeed(diskWriteBps)
+            self.lastDiskStats = currentDiskStats
+            self.lastDiskSampleTimestamp = currentTimestamp
+        }
+
+        if shouldSampleCapacity(at: currentTimestamp), let capacity = diskMonitor.getDiskCapacity(),
+            capacity.totalBytes > 0
+        {
+            setIfChanged(&self.diskTotalCapacity, formatCapacity(capacity.totalBytes))
+            setIfChanged(&self.diskFreeCapacity, formatCapacity(capacity.freeBytes))
+            let usedRatio = Double(capacity.usedBytes) / Double(capacity.totalBytes)
+            setIfChanged(&self.diskUsedPercent, String(format: "%.0f%%", usedRatio * 100))
+            self.lastCapacitySampleTimestamp = currentTimestamp
         }
 
         self.lastStats = currentStats
-        self.lastDiskStats = currentDiskStats
         self.lastTimestamp = currentTimestamp
     }
 
@@ -152,6 +177,26 @@ final class NetworkViewModel: ObservableObject {
             return String(format: "%.1f KB/s", kb)
         } else {
             return String(format: "%.0f B/s", bytesPerSecond)
+        }
+    }
+
+    private func formatCapacity(_ bytes: UInt64) -> String {
+        Self.capacityFormatter.string(fromByteCount: Int64(bytes))
+    }
+
+    private func shouldSampleDisk(at timestamp: Date) -> Bool {
+        guard let lastDiskSampleTimestamp else { return true }
+        return timestamp.timeIntervalSince(lastDiskSampleTimestamp) >= diskSampleInterval
+    }
+
+    private func shouldSampleCapacity(at timestamp: Date) -> Bool {
+        guard let lastCapacitySampleTimestamp else { return true }
+        return timestamp.timeIntervalSince(lastCapacitySampleTimestamp) >= capacitySampleInterval
+    }
+
+    private func setIfChanged(_ value: inout String, _ newValue: String) {
+        if value != newValue {
+            value = newValue
         }
     }
 }

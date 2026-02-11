@@ -13,6 +13,15 @@ final class DiskMonitor {
         var bytesWritten: UInt64 = 0
     }
 
+    struct DiskCapacity {
+        let totalBytes: UInt64
+        let freeBytes: UInt64
+
+        var usedBytes: UInt64 {
+            totalBytes > freeBytes ? totalBytes - freeBytes : 0
+        }
+    }
+
     func getDiskUsage() -> DiskStats {
         var stats = DiskStats()
         var iterator: io_iterator_t = 0
@@ -49,6 +58,23 @@ final class DiskMonitor {
         }
 
         return stats
+    }
+
+    func getDiskCapacity() -> DiskCapacity? {
+        do {
+            let attributes = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory())
+            guard
+                let total = attributes[.systemSize] as? NSNumber,
+                let free = attributes[.systemFreeSize] as? NSNumber
+            else { return nil }
+
+            return DiskCapacity(
+                totalBytes: total.uint64Value,
+                freeBytes: free.uint64Value
+            )
+        } catch {
+            return nil
+        }
     }
 
     private static func toUInt64(_ value: Any?) -> UInt64 {

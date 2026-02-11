@@ -10,6 +10,7 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var networkViewModel: NetworkViewModel
     @ObservedObject var fanViewModel: FanViewModel
+    @ObservedObject var launchAtLoginManager: LaunchAtLoginManager
     private let defaultWindowSize = CGSize(width: 1230, height: 650)
     private let minimumWindowSize = CGSize(width: 1040, height: 620)
     private let leftColumnMinWidth: CGFloat = 320
@@ -51,35 +52,68 @@ struct ContentView: View {
                         }
                         .padding(.horizontal, 24)
 
-                        VStack(spacing: 20) {
+                        LazyVGrid(
+                            columns: [
+                                GridItem(.flexible(), spacing: 14),
+                                GridItem(.flexible(), spacing: 14),
+                            ],
+                            spacing: 14
+                        ) {
                             DashboardMetricCard(
                                 title: AppStrings.download,
                                 value: networkViewModel.downloadSpeed,
                                 icon: AppImages.download,
-                                color: .blue
+                                color: .blue,
+                                compact: true
                             )
                             DashboardMetricCard(
                                 title: AppStrings.upload,
                                 value: networkViewModel.uploadSpeed,
                                 icon: AppImages.upload,
-                                color: .green
+                                color: .green,
+                                compact: true
+                            )
+                            DashboardMetricCard(
+                                title: AppStrings.diskRead,
+                                value: networkViewModel.diskReadSpeed,
+                                icon: AppImages.diskRead,
+                                color: .teal,
+                                compact: true
+                            )
+                            DashboardMetricCard(
+                                title: AppStrings.diskWrite,
+                                value: networkViewModel.diskWriteSpeed,
+                                icon: AppImages.diskWrite,
+                                color: .mint,
+                                compact: true
                             )
                             DashboardMetricCard(
                                 title: AppStrings.fan,
                                 value: fanViewModel.primaryFanRPM,
                                 icon: AppImages.fan,
-                                color: .indigo
+                                color: .indigo,
+                                compact: true
                             )
                             DashboardMetricCard(
                                 title: AppStrings.systemTemp,
                                 value: fanViewModel.primaryTemp,
                                 icon: AppImages.temperature,
                                 color: .orange,
+                                compact: true,
                                 showInfoButton: false,
                                 action: {
                                     fanViewModel.isShowingThermalDetails = true
                                 }
                             )
+                            DashboardMetricCard(
+                                title: AppStrings.diskCapacity,
+                                value: "\(networkViewModel.diskFreeCapacity) / \(networkViewModel.diskTotalCapacity)",
+                                icon: AppImages.diskCapacity,
+                                color: .cyan,
+                                subtitle: "\(AppStrings.diskFree): \(networkViewModel.diskFreeCapacity) • \(AppStrings.diskUsed): \(networkViewModel.diskUsedPercent)",
+                                compact: true
+                            )
+                            .gridCellColumns(2)
                         }
                         .padding(.horizontal, 24)
 
@@ -103,6 +137,7 @@ struct ContentView: View {
                             SettingsView(
                                 networkViewModel: networkViewModel,
                                 fanViewModel: fanViewModel,
+                                launchAtLoginManager: launchAtLoginManager,
                                 showWindowButton: false,
                                 preferredWidth: nil
                             )
@@ -177,5 +212,9 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView(networkViewModel: NetworkViewModel(), fanViewModel: FanViewModel())
+    ContentView(
+        networkViewModel: NetworkViewModel(),
+        fanViewModel: FanViewModel(),
+        launchAtLoginManager: LaunchAtLoginManager()
+    )
 }

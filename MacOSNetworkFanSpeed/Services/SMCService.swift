@@ -12,6 +12,8 @@ class SMCService {
     static let shared = SMCService()
     private var connection: io_connect_t = 0
     private var loggedNotPrivilegedWrite = false
+    private var keyInfoCache: [String: (size: UInt32, type: UInt32)] = [:]
+    private let keyInfoCacheLock = NSLock()
     var isConnected: Bool { connection != 0 }
     var lastError: String?
 
@@ -190,14 +192,32 @@ class SMCService {
     }
 
     private func getInfo(_ name: String) -> (size: UInt32, type: UInt32)? {
+        if let cached = cachedKeyInfo(for: name) {
+            return cached
+        }
+
         var inputStruct = SMCParamStruct()
         inputStruct.key = stringToKey(name)
 
         let result = callSMC(.readInfo, inputStruct: &inputStruct)
         if result == kIOReturnSuccess {
-            return (inputStruct.dataSize, inputStruct.dataType)
+            let info = (inputStruct.dataSize, inputStruct.dataType)
+            cacheKeyInfo(name, info: info)
+            return info
         }
         return nil
+    }
+
+    private func cachedKeyInfo(for name: String) -> (size: UInt32, type: UInt32)? {
+        keyInfoCacheLock.lock()
+        defer { keyInfoCacheLock.unlock() }
+        return keyInfoCache[name]
+    }
+
+    private func cacheKeyInfo(_ name: String, info: (size: UInt32, type: UInt32)) {
+        keyInfoCacheLock.lock()
+        keyInfoCache[name] = info
+        keyInfoCacheLock.unlock()
     }
 
     func readKey(_ name: String) -> SMCVal? {

@@ -184,7 +184,10 @@ final class FanControlClient: FanControlProviding {
     private func handleHelperFailure(_ error: Error) {
         let now = Date()
         if now.timeIntervalSince(lastHelperErrorLogAt) >= 10 {
-            logger.error("XPC remote object error: \(error.localizedDescription, privacy: .public)")
+            let nsError = error as NSError
+            logger.error(
+                "XPC remote object error domain=\(nsError.domain, privacy: .public) code=\(nsError.code)"
+            )
             lastHelperErrorLogAt = now
         }
         markHelperUnavailable()
