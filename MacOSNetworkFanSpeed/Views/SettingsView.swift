@@ -219,6 +219,42 @@ struct SettingsView: View {
                         .controlSize(.small)
                     }
                 }
+
+                SettingsCard(
+                    title: AppStrings.privilegedHelper,
+                    symbol: AppImages.helper,
+                    tint: fanViewModel.helperInstalled ? .green : .orange
+                ) {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(fanViewModel.helperInstalled ? Color.green : Color.orange)
+                            .frame(width: 7, height: 7)
+                        Text(fanViewModel.helperStatusMessage)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(fanViewModel.helperInstalled ? .secondary : .orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                    }
+
+                    HStack(spacing: 8) {
+                        Button(
+                            fanViewModel.helperInstalled
+                                ? AppStrings.helperReinstall : AppStrings.helperInstall
+                        ) {
+                            fanViewModel.installHelper()
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .disabled(fanViewModel.isInstallingHelper)
+
+                        Button(AppStrings.launchAtLoginRefresh) {
+                            fanViewModel.refreshHelperStatus()
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .disabled(fanViewModel.isInstallingHelper)
+                    }
+                }
             }
 
             Button(
@@ -242,6 +278,9 @@ struct SettingsView: View {
         .padding(16)
         .frame(width: preferredWidth, alignment: .leading)
         .frame(maxWidth: preferredWidth == nil ? .infinity : preferredWidth, alignment: .leading)
+        .onAppear {
+            fanViewModel.refreshHelperStatus()
+        }
     }
 
     private var headerSection: some View {

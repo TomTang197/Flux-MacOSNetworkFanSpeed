@@ -109,6 +109,9 @@ final class FanMonitor: ObservableObject {
         }
 
         var sensors = readSensors(from: discoveredSensorDefinitions)
+        if sensors.isEmpty {
+            sensors = readEssentialFallbackSensors()
+        }
         sensors = normalizeCoreSensors(sensors)
         sensors = normalizeGPUSensors(sensors)
 
@@ -129,6 +132,36 @@ final class FanMonitor: ObservableObject {
             }
         #endif
 
+        return sensors
+    }
+
+    private func readEssentialFallbackSensors() -> [SensorInfo] {
+        let fallbackKeys: [(id: String, name: String)] = [
+            ("TC0P", "CPU Package"),
+            ("mACC", "CPU Core Average"),
+            ("Tp0P", "CPU Proximity"),
+            ("Tp01", "CPU Core 1"),
+            ("Tp02", "CPU Core 2"),
+            ("Tp03", "CPU Core 3"),
+            ("Tp04", "CPU Core 4"),
+            ("TG0P", "GPU Proximity"),
+            ("vACC", "GPU Average"),
+            ("Tg05", "GPU Cluster 1"),
+            ("Tg0b", "GPU Cluster 2"),
+            ("Tg0d", "GPU Cluster 3"),
+            ("Ts0P", "SSD"),
+            ("TH0x", "SSD Controller"),
+        ]
+
+        var sensors: [SensorInfo] = []
+        var seen = Set<String>()
+        for key in fallbackKeys {
+            guard let value = smc.getTemperature(key.id) else { continue }
+            guard seen.insert(key.id.lowercased()).inserted else { continue }
+            sensors.append(
+                SensorInfo(id: key.id, name: key.name, temperature: value, isEnabled: true)
+            )
+        }
         return sensors
     }
 

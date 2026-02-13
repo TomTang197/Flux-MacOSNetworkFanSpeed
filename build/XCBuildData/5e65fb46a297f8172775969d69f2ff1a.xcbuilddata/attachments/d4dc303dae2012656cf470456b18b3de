@@ -1,0 +1,19 @@
+{
+  "" : {
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/MacOSNetworkFanSpeed.build/Debug/FanPrivilegedHelper.build/Objects-normal/x86_64/FanPrivilegedHelper-primary.dia",
+    "emit-module-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/MacOSNetworkFanSpeed.build/Debug/FanPrivilegedHelper.build/Objects-normal/x86_64/FanPrivilegedHelper-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/MacOSNetworkFanSpeed.build/Debug/FanPrivilegedHelper.build/Objects-normal/x86_64/FanPrivilegedHelper-primary-emit-module.dia",
+    "pch" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/MacOSNetworkFanSpeed.build/Debug/FanPrivilegedHelper.build/Objects-normal/x86_64/FanPrivilegedHelper-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/MacOSNetworkFanSpeed.build/Debug/FanPrivilegedHelper.build/Objects-normal/x86_64/FanPrivilegedHelper-primary.swiftdeps"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/FanPrivilegedHelper/main.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/MacOSNetworkFanSpeed.build/Debug/FanPrivilegedHelper.build/Objects-normal/x86_64/main.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/MacOSNetworkFanSpeed.build/Debug/FanPrivilegedHelper.build/Objects-normal/x86_64/main.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/MacOSNetworkFanSpeed.build/Debug/FanPrivilegedHelper.build/Objects-normal/x86_64/main.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/FanPrivilegedHelper.build/Objects-normal/x86_64/main.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/MacOSNetworkFanSpeed.build/Debug/FanPrivilegedHelper.build/Objects-normal/x86_64/main.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/MacOSNetworkFanSpeed.build/Debug/FanPrivilegedHelper.build/Objects-normal/x86_64/main.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/MacOSNetworkFanSpeed.build/Debug/FanPrivilegedHelper.build/Objects-normal/x86_64/main.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/MacOSNetworkFanSpeed.build/Debug/FanPrivilegedHelper.build/Objects-normal/x86_64/main~partial.swiftmodule"
+  }
+}
