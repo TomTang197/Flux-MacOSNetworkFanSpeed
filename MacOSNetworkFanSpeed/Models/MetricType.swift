@@ -11,6 +11,8 @@ enum MetricType: String, CaseIterable, Identifiable, Codable {
     case upload = "Upload"
     case diskRead = "Disk Read"
     case diskWrite = "Disk Write"
+    case cpu = "CPU"
+    case memory = "Memory"
     case temperature = "Temp"
     case fan = "Fan"
 
@@ -22,6 +24,8 @@ enum MetricType: String, CaseIterable, Identifiable, Codable {
         case .upload: return "⏫"
         case .diskRead: return "💾"
         case .diskWrite: return "💽"
+        case .cpu: return "🖥️"
+        case .memory: return "🧠"
         case .temperature: return "🌡️"
         case .fan: return "🌀"
         }
@@ -37,6 +41,10 @@ enum MetricType: String, CaseIterable, Identifiable, Codable {
             return Text("\(Image(systemName: "internaldrive"))")
         case .diskWrite:
             return Text("\(Image(systemName: "internaldrive.fill"))")
+        case .cpu:
+            return Text("\(Image(systemName: "cpu"))")
+        case .memory:
+            return Text("\(Image(systemName: "memorychip"))")
         case .fan:
             return Text("\(Image(systemName: "fanblades"))")
         case .temperature:

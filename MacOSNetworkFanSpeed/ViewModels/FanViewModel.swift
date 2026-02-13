@@ -3,94 +3,67 @@
 //  MacOSNetworkFanSpeed
 //
 //  Created by Bandan.K on 29/01/26.
+//  Modified for Read-Only monitoring on 14/02/26.
 //
 
+import Foundation
 import Combine
-import SwiftUI
 
-final class FanViewModel: ObservableObject {
+class FanViewModel: ObservableObject {
     @Published var fans: [FanInfo] = []
-    @Published var sensors: [SensorInfo] = []
-    @Published var isShowingThermalDetails: Bool = false
-    @Published var isMonitoring: Bool = false
-
-    private let monitor = FanMonitor()
-    private let pollingQueue = DispatchQueue(label: "com.bandan.me.fan.monitor", qos: .utility)
-    private var timer: AnyCancellable?
-    private var refreshInterval: Double = 2.0
-    private var sensorPollTick: Int = 0
-    private var isUpdatingStats = false
-    private let sensorPollingStride = 2
-
+    @Published var primaryTemp: String = "--°C"
+    
+    private var timer: Timer?
+    private let smc = SMCService.shared
+    
     init() {
-        self._isMonitoring = Published(wrappedValue: true)
-
-        // Defer side effects until next run loop to avoid publishing warnings during init.
-        DispatchQueue.main.async { [weak self] in
-            if self?.isMonitoring == true {
-                self?.startMonitoring()
-            }
-        }
+        startMonitoring()
     }
-
-    func setMonitoring(_ enabled: Bool) {
-        guard isMonitoring != enabled else { return }
-        isMonitoring = enabled
-        if enabled {
-            startMonitoring()
-        } else {
-            timer?.cancel()
-        }
-    }
-
+    
     func startMonitoring() {
-        timer?.cancel()
-        timer = Timer.publish(every: refreshInterval, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                self?.updateStats()
-            }
-        updateStats()  // Initial update
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            self?.updateData()
+        }
+        updateData()
     }
-
-    func updateStats() {
-        guard !isUpdatingStats else { return }
-        isUpdatingStats = true
-
-        let shouldRefreshSensors = sensors.isEmpty || (sensorPollTick % sensorPollingStride == 0)
-        sensorPollTick += 1
-
-        pollingQueue.async { [weak self] in
-            guard let self = self else { return }
-            let newFans = self.monitor.getFans()
-            let newSensors = shouldRefreshSensors ? self.monitor.getSensors() : nil
-
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                if self.fans != newFans { self.fans = newFans }
-                if let newSensors, self.sensors != newSensors {
-                    self.sensors = newSensors
-                }
-                self.isUpdatingStats = false
+    
+    private func updateData() {
+        // Update Fans
+        var updatedFans: [FanInfo] = []
+        // Standard check for up to 2 fans (typical for Mac laptops)
+        for i in 0..<2 {
+            if let rpm = smc.getFanRPM(i) {
+                // For monitoring, we use default min/max if not easily available
+                // Modern Silicon Macs vary wildly, so we focus on current RPM
+                updatedFans.append(FanInfo(
+                    id: i,
+                    name: "Fan \(i + 1)",
+                    currentRPM: rpm,
+                    minRPM: 1200, 
+                    maxRPM: 6000,
+                    isManual: false
+                ))
             }
         }
-    }
-
-    var primaryFanRPM: String {
-        guard let firstFan = fans.first else { return "0 \(AppStrings.rpmUnit)" }
-        return "\(firstFan.currentRPM) \(AppStrings.rpmUnit)"
-    }
-
-    var primaryTemp: String {
-        // Calculate average of all CPU-related sensors
-        let cpuSensors = sensors.filter { sensor in
-            sensor.name.contains("P-Core") || sensor.name.contains("E-Core")
-                || sensor.name.contains("CPU Core") || sensor.name.contains("CPU Package")
+        
+        // Update Temperatures (Common CPU PECI or Silicon P-Core keys)
+        let tempKeys = ["TC0P", "Tp0P", "Tp01"] 
+        var foundTemp: Double?
+        for key in tempKeys {
+            if let t = smc.getTemperature(key) {
+                foundTemp = t
+                break
+            }
         }
-
-        guard !cpuSensors.isEmpty else { return "0°C" }
-
-        let avgTemp = cpuSensors.reduce(0.0) { $0 + $1.temperature } / Double(cpuSensors.count)
-        return String(format: "%.0f°C", avgTemp)
+        
+        DispatchQueue.main.async {
+            self.fans = updatedFans
+            if let t = foundTemp {
+                self.primaryTemp = String(format: "%.1f°C", t)
+            } else {
+                self.primaryTemp = "--°C"
+            }
+        }
     }
 }

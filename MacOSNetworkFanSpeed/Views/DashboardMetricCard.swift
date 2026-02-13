@@ -17,15 +17,27 @@ struct DashboardMetricCard: View {
     var showInfoButton: Bool = false
     var action: (() -> Void)? = nil
 
+    private var cardCornerRadius: CGFloat {
+        compact ? 18 : 22
+    }
+
+    private var cardPadding: CGFloat {
+        compact ? 14 : 20
+    }
+
+    private var minimumCardHeight: CGFloat {
+        compact ? 122 : 164
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: compact ? 10 : 15) {
+        VStack(alignment: .leading, spacing: compact ? 10 : 14) {
             HStack {
                 Image(systemName: icon)
                     .foregroundColor(color)
-                    .font(compact ? .system(size: 16, weight: .bold) : .title3)
+                    .font(compact ? .system(size: 15, weight: .bold) : .title3)
                 Spacer()
                 Text(title.uppercased())
-                    .font(.system(size: 9, weight: .black))
+                    .font(.system(size: compact ? 9 : 10, weight: .black))
                     .foregroundColor(.secondary)
                     .tracking(1)
             }
@@ -33,7 +45,7 @@ struct DashboardMetricCard: View {
             HStack(alignment: .bottom, spacing: 8) {
                 VStack(alignment: .leading, spacing: compact ? 4 : 6) {
                     Text(value)
-                        .font(.system(size: compact ? 20 : 28, weight: .bold, design: .monospaced))
+                        .font(.system(size: compact ? 21 : 30, weight: .bold, design: .monospaced))
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
 
@@ -41,8 +53,12 @@ struct DashboardMetricCard: View {
                         Text(subtitle)
                             .font(.system(size: compact ? 10 : 11, weight: .semibold))
                             .foregroundColor(.secondary)
-                            .lineLimit(1)
+                            .lineLimit(2)
                             .minimumScaleFactor(0.8)
+                    } else if compact {
+                        Text(" ")
+                            .font(.system(size: 10, weight: .semibold))
+                            .hidden()
                     }
                 }
 
@@ -61,22 +77,13 @@ struct DashboardMetricCard: View {
                 }
             }
         }
-        .padding(compact ? 14 : 20)
-        .frame(maxWidth: .infinity)
-        .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-        .background(.ultraThinMaterial)
-        .cornerRadius(compact ? 16 : 20)
-        .shadow(color: Color.black.opacity(0.1), radius: compact ? 10 : 15, x: 0, y: compact ? 5 : 8)
-        .overlay(
-            RoundedRectangle(cornerRadius: compact ? 16 : 20)
-                .stroke(
-                    LinearGradient(
-                        colors: [color.opacity(0.2), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
+        .padding(cardPadding)
+        .frame(maxWidth: .infinity, minHeight: minimumCardHeight, alignment: .topLeading)
+        .liquidGlassCard(
+            cornerRadius: cardCornerRadius,
+            tint: color,
+            style: .regular,
+            shadowOpacity: compact ? 0.12 : 0.16
         )
     }
 }

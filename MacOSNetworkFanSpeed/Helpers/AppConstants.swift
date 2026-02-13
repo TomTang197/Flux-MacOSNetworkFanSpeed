@@ -1,120 +1,49 @@
-//
-//  AppConstants.swift
-//  MacOSNetworkFanSpeed
-//
-//  Created by Bandan.K on 03/02/26.
-//
-
 import Foundation
 
 struct AppStrings {
-    // General
-    static var appName: String {
-        // $(TARGET_NAME)
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
-            ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
-            ?? "AeroPulse"
-    }
+    static let appName = "Flux"
     static let systemMonitor = "System Monitor"
-
-    // Metrics
     static let download = "Download"
     static let upload = "Upload"
     static let diskRead = "Disk Read"
     static let diskWrite = "Disk Write"
-    static let diskCapacity = "Disk Capacity"
-    static let diskFree = "Free"
-    static let diskTotal = "Total"
-    static let diskUsed = "Used"
-    static let fan = "Fan"
-    static let systemTemp = "System Temp"
+    static let diskCapacity = "Disk Free"
+    static let cpuUsage = "CPU Usage"
+    static let memory = "Memory"
     static let cpuTemp = "CPU Temp"
-
-    // Status
-    static let hardwareConnected = "Hardware Connected"
-    static let hardwareDisconnected = "Hardware Disconnected"
-    static let unknownConnectionError = "Unknown connection error"
-    static let smcInterfaceActive = "✅ SMC Interface Active"
-    static let noData = "No data"
-
-    // Actions
-    static let retryConnection = "Retry Connection"
-    static let quitApplication = "Quit Application"
-    static let viewThermalDetails = "View Thermal Details"
-    static let openSystemHub = "Open System Hub"
-    static let installHelper = "Install Helper"
-    static let reinstallHelper = "Reinstall"
-    static let refresh = "Refresh"
-    static let installing = "Installing..."
-
-    // Settings
-    static let menuBarMetrics = "Menu Bar Metrics"
-    static let refreshRate = "Refresh Rate"
-    static let fanControlPreset = "Fan Control Preset"
-    static let hardwareConnection = "Hardware Connection"
-    static let privilegedHelper = "Privileged Helper"
-    static let launchAtLogin = "Launch at Login"
-    static let launchAtLoginDescription = "Start after sign-in (menu bar only, dashboard stays hidden)."
-    static let launchAtLoginRefresh = "Recheck"
-    static let launchAtLoginErrorPrefix = "Launch at login failed:"
-    static let helperInstalled = "Helper installed and launchd service registered."
-    static let helperMissing = "Helper missing. Fan writes on Apple Silicon will stay read-only."
-    static let helperUnhealthy = "Helper installed but not responding. Click Reinstall."
-    static let helperInstalling = "Requesting administrator permission to install helper..."
-    static let helperInstallSuccess = "Helper installed. Manual/Full Blast should now work."
-    static let helperInstallFailedPrefix = "Helper install failed:"
-
-    // Modes & Presets
-    static let modeMini = "Mini"
-    static let modeStandard = "Standard"
-    static let modePro = "Pro"
-
-    static let presetAutomatic = "Automatic"
-    static let presetManual = "Manual"
-    static let presetFullBlast = "Full Blast"
-
-    // Thermal View
-    static let thermalSensors = "Thermal Sensors"
-    static let sensorsDetected = "sensors detected"
-    static let thermalSensorsUpperCase = "THERMAL SENSORS"
-    static let pCores = "P-Cores"
-    static let eCores = "E-Cores"
-    static let cpu = "CPU"
-    static let gpu = "GPU"
-    static let system = "System"
-    static let pCoreFilter = "P-Core"
-    static let eCoreFilter = "E-Core"
-
-    // Formatting
-    static let temperatureFormat = "%.1f°C"
     static let rpmUnit = "RPM"
+    static let menuBarMetrics = "Menu Bar Layout"
+    static let launchAtLogin = "Launch at Login"
+    static let launchAtLoginDescription = "Start Flux when you sign in"
+    static let launchAtLoginRefresh = "Refresh"
+    static let launchAtLoginErrorPrefix = "Error:"
+    static let refreshRate = "Sampling Frequency"
+    static let hardwareConnection = "Hardware Bridge"
+    static let hardwareConnected = "SMC Connected"
+    static let hardwareDisconnected = "SMC Disconnected"
+    static let retryConnection = "Reconnect Bridge"
+    static let unknownConnectionError = "Unable to reach SMC service."
+    static let quitApplication = "Quit Flux"
+    static let noData = "No data available"
+    static let openSystemHub = "Open Dashboard"
 }
 
 struct AppImages {
-    // Metric Icons
-    static let download = "arrow.down.circle.fill"
-    static let upload = "arrow.up.circle.fill"
+    static let rocket = "rocket"
+    static let download = "arrow.down.circle"
+    static let upload = "arrow.up.circle"
     static let diskRead = "internaldrive"
-    static let diskWrite = "internaldrive.fill"
-    static let diskCapacity = "externaldrive.fill.badge.checkmark"
-    static let fan = "fanblades.fill"
+    static let diskWrite = "externaldrive"
+    static let diskCapacity = "chart.pie"
+    static let cpuUsage = "cpu"
+    static let memory = "memorychip"
+    static let fan = "fanblades"
     static let temperature = "thermometer.medium"
-
-    // UI Icons
-    static let modeMini = "rectangle.portrait"
-    static let modeStandard = "rectangle"
-    static let modeExpanded = "rectangle.split.3x1"
-
-    static let info = "info.circle.fill"
-    static let close = "xmark.circle.fill"
+    static let gauge = "gauge.with.needle"
     static let checklist = "checklist"
-    static let refresh = "arrow.clockwise.circle"
-    static let fanSettings = "fan.fill"
-    static let cpu = "cpu"
-    static let helper = "lock.shield"
-    static let launchAtLogin = "power.circle"
-    static let power = "power.circle.fill"
+    static let launchAtLogin = "person.badge.key"
+    static let refresh = "arrow.clockwise"
+    static let cpu = "processor"
+    static let power = "power"
     static let window = "macwindow"
-    static let gauge = "gauge.with.dots.needle.bottom.50percent"
-    static let rocket = "rocket.fill"
 }

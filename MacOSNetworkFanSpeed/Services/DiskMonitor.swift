@@ -61,20 +61,57 @@ final class DiskMonitor {
     }
 
     func getDiskCapacity() -> DiskCapacity? {
-        do {
-            let attributes = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory())
-            guard
-                let total = attributes[.systemSize] as? NSNumber,
-                let free = attributes[.systemFreeSize] as? NSNumber
-            else { return nil }
+        let volumeKeys: Set<URLResourceKey> = [
+            .volumeTotalCapacityKey,
+            .volumeAvailableCapacityForImportantUsageKey,
+            .volumeAvailableCapacityKey,
+            .volumeAvailableCapacityForOpportunisticUsageKey,
+        ]
 
-            return DiskCapacity(
-                totalBytes: total.uint64Value,
-                freeBytes: free.uint64Value
-            )
-        } catch {
-            return nil
+        let candidateURLs: [URL] = [
+            URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true),
+            URL(fileURLWithPath: "/", isDirectory: true),
+            URL(fileURLWithPath: "/System/Volumes/Data", isDirectory: true),
+        ]
+
+        for url in candidateURLs {
+            if let capacity = diskCapacity(from: url, keys: volumeKeys) {
+                return capacity
+            }
         }
+
+        return fallbackDiskCapacity()
+    }
+
+    private func diskCapacity(from url: URL, keys: Set<URLResourceKey>) -> DiskCapacity? {
+        guard let values = try? url.resourceValues(forKeys: keys),
+            let total = values.volumeTotalCapacity,
+            total > 0
+        else { return nil }
+
+        let available = values.volumeAvailableCapacityForImportantUsage
+            ?? values.volumeAvailableCapacity.map(Int64.init)
+            ?? values.volumeAvailableCapacityForOpportunisticUsage
+
+        guard let available, available > 0 else { return nil }
+
+        return DiskCapacity(
+            totalBytes: UInt64(total),
+            freeBytes: UInt64(available)
+        )
+    }
+
+    private func fallbackDiskCapacity() -> DiskCapacity? {
+        guard
+            let attributes = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
+            let total = attributes[.systemSize] as? NSNumber,
+            let free = attributes[.systemFreeSize] as? NSNumber
+        else { return nil }
+
+        return DiskCapacity(
+            totalBytes: total.uint64Value,
+            freeBytes: free.uint64Value
+        )
     }
 
     private static func toUInt64(_ value: Any?) -> UInt64 {

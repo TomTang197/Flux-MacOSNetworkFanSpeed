@@ -11,6 +11,7 @@ struct ThermalDetailView: View {
     @ObservedObject var fanViewModel: FanViewModel
     @Environment(\.dismiss) var dismiss
     var isEmbedded: Bool = false
+    var layoutWidth: CGFloat? = nil
 
     private var cpuSensors: [SensorInfo] {
         fanViewModel.sensors.filter { isCPUSensor($0) }
@@ -37,6 +38,12 @@ struct ThermalDetailView: View {
         fanViewModel.sensors.contains {
             $0.name.hasPrefix("GPU Core Sensor ")
         }
+    }
+
+    private var thermalColumnCount: Int {
+        let widthBaseline = layoutWidth ?? (isEmbedded ? 0 : 700)
+        let available = max(widthBaseline - 20, 0)
+        return available >= 500 ? 2 : 1
     }
 
     var body: some View {
@@ -76,25 +83,28 @@ struct ThermalDetailView: View {
             }
 
             ScrollView {
-                HStack(alignment: .top, spacing: 1) {
-                    SensorCategoryColumn(
-                        title: "\(AppStrings.cpu) (\(cpuSensors.count))",
-                        sensors: cpuSensors,
-                        color: .orange
-                    )
-                    Divider()
-                    SensorCategoryColumn(
-                        title: "\(AppStrings.gpu) (\(gpuSensors.count))",
-                        sensors: gpuSensors,
-                        color: .blue
-                    )
-                    Divider()
-                    SensorCategoryColumn(
+                VStack(alignment: .leading, spacing: 10) {
+                    WaterfallColumnsLayout(columns: thermalColumnCount, spacing: 10) {
+                        sensorCategoryCard(
+                            title: "\(AppStrings.cpu) (\(cpuSensors.count))",
+                            sensors: cpuSensors,
+                            color: .orange
+                        )
+                        sensorCategoryCard(
+                            title: "\(AppStrings.gpu) (\(gpuSensors.count))",
+                            sensors: gpuSensors,
+                            color: .blue
+                        )
+                    }
+
+                    sensorCategoryCard(
                         title: "\(AppStrings.system) (\(otherSensors.count))",
                         sensors: otherSensors,
                         color: .green
                     )
                 }
+                .padding(.horizontal, 10)
+                .padding(.bottom, 10)
             }
         }
         .frame(width: isEmbedded ? nil : 700, height: isEmbedded ? nil : 500)
@@ -145,6 +155,25 @@ struct ThermalDetailView: View {
         guard name.hasPrefix(prefix) else { return nil }
         return Int(name.dropFirst(prefix.count))
     }
+
+    @ViewBuilder
+    private func sensorCategoryCard(
+        title: String,
+        sensors: [SensorInfo],
+        color: Color
+    ) -> some View {
+        SensorCategoryColumn(
+            title: title,
+            sensors: sensors,
+            color: color
+        )
+        .liquidGlassCard(
+            cornerRadius: 12,
+            tint: color,
+            style: .regular,
+            shadowOpacity: 0.08
+        )
+    }
 }
 
 struct SensorCategoryColumn: View {
@@ -186,6 +215,6 @@ struct SensorCategoryColumn: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(minWidth: 180, maxWidth: .infinity, alignment: .topLeading)
     }
 }

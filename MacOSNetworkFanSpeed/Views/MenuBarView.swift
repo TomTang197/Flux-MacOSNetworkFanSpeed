@@ -43,6 +43,9 @@ struct MenuBarView: View {
         if let diskColumn = makePairedColumn(top: .diskRead, bottom: .diskWrite, enabled: enabled) {
             columns.append(diskColumn)
         }
+        if let computeColumn = makePairedColumn(top: .cpu, bottom: .memory, enabled: enabled) {
+            columns.append(computeColumn)
+        }
         if let thermalColumn = makePairedColumn(top: .temperature, bottom: .fan, enabled: enabled) {
             columns.append(thermalColumn)
         }
@@ -181,6 +184,8 @@ struct MenuBarView: View {
         case .upload: return AppImages.upload
         case .diskRead: return AppImages.diskRead
         case .diskWrite: return AppImages.diskWrite
+        case .cpu: return AppImages.cpuUsage
+        case .memory: return AppImages.memory
         case .fan: return AppImages.fan
         case .temperature: return AppImages.temperature
         }
@@ -208,6 +213,8 @@ struct MenuBarView: View {
         case .upload: return networkViewModel.uploadSpeed
         case .diskRead: return networkViewModel.diskReadSpeed
         case .diskWrite: return networkViewModel.diskWriteSpeed
+        case .cpu: return networkViewModel.cpuUsage
+        case .memory: return networkViewModel.memoryUsage
         case .fan: return fanViewModel.primaryFanRPM
         case .temperature: return fanViewModel.primaryTemp
         }

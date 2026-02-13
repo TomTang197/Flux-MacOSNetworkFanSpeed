@@ -20,6 +20,10 @@ final class NetworkViewModel: ObservableObject {
     @Published var diskTotalCapacity: String = "--"
     @Published var diskFreeCapacity: String = "--"
     @Published var diskUsedPercent: String = "--"
+    @Published var cpuUsage: String = "0%"
+    @Published var memoryUsage: String = "0%"
+    @Published var memoryUsed: String = "--"
+    @Published var memoryTotal: String = "--"
 
     @Published var enabledMetrics: Set<MetricType> = [.download, .upload] {
         didSet {
@@ -39,14 +43,18 @@ final class NetworkViewModel: ObservableObject {
 
     private let monitor = NetworkMonitor()
     private let diskMonitor = DiskMonitor()
+    private let systemMonitor = SystemMonitor()
     private var lastStats: NetworkMonitor.InterfaceStats?
     private var lastDiskStats: DiskMonitor.DiskStats?
+    private var lastCPUTicks: SystemMonitor.CPUTicks?
     private var lastTimestamp: Date?
     private var lastDiskSampleTimestamp: Date?
     private var lastCapacitySampleTimestamp: Date?
+    private var lastMemorySampleTimestamp: Date?
     private var timer: AnyCancellable?
     private let diskSampleInterval: TimeInterval = 2.0
     private let capacitySampleInterval: TimeInterval = 15.0
+    private let memorySampleInterval: TimeInterval = 2.0
     private static let capacityFormatter: ByteCountFormatter = {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
@@ -54,6 +62,16 @@ final class NetworkViewModel: ObservableObject {
         formatter.includesCount = true
         formatter.isAdaptive = true
         formatter.allowedUnits = [.useTB, .useGB, .useMB]
+        return formatter
+    }()
+
+    private static let memoryFormatter: ByteCountFormatter = {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .memory
+        formatter.includesUnit = true
+        formatter.includesCount = true
+        formatter.isAdaptive = true
+        formatter.allowedUnits = [.useGB, .useMB]
         return formatter
     }()
 
@@ -91,6 +109,7 @@ final class NetworkViewModel: ObservableObject {
     private func updateSpeed() {
         let currentStats = monitor.getNetworkUsage()
         let currentTimestamp = Date()
+        let currentCPUTicks = systemMonitor.currentCPUTicks()
 
         if
             let lastStats = self.lastStats,
@@ -117,6 +136,15 @@ final class NetworkViewModel: ObservableObject {
 
             setIfChanged(&self.downloadSpeed, formatSpeed(downBps))
             setIfChanged(&self.uploadSpeed, formatSpeed(upBps))
+        }
+
+        if let currentCPUTicks {
+            if let lastCPUTicks = self.lastCPUTicks,
+                let cpuPercent = systemMonitor.cpuUsagePercent(previous: lastCPUTicks, current: currentCPUTicks)
+            {
+                setIfChanged(&self.cpuUsage, String(format: "%.0f%%", cpuPercent))
+            }
+            self.lastCPUTicks = currentCPUTicks
         }
 
         if shouldSampleDisk(at: currentTimestamp) {
@@ -158,6 +186,13 @@ final class NetworkViewModel: ObservableObject {
             self.lastCapacitySampleTimestamp = currentTimestamp
         }
 
+        if shouldSampleMemory(at: currentTimestamp), let memorySample = systemMonitor.currentMemorySample() {
+            setIfChanged(&self.memoryUsage, String(format: "%.0f%%", memorySample.usedRatio * 100))
+            setIfChanged(&self.memoryUsed, formatMemory(memorySample.usedBytes))
+            setIfChanged(&self.memoryTotal, formatMemory(memorySample.totalBytes))
+            self.lastMemorySampleTimestamp = currentTimestamp
+        }
+
         self.lastStats = currentStats
         self.lastTimestamp = currentTimestamp
     }
@@ -184,6 +219,10 @@ final class NetworkViewModel: ObservableObject {
         Self.capacityFormatter.string(fromByteCount: Int64(bytes))
     }
 
+    private func formatMemory(_ bytes: UInt64) -> String {
+        Self.memoryFormatter.string(fromByteCount: Int64(bytes))
+    }
+
     private func shouldSampleDisk(at timestamp: Date) -> Bool {
         guard let lastDiskSampleTimestamp else { return true }
         return timestamp.timeIntervalSince(lastDiskSampleTimestamp) >= diskSampleInterval
@@ -192,6 +231,11 @@ final class NetworkViewModel: ObservableObject {
     private func shouldSampleCapacity(at timestamp: Date) -> Bool {
         guard let lastCapacitySampleTimestamp else { return true }
         return timestamp.timeIntervalSince(lastCapacitySampleTimestamp) >= capacitySampleInterval
+    }
+
+    private func shouldSampleMemory(at timestamp: Date) -> Bool {
+        guard let lastMemorySampleTimestamp else { return true }
+        return timestamp.timeIntervalSince(lastMemorySampleTimestamp) >= memorySampleInterval
     }
 
     private func setIfChanged(_ value: inout String, _ newValue: String) {

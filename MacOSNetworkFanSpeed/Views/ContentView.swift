@@ -14,12 +14,46 @@ struct ContentView: View {
     private let defaultWindowSize = CGSize(width: 1230, height: 650)
     private let minimumWindowSize = CGSize(width: 1040, height: 620)
     private let leftColumnMinWidth: CGFloat = 320
-    private let thermalColumnMinWidth: CGFloat = 440
-    private let settingsColumnMinWidth: CGFloat = 280
+    private let thermalColumnMinWidth: CGFloat = 400
+    private let settingsColumnMinWidth: CGFloat = 460
     private let dividerWidth: CGFloat = 2
 
     private var minimumContentWidth: CGFloat {
         leftColumnMinWidth + thermalColumnMinWidth + settingsColumnMinWidth + dividerWidth
+    }
+
+    private var dashboardBackground: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(NSColor.windowBackgroundColor),
+                    Color(NSColor.controlBackgroundColor).opacity(0.96),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            RadialGradient(
+                colors: [
+                    Color.blue.opacity(0.12),
+                    .clear,
+                ],
+                center: .topLeading,
+                startRadius: 10,
+                endRadius: 520
+            )
+
+            RadialGradient(
+                colors: [
+                    Color.indigo.opacity(0.08),
+                    .clear,
+                ],
+                center: .bottomTrailing,
+                startRadius: 40,
+                endRadius: 640
+            )
+        }
+        .ignoresSafeArea()
     }
 
     var body: some View {
@@ -88,6 +122,21 @@ struct ContentView: View {
                                 compact: true
                             )
                             DashboardMetricCard(
+                                title: AppStrings.cpuUsage,
+                                value: networkViewModel.cpuUsage,
+                                icon: AppImages.cpuUsage,
+                                color: .red,
+                                compact: true
+                            )
+                            DashboardMetricCard(
+                                title: AppStrings.memory,
+                                value: networkViewModel.memoryUsage,
+                                icon: AppImages.memory,
+                                color: .brown,
+                                subtitle: "\(networkViewModel.memoryUsed) / \(networkViewModel.memoryTotal)",
+                                compact: true
+                            )
+                            DashboardMetricCard(
                                 title: AppStrings.fan,
                                 value: fanViewModel.primaryFanRPM,
                                 icon: AppImages.fan,
@@ -125,7 +174,11 @@ struct ContentView: View {
                     Divider()
 
                     VStack(spacing: 0) {
-                        ThermalDetailView(fanViewModel: fanViewModel, isEmbedded: true)
+                        ThermalDetailView(
+                            fanViewModel: fanViewModel,
+                            isEmbedded: true,
+                            layoutWidth: columns.thermalWidth
+                        )
                     }
                     .padding(.horizontal, 10)
                     .frame(width: columns.thermalWidth)
@@ -139,7 +192,8 @@ struct ContentView: View {
                                 fanViewModel: fanViewModel,
                                 launchAtLoginManager: launchAtLoginManager,
                                 showWindowButton: false,
-                                preferredWidth: nil
+                                preferredWidth: nil,
+                                layoutWidth: columns.settingsWidth
                             )
                         }
                     }
@@ -150,6 +204,7 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: minimumWindowSize.width, minHeight: minimumWindowSize.height)
+        .background(dashboardBackground)
         .onAppear {
             NSApp.setActivationPolicy(.regular)
             NSApp.unhide(nil)
@@ -181,8 +236,8 @@ struct ContentView: View {
     ) {
         let clampedWidth = max(availableWidth, minimumContentWidth)
 
-        let leftWidth = max(leftColumnMinWidth, min(420, clampedWidth * 0.30))
-        let settingsWidth = max(settingsColumnMinWidth, min(360, clampedWidth * 0.24))
+        let leftWidth = max(leftColumnMinWidth, min(410, clampedWidth * 0.29))
+        let settingsWidth = max(settingsColumnMinWidth, min(760, clampedWidth * 0.42))
         let thermalWidth = max(
             thermalColumnMinWidth,
             clampedWidth - leftWidth - settingsWidth - dividerWidth

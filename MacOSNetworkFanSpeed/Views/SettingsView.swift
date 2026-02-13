@@ -3,6 +3,7 @@
 //  MacOSNetworkFanSpeed
 //
 //  Created by Bandan.K on 29/01/26.
+//  Modified for Read-Only monitoring on 14/02/26.
 //
 
 import SwiftUI
@@ -14,6 +15,7 @@ struct SettingsView: View {
     @ObservedObject var launchAtLoginManager: LaunchAtLoginManager
     var showWindowButton: Bool = true
     var preferredWidth: CGFloat? = 280
+    var layoutWidth: CGFloat? = nil
     @Environment(\.openWindow) private var openWindow
 
     private var sortedFans: [FanInfo] {
@@ -26,177 +28,196 @@ struct SettingsView: View {
         return total / sortedFans.count
     }
 
+    private var usesTwoColumnCards: Bool {
+        preferredWidth == nil
+    }
+
+    private var cardColumnCount: Int {
+        guard usesTwoColumnCards else { return 1 }
+        let available = max((layoutWidth ?? 0) - 32, 0)
+        if available >= 760 { return 3 }
+        if available >= 460 { return 2 }
+        return 1
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             headerSection
 
-            SettingsCard(title: "Live Throughput", symbol: AppImages.gauge, tint: .blue) {
-                VStack(spacing: 8) {
-                    StatRow(
-                        icon: AppImages.download,
-                        label: AppStrings.download,
-                        value: networkViewModel.downloadSpeed,
-                        color: .blue
-                    )
-                    StatRow(
-                        icon: AppImages.upload,
-                        label: AppStrings.upload,
-                        value: networkViewModel.uploadSpeed,
-                        color: .green
-                    )
-                    StatRow(
-                        icon: AppImages.diskRead,
-                        label: AppStrings.diskRead,
-                        value: networkViewModel.diskReadSpeed,
-                        color: .teal
-                    )
-                    StatRow(
-                        icon: AppImages.diskWrite,
-                        label: AppStrings.diskWrite,
-                        value: networkViewModel.diskWriteSpeed,
-                        color: .mint
-                    )
-                    StatRow(
-                        icon: AppImages.diskCapacity,
-                        label: AppStrings.diskCapacity,
-                        value: "\(networkViewModel.diskFreeCapacity) / \(networkViewModel.diskTotalCapacity)",
-                        color: .cyan
-                    )
-                    Divider().opacity(0.22)
-                    StatRow(
-                        icon: AppImages.temperature,
-                        label: AppStrings.cpuTemp,
-                        value: fanViewModel.primaryTemp,
-                        color: .orange
-                    )
-                }
-            }
-
-            SettingsCard(title: "Fan RPM Monitor", symbol: AppImages.fan, tint: .indigo) {
-                if sortedFans.isEmpty {
-                    Text(AppStrings.noData)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, 8)
-                } else {
-                    HStack(spacing: 10) {
-                        FanBadge(title: "Fans", value: "\(sortedFans.count)")
-                        FanBadge(title: "Average", value: "\(averageFanRPM) \(AppStrings.rpmUnit)")
-                    }
-
+            WaterfallColumnsLayout(columns: cardColumnCount, spacing: 10) {
+                SettingsCard(title: "Live Throughput", symbol: AppImages.gauge, tint: .blue) {
                     VStack(spacing: 8) {
-                        ForEach(sortedFans) { fan in
-                            FanSpeedRow(fan: fan)
+                        StatRow(
+                            icon: AppImages.download,
+                            label: AppStrings.download,
+                            value: networkViewModel.downloadSpeed,
+                            color: .blue
+                        )
+                        StatRow(
+                            icon: AppImages.upload,
+                            label: AppStrings.upload,
+                            value: networkViewModel.uploadSpeed,
+                            color: .green
+                        )
+                        StatRow(
+                            icon: AppImages.diskRead,
+                            label: AppStrings.diskRead,
+                            value: networkViewModel.diskReadSpeed,
+                            color: .teal
+                        )
+                        StatRow(
+                            icon: AppImages.diskWrite,
+                            label: AppStrings.diskWrite,
+                            value: networkViewModel.diskWriteSpeed,
+                            color: .mint
+                        )
+                        StatRow(
+                            icon: AppImages.diskCapacity,
+                            label: AppStrings.diskCapacity,
+                            value: "\(networkViewModel.diskFreeCapacity) / \(networkViewModel.diskTotalCapacity)",
+                            color: .cyan
+                        )
+                        StatRow(
+                            icon: AppImages.cpuUsage,
+                            label: AppStrings.cpuUsage,
+                            value: networkViewModel.cpuUsage,
+                            color: .red
+                        )
+                        StatRow(
+                            icon: AppImages.memory,
+                            label: AppStrings.memory,
+                            value: "\(networkViewModel.memoryUsage) (\(networkViewModel.memoryUsed)/\(networkViewModel.memoryTotal))",
+                            color: .brown
+                        )
+                        Divider().opacity(0.22)
+                        StatRow(
+                            icon: AppImages.temperature,
+                            label: AppStrings.cpuTemp,
+                            value: fanViewModel.primaryTemp,
+                            color: .orange
+                        )
+                    }
+                }
+
+                SettingsCard(title: "Fan RPM Monitor", symbol: AppImages.fan, tint: .indigo) {
+                    if sortedFans.isEmpty {
+                        Text(AppStrings.noData)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 8)
+                    } else {
+                        HStack(spacing: 10) {
+                            FanBadge(title: "Fans", value: "\(sortedFans.count)")
+                            FanBadge(title: "Average", value: "\(averageFanRPM) \(AppStrings.rpmUnit)")
+                        }
+
+                        VStack(spacing: 8) {
+                            ForEach(sortedFans) { fan in
+                                FanSpeedRow(fan: fan)
+                            }
                         }
                     }
                 }
-            }
 
-            SettingsCard(title: AppStrings.menuBarMetrics, symbol: AppImages.checklist, tint: .cyan) {
-                LazyVGrid(
-                    columns: [
-                        GridItem(.flexible(), spacing: 8),
-                        GridItem(.flexible(), spacing: 8),
-                    ],
-                    spacing: 8
-                ) {
-                    ForEach(MetricType.allCases) { metric in
-                        metricChip(metric)
+                SettingsCard(title: AppStrings.menuBarMetrics, symbol: AppImages.checklist, tint: .cyan) {
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.flexible(), spacing: 8),
+                            GridItem(.flexible(), spacing: 8),
+                        ],
+                        spacing: 8
+                    ) {
+                        ForEach(MetricType.allCases) { metric in
+                            metricChip(metric)
+                        }
                     }
                 }
-            }
 
-            SettingsCard(title: AppStrings.refreshRate, symbol: AppImages.refresh, tint: .mint) {
-                HStack {
-                    Text("Sampling")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Picker("", selection: $networkViewModel.refreshInterval) {
-                        Text("0.5s").tag(0.5)
-                        Text("1.0s").tag(1.0)
-                        Text("2.0s").tag(2.0)
-                        Text("5.0s").tag(5.0)
+                SettingsCard(title: AppStrings.launchAtLogin, symbol: AppImages.launchAtLogin, tint: .blue) {
+                    Toggle(
+                        isOn: Binding(
+                            get: { launchAtLoginManager.isEnabled },
+                            set: { launchAtLoginManager.setEnabled($0) }
+                        )
+                    ) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(AppStrings.launchAtLogin)
+                                .font(.system(size: 11, weight: .semibold))
+                            Text(AppStrings.launchAtLoginDescription)
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
                     }
-                    .pickerStyle(.menu)
-                    .frame(width: 78)
-                }
-            }
+                    .toggleStyle(.switch)
 
-            SettingsCard(title: AppStrings.launchAtLogin, symbol: AppImages.launchAtLogin, tint: .blue) {
-                Toggle(
-                    isOn: Binding(
-                        get: { launchAtLoginManager.isEnabled },
-                        set: { launchAtLoginManager.setEnabled($0) }
-                    )
-                ) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(AppStrings.launchAtLogin)
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(launchAtLoginManager.statusIsWarning ? Color.orange : Color.green)
+                            .frame(width: 7, height: 7)
+                        Text(launchAtLoginManager.statusText)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(launchAtLoginManager.statusIsWarning ? .orange : .secondary)
+                        Spacer()
+                        Button(AppStrings.launchAtLoginRefresh) {
+                            launchAtLoginManager.refreshStatus()
+                        }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.blue)
+                    }
+                }
+
+                SettingsCard(title: AppStrings.refreshRate, symbol: AppImages.refresh, tint: .mint) {
+                    HStack {
+                        Text("Sampling")
                             .font(.system(size: 11, weight: .semibold))
-                        Text(AppStrings.launchAtLoginDescription)
-                            .font(.system(size: 10, weight: .medium))
                             .foregroundColor(.secondary)
+                        Spacer()
+                        Picker("", selection: $networkViewModel.refreshInterval) {
+                            Text("0.5s").tag(0.5)
+                            Text("1.0s").tag(1.0)
+                            Text("2.0s").tag(2.0)
+                            Text("5.0s").tag(5.0)
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 78)
                     }
                 }
-                .toggleStyle(.switch)
 
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(launchAtLoginManager.statusIsWarning ? Color.orange : Color.green)
-                        .frame(width: 7, height: 7)
-                    Text(launchAtLoginManager.statusText)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(launchAtLoginManager.statusIsWarning ? .orange : .secondary)
-                    Spacer()
-                    Button(AppStrings.launchAtLoginRefresh) {
-                        launchAtLoginManager.refreshStatus()
+                SettingsCard(
+                    title: AppStrings.hardwareConnection,
+                    symbol: AppImages.cpu,
+                    tint: SMCService.shared.isConnected ? .blue : .red
+                ) {
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(SMCService.shared.isConnected ? Color.blue : Color.red)
+                            .frame(width: 8, height: 8)
+                        Text(
+                            SMCService.shared.isConnected
+                                ? AppStrings.hardwareConnected : AppStrings.hardwareDisconnected
+                        )
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(SMCService.shared.isConnected ? .primary : .red)
                     }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.blue)
-                }
 
-                if let error = launchAtLoginManager.lastError, !error.isEmpty {
-                    Text("\(AppStrings.launchAtLoginErrorPrefix) \(error)")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(.red.opacity(0.9))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
+                    if !SMCService.shared.isConnected {
+                        Text(SMCService.shared.lastError ?? AppStrings.unknownConnectionError)
+                            .font(.system(size: 10))
+                            .foregroundColor(.red.opacity(0.85))
+                            .fixedSize(horizontal: false, vertical: true)
 
-            SettingsCard(
-                title: AppStrings.hardwareConnection,
-                symbol: AppImages.cpu,
-                tint: SMCService.shared.isConnected ? .blue : .red
-            ) {
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(SMCService.shared.isConnected ? Color.blue : Color.red)
-                        .frame(width: 8, height: 8)
-                    Text(
-                        SMCService.shared.isConnected
-                            ? AppStrings.hardwareConnected : AppStrings.hardwareDisconnected
-                    )
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(SMCService.shared.isConnected ? .primary : .red)
-                }
-
-                if !SMCService.shared.isConnected {
-                    Text(SMCService.shared.lastError ?? AppStrings.unknownConnectionError)
-                        .font(.system(size: 10))
-                        .foregroundColor(.red.opacity(0.85))
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Button {
-                        SMCService.shared.reconnect()
-                    } label: {
-                        Text(AppStrings.retryConnection)
-                            .font(.system(size: 10, weight: .bold))
-                            .frame(maxWidth: .infinity)
+                        Button {
+                            SMCService.shared.reconnect()
+                        } label: {
+                            Text(AppStrings.retryConnection)
+                                .font(.system(size: 10, weight: .bold))
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
                 }
             }
 
@@ -283,7 +304,6 @@ struct SettingsView: View {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
 
-        // Close menu bar popover if it's the key window.
         NSApp.keyWindow?.close()
 
         if let window = NSApp.windows.first(where: {
@@ -304,7 +324,7 @@ private struct SettingsCard<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 11) {
             HStack(spacing: 7) {
                 Image(systemName: symbol)
                     .foregroundColor(tint)
@@ -318,25 +338,14 @@ private struct SettingsCard<Content: View>: View {
 
             content
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(NSColor.controlBackgroundColor).opacity(0.65),
-                            Color(NSColor.windowBackgroundColor).opacity(0.6),
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .liquidGlassCard(
+            cornerRadius: 14,
+            tint: tint,
+            style: .regular,
+            shadowOpacity: 0.09
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(tint.opacity(0.2), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
     }
 }
 
@@ -390,9 +399,9 @@ private struct FanSpeedRow: View {
                 .tint(.indigo.opacity(0.92))
 
             HStack {
-                Text("MIN \(fan.minRPM)")
+                Text("CURRENT")
                 Spacer()
-                Text("MAX \(fan.maxRPM)")
+                Text("RPM")
             }
             .font(.system(size: 9, weight: .semibold, design: .monospaced))
             .foregroundColor(.secondary)
