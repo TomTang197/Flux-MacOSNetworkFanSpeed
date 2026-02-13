@@ -3,6 +3,7 @@
 //  MacOSNetworkFanSpeed
 //
 //  Created by Bandan.K on 29/01/26.
+//  Modified for Mixed Layout (Stacked/Single) on 14/02/26.
 //
 
 import SwiftUI
@@ -31,43 +32,45 @@ struct MenuBarView: View {
     private struct MetricColumn {
         let top: MetricRow?
         let bottom: MetricRow?
+        let isPaired: Bool
     }
 
     private func groupedColumns() -> [MetricColumn] {
         let enabled = networkViewModel.enabledMetrics
         var columns: [MetricColumn] = []
 
+        // --- Paired Metrics (Stacked) ---
         if let networkColumn = makePairedColumn(top: .download, bottom: .upload, enabled: enabled) {
             columns.append(networkColumn)
         }
         if let diskColumn = makePairedColumn(top: .diskRead, bottom: .diskWrite, enabled: enabled) {
             columns.append(diskColumn)
         }
-        if let computeColumn = makePairedColumn(top: .cpu, bottom: .memory, enabled: enabled) {
-            columns.append(computeColumn)
-        }
-        if let thermalColumn = makePairedColumn(top: .temperature, bottom: .fan, enabled: enabled) {
-            columns.append(thermalColumn)
+
+        // --- Single Metrics (Horizontal/Centered) ---
+        let singles: [MetricType] = [.cpu, .memory, .temperature, .fan]
+        for metric in singles {
+            if enabled.contains(metric) {
+                columns.append(MetricColumn(top: metricRow(for: metric), bottom: nil, isPaired: false))
+            }
         }
 
         return columns
     }
 
-    private func makePairedColumn(top: MetricType, bottom: MetricType, enabled: Set<MetricType>) -> MetricColumn?
-    {
+    private func makePairedColumn(top: MetricType, bottom: MetricType, enabled: Set<MetricType>) -> MetricColumn? {
         let topEnabled = enabled.contains(top)
         let bottomEnabled = enabled.contains(bottom)
         guard topEnabled || bottomEnabled else { return nil }
 
+        // If both enabled, they are paired (stacked)
         if topEnabled && bottomEnabled {
-            return MetricColumn(top: metricRow(for: top), bottom: metricRow(for: bottom))
+            return MetricColumn(top: metricRow(for: top), bottom: metricRow(for: bottom), isPaired: true)
         }
 
-        if topEnabled {
-            return MetricColumn(top: metricRow(for: top), bottom: nil)
-        }
-
-        return MetricColumn(top: metricRow(for: bottom), bottom: nil)
+        // If only one enabled, it defaults to a single centered layout
+        let activeMetric = topEnabled ? top : bottom
+        return MetricColumn(top: metricRow(for: activeMetric), bottom: nil, isPaired: false)
     }
 
     private func metricRow(for metric: MetricType) -> MetricRow {
@@ -88,54 +91,54 @@ struct MenuBarView: View {
         let rowHeight: CGFloat = 8
         let rowSpacing: CGFloat = 2
         let verticalPadding: CGFloat = 1
-        let columnWidth: CGFloat = 66
+        let height = rowHeight * 2 + rowSpacing + verticalPadding * 2
+        
+        let columnWidthStacked: CGFloat = 66
+        let columnWidthSingle: CGFloat = 58 // Slightly narrower for single items
         let dividerSpacing: CGFloat = 6
         let iconSlotWidth: CGFloat = 10
         let iconTextSpacing: CGFloat = 2
-        let textWidth = columnWidth - iconSlotWidth - iconTextSpacing
-        let height = rowHeight * 2 + rowSpacing + verticalPadding * 2
-        let totalWidth = CGFloat(columns.count) * columnWidth + CGFloat(max(columns.count - 1, 0)) * dividerSpacing
+        
+        // Calculate total width based on mix of column types
+        var totalWidth: CGFloat = 0
+        for (idx, col) in columns.enumerated() {
+            totalWidth += col.isPaired ? columnWidthStacked : columnWidthSingle
+            if idx < columns.count - 1 {
+                totalWidth += dividerSpacing
+            }
+        }
 
         let finalImage = NSImage(size: NSSize(width: totalWidth, height: height))
         finalImage.lockFocus()
 
+        var currentX: CGFloat = 0
         for (index, column) in columns.enumerated() {
-            let xOrigin = CGFloat(index) * (columnWidth + dividerSpacing)
-            let topY = verticalPadding + rowHeight + rowSpacing
-            let bottomY = verticalPadding
+            let colWidth = column.isPaired ? columnWidthStacked : columnWidthSingle
+            let textWidth = colWidth - iconSlotWidth - iconTextSpacing
 
-            drawRow(
-                column.top,
-                xOrigin: xOrigin,
-                yOrigin: topY,
-                rowHeight: rowHeight,
-                iconConfig: iconConfig,
-                iconSlotWidth: iconSlotWidth,
-                iconTextSpacing: iconTextSpacing,
-                textWidth: textWidth,
-                textAttributes: textAttributes
-            )
-            drawRow(
-                column.bottom,
-                xOrigin: xOrigin,
-                yOrigin: bottomY,
-                rowHeight: rowHeight,
-                iconConfig: iconConfig,
-                iconSlotWidth: iconSlotWidth,
-                iconTextSpacing: iconTextSpacing,
-                textWidth: textWidth,
-                textAttributes: textAttributes
-            )
+            if column.isPaired {
+                // Draw Stacked
+                let topY = verticalPadding + rowHeight + rowSpacing
+                let bottomY = verticalPadding
+                drawRow(column.top, xOrigin: currentX, yOrigin: topY, rowHeight: rowHeight, iconConfig: iconConfig, iconSlotWidth: iconSlotWidth, iconTextSpacing: iconTextSpacing, textWidth: textWidth, textAttributes: textAttributes)
+                drawRow(column.bottom, xOrigin: currentX, yOrigin: bottomY, rowHeight: rowHeight, iconConfig: iconConfig, iconSlotWidth: iconSlotWidth, iconTextSpacing: iconTextSpacing, textWidth: textWidth, textAttributes: textAttributes)
+            } else {
+                // Draw Single Centered
+                let centerY = (height - rowHeight) / 2
+                drawRow(column.top, xOrigin: currentX, yOrigin: centerY, rowHeight: rowHeight, iconConfig: iconConfig, iconSlotWidth: iconSlotWidth, iconTextSpacing: iconTextSpacing, textWidth: textWidth, textAttributes: textAttributes)
+            }
 
             if index < columns.count - 1 {
-                let dividerX = xOrigin + columnWidth + dividerSpacing / 2
+                let dividerX = currentX + colWidth + dividerSpacing / 2
                 let path = NSBezierPath()
-                path.move(to: NSPoint(x: dividerX, y: verticalPadding))
-                path.line(to: NSPoint(x: dividerX, y: height - verticalPadding))
-                NSColor.labelColor.withAlphaComponent(0.25).setStroke()
+                path.move(to: NSPoint(x: dividerX, y: verticalPadding + 2))
+                path.line(to: NSPoint(x: dividerX, y: height - verticalPadding - 2))
+                NSColor.labelColor.withAlphaComponent(0.2).setStroke()
                 path.lineWidth = 1
                 path.stroke()
             }
+            
+            currentX += colWidth + dividerSpacing
         }
 
         finalImage.unlockFocus()
@@ -197,13 +200,6 @@ struct MenuBarView: View {
         {
             return image
         }
-
-        if let fallback = NSImage(systemSymbolName: "questionmark.circle", accessibilityDescription: nil)?
-            .withSymbolConfiguration(config)
-        {
-            return fallback
-        }
-
         return NSImage(size: NSSize(width: 8, height: 8))
     }
 
