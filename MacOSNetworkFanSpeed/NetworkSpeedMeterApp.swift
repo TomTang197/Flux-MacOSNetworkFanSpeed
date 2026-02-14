@@ -29,11 +29,10 @@ struct NetworkSpeedMeterApp: App {
         .defaultLaunchBehavior(.suppressed)
 
         MenuBarExtra {
-            SettingsView(
+            MenuBarDashboardView(
                 networkViewModel: networkViewModel,
                 fanViewModel: fanViewModel,
-                launchAtLoginManager: launchAtLoginManager,
-                showWindowButton: true
+                launchAtLoginManager: launchAtLoginManager
             )
         } label: {
             MenuBarView(networkViewModel: networkViewModel, fanViewModel: fanViewModel)

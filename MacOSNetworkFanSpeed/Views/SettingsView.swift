@@ -72,6 +72,30 @@ struct SettingsView: View {
                             color: .mint
                         )
                         StatRow(
+                            icon: AppImages.download,
+                            label: "\(AppStrings.download) \(AppStrings.total)",
+                            value: networkViewModel.downloadTotal,
+                            color: .blue
+                        )
+                        StatRow(
+                            icon: AppImages.upload,
+                            label: "\(AppStrings.upload) \(AppStrings.total)",
+                            value: networkViewModel.uploadTotal,
+                            color: .green
+                        )
+                        StatRow(
+                            icon: AppImages.diskRead,
+                            label: "\(AppStrings.diskRead) \(AppStrings.total)",
+                            value: networkViewModel.diskReadTotal,
+                            color: .teal
+                        )
+                        StatRow(
+                            icon: AppImages.diskWrite,
+                            label: "\(AppStrings.diskWrite) \(AppStrings.total)",
+                            value: networkViewModel.diskWriteTotal,
+                            color: .mint
+                        )
+                        StatRow(
                             icon: AppImages.diskCapacity,
                             label: AppStrings.diskCapacity,
                             value: "\(networkViewModel.diskFreeCapacity) / \(networkViewModel.diskTotalCapacity)",

@@ -1,0 +1,249 @@
+{
+  "" : {
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MacOSNetworkFanSpeed-primary.dia",
+    "emit-module-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MacOSNetworkFanSpeed-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MacOSNetworkFanSpeed-primary-emit-module.dia",
+    "pch" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MacOSNetworkFanSpeed-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MacOSNetworkFanSpeed-primary.swiftdeps"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Helpers/AppConstants.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/AppConstants.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/AppConstants.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/AppConstants.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/AppConstants.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/AppConstants.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/AppConstants.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/AppConstants.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/AppConstants~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Models/FanStats.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanStats.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanStats.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanStats.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanStats.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanStats.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanStats.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanStats.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanStats~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Models/MetricType.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MetricType.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MetricType.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MetricType.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MetricType.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MetricType.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MetricType.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MetricType.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MetricType~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Models/SMCSensorKeys.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCSensorKeys.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCSensorKeys.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCSensorKeys.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCSensorKeys.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCSensorKeys.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCSensorKeys.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCSensorKeys.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCSensorKeys~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/NetworkSpeedMeterApp.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkSpeedMeterApp.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkSpeedMeterApp.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkSpeedMeterApp.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkSpeedMeterApp.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkSpeedMeterApp.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkSpeedMeterApp.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkSpeedMeterApp.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkSpeedMeterApp~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Services/DiskMonitor.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DiskMonitor.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DiskMonitor.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DiskMonitor.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DiskMonitor.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DiskMonitor.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DiskMonitor.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DiskMonitor.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DiskMonitor~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Services/FanControlClient.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanControlClient.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanControlClient.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanControlClient.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanControlClient.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanControlClient.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanControlClient.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanControlClient.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanControlClient~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Services/FanMonitor.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanMonitor.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanMonitor.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanMonitor.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanMonitor.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanMonitor.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanMonitor.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanMonitor.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanMonitor~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Services/LaunchAtLoginManager.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/LaunchAtLoginManager.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/LaunchAtLoginManager.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/LaunchAtLoginManager.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/LaunchAtLoginManager.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/LaunchAtLoginManager.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/LaunchAtLoginManager.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/LaunchAtLoginManager.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/LaunchAtLoginManager~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Services/NetworkMonitor.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkMonitor.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkMonitor.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkMonitor.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkMonitor.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkMonitor.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkMonitor.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkMonitor.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkMonitor~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Services/PrivilegedHelperInstaller.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/PrivilegedHelperInstaller.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/PrivilegedHelperInstaller.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/PrivilegedHelperInstaller.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/PrivilegedHelperInstaller.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/PrivilegedHelperInstaller.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/PrivilegedHelperInstaller.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/PrivilegedHelperInstaller.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/PrivilegedHelperInstaller~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Services/SMCService.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCService.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCService.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCService.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCService.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCService.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCService.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCService.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCService~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Services/SystemMonitor.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SystemMonitor.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SystemMonitor.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SystemMonitor.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SystemMonitor.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SystemMonitor.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SystemMonitor.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SystemMonitor.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SystemMonitor~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/ViewModels/FanViewModel.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanViewModel.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanViewModel.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanViewModel.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanViewModel.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanViewModel.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanViewModel.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanViewModel.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanViewModel~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/ViewModels/NetworkViewModel.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkViewModel.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkViewModel.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkViewModel.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkViewModel.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkViewModel.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkViewModel.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkViewModel.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/NetworkViewModel~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Views/ContentView.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/ContentView.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/ContentView.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/ContentView.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/ContentView.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/ContentView~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Views/DashboardMetricCard.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DashboardMetricCard.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DashboardMetricCard.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DashboardMetricCard.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DashboardMetricCard.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DashboardMetricCard.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DashboardMetricCard.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DashboardMetricCard.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DashboardMetricCard~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Views/LiquidGlassStyle.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/LiquidGlassStyle.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/LiquidGlassStyle.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/LiquidGlassStyle.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/LiquidGlassStyle.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/LiquidGlassStyle.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/LiquidGlassStyle.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/LiquidGlassStyle.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/LiquidGlassStyle~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Views/MenuBarDashboardView.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MenuBarDashboardView.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MenuBarDashboardView.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MenuBarDashboardView.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MenuBarDashboardView.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MenuBarDashboardView.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MenuBarDashboardView.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MenuBarDashboardView.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MenuBarDashboardView~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Views/MenuBarView.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MenuBarView.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MenuBarView.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MenuBarView.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MenuBarView.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MenuBarView.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MenuBarView.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MenuBarView.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/MenuBarView~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Views/SettingsView.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SettingsView.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SettingsView.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SettingsView.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SettingsView.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SettingsView.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SettingsView.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SettingsView.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SettingsView~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Views/ThermalDetailView.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/ThermalDetailView.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/ThermalDetailView.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/ThermalDetailView.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/ThermalDetailView.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/ThermalDetailView.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/ThermalDetailView.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/ThermalDetailView.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/ThermalDetailView~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Views/WaterfallColumnsLayout.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/WaterfallColumnsLayout.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/WaterfallColumnsLayout.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/WaterfallColumnsLayout.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/WaterfallColumnsLayout.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/WaterfallColumnsLayout.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/WaterfallColumnsLayout.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/WaterfallColumnsLayout.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/WaterfallColumnsLayout~partial.swiftmodule"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  }
+}

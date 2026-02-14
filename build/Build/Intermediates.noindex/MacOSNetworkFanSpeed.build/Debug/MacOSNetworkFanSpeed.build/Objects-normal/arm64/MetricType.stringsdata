@@ -1,0 +1,72 @@
+{
+  "source": "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Models/MetricType.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%@",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 37
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 39
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 41
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 43
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 45
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 47
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 49
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 51
+        }
+      }
+    ]
+  },
+  "version": 1
+}

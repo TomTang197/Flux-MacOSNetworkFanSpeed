@@ -1,0 +1,23 @@
+{
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Services/PrivilegedHelperInstaller.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/PrivilegedHelperInstaller.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/PrivilegedHelperInstaller.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/PrivilegedHelperInstaller.dia",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/PrivilegedHelperInstaller.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/PrivilegedHelperInstaller.swiftdeps"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Services/SMCService.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCService.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCService.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCService.dia",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCService.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCService.swiftdeps"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Services/SystemMonitor.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SystemMonitor.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SystemMonitor.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SystemMonitor.dia",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SystemMonitor.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SystemMonitor.swiftdeps"
+  }
+}

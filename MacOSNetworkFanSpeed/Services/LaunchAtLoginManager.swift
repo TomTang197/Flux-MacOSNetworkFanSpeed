@@ -15,7 +15,8 @@ final class LaunchAtLoginManager: ObservableObject {
     @Published private(set) var lastError: String?
 
     init() {
-        refreshStatus()
+        // Querying SMAppService status on every app launch can trigger noisy
+        // system permission logs on newer macOS builds. We only refresh on demand.
     }
 
     func setEnabled(_ enabled: Bool) {

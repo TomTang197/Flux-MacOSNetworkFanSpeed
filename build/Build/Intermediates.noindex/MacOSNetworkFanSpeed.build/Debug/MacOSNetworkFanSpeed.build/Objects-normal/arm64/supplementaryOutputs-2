@@ -1,0 +1,23 @@
+{
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Models/SMCSensorKeys.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCSensorKeys.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCSensorKeys.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCSensorKeys.dia",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCSensorKeys.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/SMCSensorKeys.swiftdeps"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Services/DiskMonitor.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DiskMonitor.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DiskMonitor.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DiskMonitor.dia",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DiskMonitor.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/DiskMonitor.swiftdeps"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Services/FanControlClient.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanControlClient.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanControlClient.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanControlClient.dia",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanControlClient.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/build/Build/Intermediates.noindex/MacOSNetworkFanSpeed.build/Debug/MacOSNetworkFanSpeed.build/Objects-normal/arm64/FanControlClient.swiftdeps"
+  }
+}

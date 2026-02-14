@@ -1,0 +1,16 @@
+{
+  "source": "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Views/DashboardMetricCard.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": " ",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 59
+        }
+      }
+    ]
+  },
+  "version": 1
+}

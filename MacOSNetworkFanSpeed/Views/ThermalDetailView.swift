@@ -216,5 +216,6 @@ struct SensorCategoryColumn: View {
             }
         }
         .frame(minWidth: 180, maxWidth: .infinity, alignment: .topLeading)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }

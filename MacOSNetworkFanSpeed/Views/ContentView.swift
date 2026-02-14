@@ -98,6 +98,7 @@ struct ContentView: View {
                                 value: networkViewModel.downloadSpeed,
                                 icon: AppImages.download,
                                 color: .blue,
+                                subtitle: "\(AppStrings.total): \(networkViewModel.downloadTotal)",
                                 compact: true
                             )
                             DashboardMetricCard(
@@ -105,6 +106,7 @@ struct ContentView: View {
                                 value: networkViewModel.uploadSpeed,
                                 icon: AppImages.upload,
                                 color: .green,
+                                subtitle: "\(AppStrings.total): \(networkViewModel.uploadTotal)",
                                 compact: true
                             )
                             DashboardMetricCard(
@@ -112,6 +114,7 @@ struct ContentView: View {
                                 value: networkViewModel.diskReadSpeed,
                                 icon: AppImages.diskRead,
                                 color: .teal,
+                                subtitle: "\(AppStrings.total): \(networkViewModel.diskReadTotal)",
                                 compact: true
                             )
                             DashboardMetricCard(
@@ -119,6 +122,7 @@ struct ContentView: View {
                                 value: networkViewModel.diskWriteSpeed,
                                 icon: AppImages.diskWrite,
                                 color: .mint,
+                                subtitle: "\(AppStrings.total): \(networkViewModel.diskWriteTotal)",
                                 compact: true
                             )
                             DashboardMetricCard(
@@ -254,7 +258,7 @@ struct ContentView: View {
     private func setupWindow(_ window: NSWindow) {
         var frame = window.frame
         frame.size = defaultWindowSize
-        window.setFrame(frame, display: true, animate: true)
+        window.setFrame(frame, display: true, animate: false)
 
         window.minSize = minimumWindowSize
         window.maxSize = NSSize(

@@ -1,0 +1,16 @@
+{
+  "source": "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/MacOSNetworkFanSpeed/Views/ThermalDetailView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 56
+        }
+      }
+    ]
+  },
+  "version": 1
+}

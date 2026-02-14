@@ -7,7 +7,6 @@
 
 import Foundation
 import IOKit
-import Security
 import os.log
 
 // MARK: - XPC Protocol (helper side)
@@ -431,68 +430,32 @@ final class ServiceDelegate: NSObject, NSXPCListenerDelegate {
         subsystem: "com.bandan.me.MacOSNetworkFanSpeed.FanService",
         category: "XPC"
     )
-    private let allowedClientBundleIdentifiers: Set<String> = [
-        "com.bandan.me.MacOSNetworkFanSpeed",
-        "cam.bandan.me.MacOSNetworkFanSpeed",
-    ]
+    private lazy var exportedInterface: NSXPCInterface = {
+        NSXPCInterface(with: FanHelperProtocol.self)
+    }()
 
     func listener(_ listener: NSXPCListener, shouldAcceptNewConnection connection: NSXPCConnection) -> Bool {
         guard isConnectionAllowed(connection) else {
             logger.error(
-                "Rejected XPC client pid=\(connection.processIdentifier, privacy: .public) uid=\(connection.effectiveUserIdentifier, privacy: .public)"
+                "Rejected XPC client uid=\(connection.effectiveUserIdentifier, privacy: .public)"
             )
             return false
         }
 
-        connection.exportedInterface = NSXPCInterface(with: FanHelperProtocol.self)
+        connection.exportedInterface = exportedInterface
         connection.exportedObject = exportedObject
         connection.resume()
         return true
     }
 
     private func isConnectionAllowed(_ connection: NSXPCConnection) -> Bool {
-        for bundleIdentifier in allowedClientBundleIdentifiers {
-            if satisfiesCodeRequirement(connection: connection, bundleIdentifier: bundleIdentifier) {
-                return true
-            }
-        }
-
-        // Development fallback: ad-hoc signed app builds may not carry the expected
-        // bundle identifier in code-sign requirements. Allow any non-root client UID.
+        // Keep helper access limited to non-root user clients. This avoids PID-based
+        // code-sign checks that can trigger noisy task-port permission logs.
         if connection.effectiveUserIdentifier > 0 {
-            logger.notice(
-                "Allowing XPC client via UID fallback pid=\(connection.processIdentifier, privacy: .public) uid=\(connection.effectiveUserIdentifier, privacy: .public)"
-            )
             return true
         }
 
         return false
-    }
-
-    private func satisfiesCodeRequirement(
-        connection: NSXPCConnection,
-        bundleIdentifier: String
-    ) -> Bool {
-        let attributes = [
-            kSecGuestAttributePid: NSNumber(value: connection.processIdentifier)
-        ] as CFDictionary
-
-        var code: SecCode?
-        guard SecCodeCopyGuestWithAttributes(nil, attributes, SecCSFlags(), &code) == errSecSuccess,
-            let code
-        else {
-            return false
-        }
-
-        let requirementString = "identifier \"\(bundleIdentifier)\"" as CFString
-        var requirement: SecRequirement?
-        guard SecRequirementCreateWithString(requirementString, SecCSFlags(), &requirement) == errSecSuccess,
-            let requirement
-        else {
-            return false
-        }
-
-        return SecCodeCheckValidity(code, SecCSFlags(), requirement) == errSecSuccess
     }
 }
 

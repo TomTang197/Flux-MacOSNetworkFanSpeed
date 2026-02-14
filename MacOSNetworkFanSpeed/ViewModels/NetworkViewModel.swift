@@ -17,6 +17,10 @@ final class NetworkViewModel: ObservableObject {
     @Published var uploadSpeed: String = "0 KB/s"
     @Published var diskReadSpeed: String = "0 KB/s"
     @Published var diskWriteSpeed: String = "0 KB/s"
+    @Published var downloadTotal: String = "0 B"
+    @Published var uploadTotal: String = "0 B"
+    @Published var diskReadTotal: String = "0 B"
+    @Published var diskWriteTotal: String = "0 B"
     @Published var diskTotalCapacity: String = "--"
     @Published var diskFreeCapacity: String = "--"
     @Published var diskUsedPercent: String = "--"
@@ -51,6 +55,10 @@ final class NetworkViewModel: ObservableObject {
     private var lastDiskSampleTimestamp: Date?
     private var lastCapacitySampleTimestamp: Date?
     private var lastMemorySampleTimestamp: Date?
+    private var sessionDownloadBytes: UInt64 = 0
+    private var sessionUploadBytes: UInt64 = 0
+    private var sessionDiskReadBytes: UInt64 = 0
+    private var sessionDiskWriteBytes: UInt64 = 0
     private var timer: AnyCancellable?
     private let diskSampleInterval: TimeInterval = 2.0
     private let capacitySampleInterval: TimeInterval = 15.0
@@ -72,6 +80,16 @@ final class NetworkViewModel: ObservableObject {
         formatter.includesCount = true
         formatter.isAdaptive = true
         formatter.allowedUnits = [.useGB, .useMB]
+        return formatter
+    }()
+
+    private static let totalFormatter: ByteCountFormatter = {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        formatter.includesUnit = true
+        formatter.includesCount = true
+        formatter.isAdaptive = true
+        formatter.allowedUnits = [.useTB, .useGB, .useMB, .useKB, .useBytes]
         return formatter
     }()
 
@@ -124,18 +142,23 @@ final class NetworkViewModel: ObservableObject {
 
             // Speed = (Current Bytes - Last Bytes) / Time Interval
             // We use max(0, ...) to handle potential overflows or counter resets (rare).
-            let diffIn = Double(
+            let bytesInDelta =
                 currentStats.bytesIn >= lastStats.bytesIn ? currentStats.bytesIn - lastStats.bytesIn : 0
-            )
-            let diffOut = Double(
+            let bytesOutDelta =
                 currentStats.bytesOut >= lastStats.bytesOut ? currentStats.bytesOut - lastStats.bytesOut : 0
-            )
+
+            let diffIn = Double(bytesInDelta)
+            let diffOut = Double(bytesOutDelta)
 
             let downBps = diffIn / timeInterval
             let upBps = diffOut / timeInterval
 
             setIfChanged(&self.downloadSpeed, formatSpeed(downBps))
             setIfChanged(&self.uploadSpeed, formatSpeed(upBps))
+            accumulate(&sessionDownloadBytes, delta: bytesInDelta)
+            accumulate(&sessionUploadBytes, delta: bytesOutDelta)
+            setIfChanged(&self.downloadTotal, formatTransferTotal(sessionDownloadBytes))
+            setIfChanged(&self.uploadTotal, formatTransferTotal(sessionUploadBytes))
         }
 
         if let currentCPUTicks {
@@ -155,20 +178,25 @@ final class NetworkViewModel: ObservableObject {
             {
                 let diskInterval = currentTimestamp.timeIntervalSince(lastDiskSampleTimestamp)
                 if diskInterval > 0 {
-                    let diskReadDiff = Double(
+                    let diskReadDelta =
                         currentDiskStats.bytesRead >= lastDiskStats.bytesRead
-                            ? currentDiskStats.bytesRead - lastDiskStats.bytesRead : 0
-                    )
-                    let diskWriteDiff = Double(
+                        ? currentDiskStats.bytesRead - lastDiskStats.bytesRead : 0
+                    let diskWriteDelta =
                         currentDiskStats.bytesWritten >= lastDiskStats.bytesWritten
-                            ? currentDiskStats.bytesWritten - lastDiskStats.bytesWritten : 0
-                    )
+                        ? currentDiskStats.bytesWritten - lastDiskStats.bytesWritten : 0
+
+                    let diskReadDiff = Double(diskReadDelta)
+                    let diskWriteDiff = Double(diskWriteDelta)
 
                     let diskReadBps = diskReadDiff / diskInterval
                     let diskWriteBps = diskWriteDiff / diskInterval
 
                     setIfChanged(&self.diskReadSpeed, formatSpeed(diskReadBps))
                     setIfChanged(&self.diskWriteSpeed, formatSpeed(diskWriteBps))
+                    accumulate(&sessionDiskReadBytes, delta: diskReadDelta)
+                    accumulate(&sessionDiskWriteBytes, delta: diskWriteDelta)
+                    setIfChanged(&self.diskReadTotal, formatTransferTotal(sessionDiskReadBytes))
+                    setIfChanged(&self.diskWriteTotal, formatTransferTotal(sessionDiskWriteBytes))
                 }
             }
 
@@ -223,6 +251,10 @@ final class NetworkViewModel: ObservableObject {
         Self.memoryFormatter.string(fromByteCount: Int64(bytes))
     }
 
+    private func formatTransferTotal(_ bytes: UInt64) -> String {
+        Self.totalFormatter.string(fromByteCount: Int64(bytes))
+    }
+
     private func shouldSampleDisk(at timestamp: Date) -> Bool {
         guard let lastDiskSampleTimestamp else { return true }
         return timestamp.timeIntervalSince(lastDiskSampleTimestamp) >= diskSampleInterval
@@ -241,6 +273,14 @@ final class NetworkViewModel: ObservableObject {
     private func setIfChanged(_ value: inout String, _ newValue: String) {
         if value != newValue {
             value = newValue
+        }
+    }
+
+    private func accumulate(_ value: inout UInt64, delta: UInt64) {
+        if UInt64.max - value < delta {
+            value = UInt64.max
+        } else {
+            value += delta
         }
     }
 }
