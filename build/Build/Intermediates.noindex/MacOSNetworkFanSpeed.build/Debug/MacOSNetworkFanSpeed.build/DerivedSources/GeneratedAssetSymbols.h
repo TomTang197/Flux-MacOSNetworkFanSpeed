@@ -7,7 +7,7 @@
 #endif
 
 /// The resource bundle ID.
-static NSString * const ACBundleID AC_SWIFT_PRIVATE = @"com.bandan.me.MacOSNetworkFanSpeed";
+static NSString * const ACBundleID AC_SWIFT_PRIVATE = @"com.bandan.me.AeroPulse";
 
 /// The "AccentColor" asset catalog color resource.
 static NSString * const ACColorNameAccentColor AC_SWIFT_PRIVATE = @"AccentColor";

@@ -22,7 +22,7 @@ import os.log
 final class SMCWriter {
     private var connection: io_connect_t = 0
     private let logger = Logger(
-        subsystem: "com.bandan.me.MacOSNetworkFanSpeed.FanService",
+        subsystem: "com.bandan.me.AeroPulse.FanService",
         category: "SMCWriter"
     )
     private var openedConnectionType: UInt32?
@@ -427,11 +427,13 @@ final class FanHelper: NSObject, FanHelperProtocol {
 final class ServiceDelegate: NSObject, NSXPCListenerDelegate {
     private let exportedObject = FanHelper()
     private let logger = Logger(
-        subsystem: "com.bandan.me.MacOSNetworkFanSpeed.FanService",
+        subsystem: "com.bandan.me.AeroPulse.FanService",
         category: "XPC"
     )
     private lazy var exportedInterface: NSXPCInterface = {
-        NSXPCInterface(with: FanHelperProtocol.self)
+        let interface = NSXPCInterface(with: FanHelperProtocol.self)
+        configureSecureCodingClasses(on: interface)
+        return interface
     }()
 
     func listener(_ listener: NSXPCListener, shouldAcceptNewConnection connection: NSXPCConnection) -> Bool {
@@ -457,12 +459,36 @@ final class ServiceDelegate: NSObject, NSXPCListenerDelegate {
 
         return false
     }
+
+    private func configureSecureCodingClasses(on interface: NSXPCInterface) {
+        // Swift imports `setClasses` with an awkward signature. Invoke the Objective-C
+        // selector directly so we can provide explicit class allow-lists (NSNumber only).
+        let setClassesSelector = NSSelectorFromString("setClasses:forSelector:argumentIndex:ofReply:")
+        typealias SetClassesIMP = @convention(c) (AnyObject, Selector, NSSet, Selector, UInt, Bool) ->
+            Void
+        let imp = interface.method(for: setClassesSelector)
+        let setClasses = unsafeBitCast(imp, to: SetClassesIMP.self)
+        let numberClasses = NSSet(array: [NSNumber.self])
+
+        let pingSelector = #selector(FanHelperProtocol.ping(withReply:))
+        setClasses(interface, setClassesSelector, numberClasses, pingSelector, 0, true)
+
+        let setFanModeSelector = #selector(FanHelperProtocol.setFanMode(index:manual:withReply:))
+        setClasses(interface, setClassesSelector, numberClasses, setFanModeSelector, 0, false)
+        setClasses(interface, setClassesSelector, numberClasses, setFanModeSelector, 1, false)
+        setClasses(interface, setClassesSelector, numberClasses, setFanModeSelector, 0, true)
+
+        let setFanTargetSelector = #selector(FanHelperProtocol.setFanTargetRPM(index:rpm:withReply:))
+        setClasses(interface, setClassesSelector, numberClasses, setFanTargetSelector, 0, false)
+        setClasses(interface, setClassesSelector, numberClasses, setFanTargetSelector, 1, false)
+        setClasses(interface, setClassesSelector, numberClasses, setFanTargetSelector, 0, true)
+    }
 }
 
 // MARK: - Entry point
 
 let delegate = ServiceDelegate()
-let listener = NSXPCListener(machServiceName: "com.bandan.me.MacOSNetworkFanSpeed.FanService")
+let listener = NSXPCListener(machServiceName: "com.bandan.me.AeroPulse.FanService")
 listener.delegate = delegate
 listener.resume()
 RunLoop.main.run()

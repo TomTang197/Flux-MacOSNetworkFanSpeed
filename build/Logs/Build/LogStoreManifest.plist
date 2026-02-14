@@ -5,6 +5,91 @@
 	<key>logFormatVersion</key>
 	<integer>12</integer>
 	<key>logs</key>
-	<dict/>
+	<dict>
+		<key>CA755C7E-C87B-46D8-959C-14A883AB56BB</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>CA755C7E-C87B-46D8-959C-14A883AB56BB.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>MacOSNetworkFanSpeed project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>MacOSNetworkFanSpeed</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building project MacOSNetworkFanSpeed with scheme MacOSNetworkFanSpeed and configuration Debug</string>
+			<key>timeStartedRecording</key>
+			<real>792723262.32072997</real>
+			<key>timeStoppedRecording</key>
+			<real>792723265.69648898</real>
+			<key>title</key>
+			<string>Building project MacOSNetworkFanSpeed with scheme MacOSNetworkFanSpeed and configuration Debug</string>
+			<key>uniqueIdentifier</key>
+			<string>CA755C7E-C87B-46D8-959C-14A883AB56BB</string>
+		</dict>
+		<key>F569AE47-995D-4F71-9ED3-5B542DBE2226</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>F569AE47-995D-4F71-9ED3-5B542DBE2226.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>MacOSNetworkFanSpeed project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>FanPrivilegedHelper</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building project MacOSNetworkFanSpeed with scheme FanPrivilegedHelper and configuration Debug</string>
+			<key>timeStartedRecording</key>
+			<real>792723468.03071904</real>
+			<key>timeStoppedRecording</key>
+			<real>792723469.68493497</real>
+			<key>title</key>
+			<string>Building project MacOSNetworkFanSpeed with scheme FanPrivilegedHelper and configuration Debug</string>
+			<key>uniqueIdentifier</key>
+			<string>F569AE47-995D-4F71-9ED3-5B542DBE2226</string>
+		</dict>
+	</dict>
 </dict>
 </plist>
