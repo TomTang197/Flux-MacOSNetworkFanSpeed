@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Products/Release/AeroPulse.app/Contents/MacOS/AeroPulse'
+relocations:     []
+...

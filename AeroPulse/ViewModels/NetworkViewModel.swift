@@ -25,6 +25,7 @@ final class NetworkViewModel: ObservableObject {
     @Published var diskFreeCapacity: String = "--"
     @Published var diskUsedPercent: String = "--"
     @Published var cpuUsage: String = "0%"
+    @Published var gpuUsage: String = "--"
     @Published var memoryUsage: String = "0%"
     @Published var memoryUsed: String = "--"
     @Published var memoryTotal: String = "--"
@@ -55,6 +56,7 @@ final class NetworkViewModel: ObservableObject {
     private var lastDiskSampleTimestamp: Date?
     private var lastCapacitySampleTimestamp: Date?
     private var lastMemorySampleTimestamp: Date?
+    private var lastGPUSampleTimestamp: Date?
     private var sessionDownloadBytes: UInt64 = 0
     private var sessionUploadBytes: UInt64 = 0
     private var sessionDiskReadBytes: UInt64 = 0
@@ -63,6 +65,7 @@ final class NetworkViewModel: ObservableObject {
     private let diskSampleInterval: TimeInterval = 2.0
     private let capacitySampleInterval: TimeInterval = 15.0
     private let memorySampleInterval: TimeInterval = 2.0
+    private let gpuSampleInterval: TimeInterval = 1.0
     private static let capacityFormatter: ByteCountFormatter = {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
@@ -170,6 +173,15 @@ final class NetworkViewModel: ObservableObject {
             self.lastCPUTicks = currentCPUTicks
         }
 
+        if shouldSampleGPU(at: currentTimestamp) {
+            if let gpuPercent = systemMonitor.currentGPUUsagePercent() {
+                setIfChanged(&self.gpuUsage, String(format: "%.0f%%", gpuPercent))
+            } else {
+                setIfChanged(&self.gpuUsage, "--")
+            }
+            self.lastGPUSampleTimestamp = currentTimestamp
+        }
+
         if shouldSampleDisk(at: currentTimestamp) {
             let currentDiskStats = diskMonitor.getDiskUsage()
             if
@@ -268,6 +280,11 @@ final class NetworkViewModel: ObservableObject {
     private func shouldSampleMemory(at timestamp: Date) -> Bool {
         guard let lastMemorySampleTimestamp else { return true }
         return timestamp.timeIntervalSince(lastMemorySampleTimestamp) >= memorySampleInterval
+    }
+
+    private func shouldSampleGPU(at timestamp: Date) -> Bool {
+        guard let lastGPUSampleTimestamp else { return true }
+        return timestamp.timeIntervalSince(lastGPUSampleTimestamp) >= gpuSampleInterval
     }
 
     private func setIfChanged(_ value: inout String, _ newValue: String) {

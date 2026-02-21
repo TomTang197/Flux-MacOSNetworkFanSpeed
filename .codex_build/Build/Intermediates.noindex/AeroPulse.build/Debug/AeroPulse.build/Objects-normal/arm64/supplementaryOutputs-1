@@ -1,0 +1,23 @@
+{
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Helpers/AppConstants.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build/Build/Intermediates.noindex/AeroPulse.build/Debug/AeroPulse.build/Objects-normal/arm64/AppConstants.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build/Build/Intermediates.noindex/AeroPulse.build/Debug/AeroPulse.build/Objects-normal/arm64/AppConstants.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build/Build/Intermediates.noindex/AeroPulse.build/Debug/AeroPulse.build/Objects-normal/arm64/AppConstants.dia",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build/Build/Intermediates.noindex/AeroPulse.build/Debug/AeroPulse.build/Objects-normal/arm64/AppConstants.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build/Build/Intermediates.noindex/AeroPulse.build/Debug/AeroPulse.build/Objects-normal/arm64/AppConstants.swiftdeps"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Models/FanStats.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build/Build/Intermediates.noindex/AeroPulse.build/Debug/AeroPulse.build/Objects-normal/arm64/FanStats.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build/Build/Intermediates.noindex/AeroPulse.build/Debug/AeroPulse.build/Objects-normal/arm64/FanStats.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build/Build/Intermediates.noindex/AeroPulse.build/Debug/AeroPulse.build/Objects-normal/arm64/FanStats.dia",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build/Build/Intermediates.noindex/AeroPulse.build/Debug/AeroPulse.build/Objects-normal/arm64/FanStats.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build/Build/Intermediates.noindex/AeroPulse.build/Debug/AeroPulse.build/Objects-normal/arm64/FanStats.swiftdeps"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Models/MetricType.swift" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build/Build/Intermediates.noindex/AeroPulse.build/Debug/AeroPulse.build/Objects-normal/arm64/MetricType.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build/Build/Intermediates.noindex/AeroPulse.build/Debug/AeroPulse.build/Objects-normal/arm64/MetricType.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build/Build/Intermediates.noindex/AeroPulse.build/Debug/AeroPulse.build/Objects-normal/arm64/MetricType.dia",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build/Build/Intermediates.noindex/AeroPulse.build/Debug/AeroPulse.build/Objects-normal/arm64/MetricType.o",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build/Build/Intermediates.noindex/AeroPulse.build/Debug/AeroPulse.build/Objects-normal/arm64/MetricType.swiftdeps"
+  }
+}

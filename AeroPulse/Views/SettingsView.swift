@@ -42,10 +42,10 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             headerSection
 
-            WaterfallColumnsLayout(columns: cardColumnCount, spacing: 10) {
+            WaterfallColumnsLayout(columns: cardColumnCount, spacing: 12) {
                 SettingsCard(title: "Live Throughput", symbol: AppImages.gauge, tint: .blue) {
                     VStack(spacing: 8) {
                         StatRow(
@@ -107,6 +107,12 @@ struct SettingsView: View {
                             label: AppStrings.cpuUsage,
                             value: networkViewModel.cpuUsage,
                             color: .red
+                        )
+                        StatRow(
+                            icon: AppImages.gpuUsage,
+                            label: AppStrings.gpuUsage,
+                            value: networkViewModel.gpuUsage,
+                            color: .pink
                         )
                         StatRow(
                             icon: AppImages.memory,
@@ -349,7 +355,7 @@ struct SettingsView: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(AppStrings.systemMonitor)
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: 15, weight: .bold))
                 Text("Live telemetry and fan RPM")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundColor(.secondary)
@@ -383,12 +389,14 @@ struct SettingsView: View {
         } label: {
             HStack(spacing: 6) {
                 metric.icon
+                    .frame(width: 14)
                 Text(metric.rawValue)
                     .font(.system(size: 11, weight: .semibold))
                     .lineLimit(1)
             }
             .foregroundColor(enabled ? .white : .primary)
-            .frame(maxWidth: .infinity, minHeight: 28)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, minHeight: 30)
             .background(
                 RoundedRectangle(cornerRadius: 8)
                     .fill(
@@ -573,27 +581,28 @@ private struct SettingsCard<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 11) {
-            HStack(spacing: 7) {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
                 Image(systemName: symbol)
                     .foregroundColor(tint)
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 12, weight: .semibold))
                 Text(title.uppercased())
                     .font(.system(size: 9, weight: .black))
-                    .tracking(0.9)
+                    .tracking(0.95)
                     .foregroundColor(.secondary)
+                    .lineLimit(1)
                 Spacer()
             }
 
             content
         }
-        .padding(14)
+        .padding(13)
         .frame(maxWidth: .infinity, alignment: .leading)
         .liquidGlassCard(
-            cornerRadius: 14,
+            cornerRadius: 12,
             tint: tint,
             style: .regular,
-            shadowOpacity: 0.09
+            shadowOpacity: 0.08
         )
     }
 }
@@ -603,16 +612,18 @@ private struct FanBadge: View {
     let value: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 3) {
             Text(title.uppercased())
-                .font(.system(size: 8, weight: .bold))
+                .font(.system(size: 8, weight: .black))
                 .foregroundColor(.secondary)
-                .tracking(0.7)
+                .tracking(0.8)
             Text(value)
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 7)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 8)
@@ -632,8 +643,8 @@ private struct FanSpeedRow: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
                 Text(fan.name)
                     .font(.system(size: 11, weight: .semibold))
                     .lineLimit(1)
@@ -641,6 +652,7 @@ private struct FanSpeedRow: View {
                 Spacer()
                 Text("\(fan.currentRPM) \(AppStrings.rpmUnit)")
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .frame(minWidth: 96, alignment: .trailing)
             }
 
             ProgressView(value: utilization)
@@ -648,9 +660,9 @@ private struct FanSpeedRow: View {
                 .tint(.indigo.opacity(0.92))
 
             HStack {
-                Text("CURRENT")
+                Text("\(fan.minRPM) MIN")
                 Spacer()
-                Text("RPM")
+                Text("\(fan.maxRPM) MAX")
             }
             .font(.system(size: 9, weight: .semibold, design: .monospaced))
             .foregroundColor(.secondary)
@@ -671,19 +683,22 @@ private struct StatRow: View {
     let color: Color
 
     var body: some View {
-        HStack {
+        HStack(spacing: 8) {
             Image(systemName: icon)
                 .foregroundColor(color)
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(size: 12, weight: .semibold))
+                .frame(width: 16)
             Text(label)
                 .font(.system(size: 11, weight: .semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-            Spacer()
+                .frame(maxWidth: .infinity, alignment: .leading)
             Text(value)
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
+                .frame(minWidth: 116, alignment: .trailing)
         }
+        .frame(minHeight: 19)
     }
 }

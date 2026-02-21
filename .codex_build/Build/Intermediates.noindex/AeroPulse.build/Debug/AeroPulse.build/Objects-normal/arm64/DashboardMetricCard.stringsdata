@@ -1,0 +1,16 @@
+{
+  "source": "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Views/DashboardMetricCard.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": " ",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 76
+        }
+      }
+    ]
+  },
+  "version": 1
+}

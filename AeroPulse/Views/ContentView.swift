@@ -133,6 +133,13 @@ struct ContentView: View {
                                 compact: true
                             )
                             DashboardMetricCard(
+                                title: AppStrings.gpuUsage,
+                                value: networkViewModel.gpuUsage,
+                                icon: AppImages.gpuUsage,
+                                color: .pink,
+                                compact: true
+                            )
+                            DashboardMetricCard(
                                 title: AppStrings.memory,
                                 value: networkViewModel.memoryUsage,
                                 icon: AppImages.memory,

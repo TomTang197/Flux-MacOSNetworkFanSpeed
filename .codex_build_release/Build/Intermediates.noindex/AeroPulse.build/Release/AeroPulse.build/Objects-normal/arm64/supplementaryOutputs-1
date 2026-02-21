@@ -1,0 +1,12 @@
+{
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Helpers/AppConstants.swift" : {
+    "abi-baseline-json" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AeroPulse.abi.json",
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AeroPulse-primary.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AeroPulse-primary.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AeroPulse-primary.dia",
+    "objc-header" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AeroPulse-Swift.h",
+    "swiftdoc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AeroPulse.swiftdoc",
+    "swiftmodule" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AeroPulse.swiftmodule",
+    "swiftsourceinfo" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AeroPulse.swiftsourceinfo"
+  }
+}

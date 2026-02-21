@@ -52,9 +52,9 @@ struct ThermalDetailView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(AppStrings.thermalSensors)
-                            .font(.headline)
+                            .font(.system(size: 15, weight: .bold))
                         Text("\(fanViewModel.sensors.count) \(AppStrings.sensorsDetected)")
-                            .font(.caption)
+                            .font(.system(size: 10, weight: .semibold))
                             .foregroundColor(.secondary)
                     }
                     Spacer()
@@ -73,9 +73,9 @@ struct ThermalDetailView: View {
                 Divider()
             } else {
                 Text(AppStrings.thermalSensorsUpperCase)
-                    .font(.system(size: 10, weight: .black))
+                    .font(.system(size: 9, weight: .black))
                     .foregroundColor(.secondary)
-                    .tracking(1)
+                    .tracking(0.95)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)
                     .padding(.top, 30)
@@ -184,9 +184,10 @@ struct SensorCategoryColumn: View {
     var body: some View {
         VStack(spacing: 0) {
             Text(title)
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: 9, weight: .black))
                 .foregroundColor(color)
                 .frame(maxWidth: .infinity)
+                .tracking(0.9)
                 .padding(.vertical, 8)
                 .background(color.opacity(0.1))
 
@@ -196,23 +197,31 @@ struct SensorCategoryColumn: View {
                     .foregroundColor(.secondary)
                     .padding(.vertical, 20)
             } else {
-                ForEach(sensors) { sensor in
-                    HStack {
-                        Text(sensor.name)
-                            .font(.system(size: 12, weight: .medium))
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.75)
-                            .layoutPriority(1)
-                        Spacer(minLength: 6)
-                        Text(String(format: AppStrings.temperatureFormat, sensor.temperature))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                            .font(.system(size: 12, weight: .medium, design: .monospaced))
-                            .frame(minWidth: 72, alignment: .trailing)
+                VStack(spacing: 4) {
+                    ForEach(Array(sensors.enumerated()), id: \.element.id) { index, sensor in
+                        HStack(spacing: 8) {
+                            Text(sensor.name)
+                                .font(.system(size: 11, weight: .semibold))
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.75)
+                                .layoutPriority(1)
+                            Spacer(minLength: 6)
+                            Text(String(format: AppStrings.temperatureFormat, sensor.temperature))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .frame(minWidth: 84, alignment: .trailing)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.primary.opacity(index.isMultiple(of: 2) ? 0.055 : 0.03))
+                        )
                     }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 4)
                 }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 8)
             }
         }
         .frame(minWidth: 180, maxWidth: .infinity, alignment: .topLeading)

@@ -18,7 +18,7 @@ struct MenuBarDashboardView: View {
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 11) {
             header
 
             LazyVGrid(columns: columns, spacing: 10) {
@@ -51,10 +51,23 @@ struct MenuBarDashboardView: View {
                     subtitle: "\(AppStrings.total): \(networkViewModel.diskWriteTotal)"
                 )
                 MetricCard(
+                    title: AppStrings.diskCapacity,
+                    value: "\(networkViewModel.diskFreeCapacity) / \(networkViewModel.diskTotalCapacity)",
+                    icon: AppImages.diskCapacity,
+                    color: .cyan,
+                    subtitle: "\(AppStrings.diskFree): \(networkViewModel.diskFreeCapacity) • \(AppStrings.diskUsed): \(networkViewModel.diskUsedPercent)"
+                )
+                MetricCard(
                     title: AppStrings.cpuUsage,
                     value: networkViewModel.cpuUsage,
                     icon: AppImages.cpuUsage,
                     color: .red
+                )
+                MetricCard(
+                    title: AppStrings.gpuUsage,
+                    value: networkViewModel.gpuUsage,
+                    icon: AppImages.gpuUsage,
+                    color: .pink
                 )
                 MetricCard(
                     title: AppStrings.memory,
@@ -82,7 +95,7 @@ struct MenuBarDashboardView: View {
                     openDashboardAndDismiss()
                 } label: {
                     Label(AppStrings.openSystemHub, systemImage: AppImages.window)
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 10, weight: .semibold))
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -91,7 +104,7 @@ struct MenuBarDashboardView: View {
                     refreshSnapshot()
                 } label: {
                     Image(systemName: AppImages.refresh)
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 11, weight: .bold))
                         .frame(width: 30, height: 26)
                 }
                 .buttonStyle(.bordered)
@@ -102,19 +115,19 @@ struct MenuBarDashboardView: View {
                     .fill(launchAtLoginManager.statusIsWarning ? Color.orange : Color.green)
                     .frame(width: 7, height: 7)
                 Text(launchAtLoginManager.statusText)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: 9, weight: .semibold))
                     .foregroundColor(.secondary)
                 Spacer()
                 Button(role: .destructive) {
                     NSApplication.shared.terminate(nil)
                 } label: {
                     Label(AppStrings.quitApplication, systemImage: AppImages.power)
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 9, weight: .bold))
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(14)
+        .padding(13)
         .frame(width: 368)
         .onAppear {
             fanViewModel.refreshHelperStatus()
@@ -198,20 +211,22 @@ private struct MetricCard: View {
     var subtitle: String? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 7) {
             HStack {
                 Image(systemName: icon)
                     .foregroundColor(color)
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 11, weight: .semibold))
+                    .frame(width: 12)
                 Spacer()
                 Text(title.uppercased())
                     .font(.system(size: 8, weight: .black))
-                    .tracking(0.8)
+                    .tracking(0.9)
                     .foregroundColor(.secondary)
+                    .lineLimit(1)
             }
 
             Text(value)
-                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .font(.system(size: 15, weight: .bold, design: .monospaced))
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
 
@@ -227,8 +242,8 @@ private struct MetricCard: View {
                     .hidden()
             }
         }
-        .padding(11)
-        .frame(maxWidth: .infinity, minHeight: 90, alignment: .topLeading)
-        .liquidGlassCard(cornerRadius: 12, tint: color, style: .regular, shadowOpacity: 0.08)
+        .padding(10)
+        .frame(maxWidth: .infinity, minHeight: 88, alignment: .topLeading)
+        .liquidGlassCard(cornerRadius: 11, tint: color, style: .regular, shadowOpacity: 0.08)
     }
 }

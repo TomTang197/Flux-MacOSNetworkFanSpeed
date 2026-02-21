@@ -1,0 +1,88 @@
+{
+  "source": "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Views/SettingsView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Sampling",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 204
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 208
+        }
+      },
+      {
+        "comment": "",
+        "key": "0.5s",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 209
+        }
+      },
+      {
+        "comment": "",
+        "key": "1.0s",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 210
+        }
+      },
+      {
+        "comment": "",
+        "key": "2.0s",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 211
+        }
+      },
+      {
+        "comment": "",
+        "key": "5.0s",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 212
+        }
+      },
+      {
+        "comment": "",
+        "key": "Live telemetry and fan RPM",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 359
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 653
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld MIN",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 663
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld MAX",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 665
+        }
+      }
+    ]
+  },
+  "version": 1
+}

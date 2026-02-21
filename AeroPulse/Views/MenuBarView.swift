@@ -45,6 +45,7 @@ struct MenuBarView: View {
 
     private enum ColumnKind {
         case stacked
+        case stackedCompact
         case singleRegular
         case singleCompact
     }
@@ -52,7 +53,7 @@ struct MenuBarView: View {
     private func enabledMetricRows() -> [MetricRow] {
         let enabled = networkViewModel.enabledMetrics
         let orderedMetrics: [MetricType] = [
-            .download, .upload, .diskRead, .diskWrite, .cpu, .memory, .temperature, .fan,
+            .download, .upload, .diskRead, .diskWrite, .cpu, .gpu, .memory, .temperature, .fan,
         ]
 
         return orderedMetrics.compactMap { metric in
@@ -73,13 +74,26 @@ struct MenuBarView: View {
             columns.append(diskColumn)
         }
 
+        // Memory/GPU are grouped in one stacked slot.
+        if
+            let computeColumn = makePairedColumn(
+                top: .memory,
+                bottom: .gpu,
+                enabled: enabled,
+                stackedKind: .stackedCompact,
+                singleKind: .singleCompact
+            )
+        {
+            columns.append(computeColumn)
+        }
+
         // Temperature/Fan are grouped in one stacked slot.
         if let thermalColumn = makePairedColumn(top: .temperature, bottom: .fan, enabled: enabled) {
             columns.append(thermalColumn)
         }
 
-        // CPU/Memory stay single but use compact width.
-        let singles: [MetricType] = [.cpu, .memory]
+        // CPU stays single but uses compact width.
+        let singles: [MetricType] = [.cpu]
         for metric in singles {
             if enabled.contains(metric) {
                 columns.append(
@@ -95,7 +109,13 @@ struct MenuBarView: View {
         return columns
     }
 
-    private func makePairedColumn(top: MetricType, bottom: MetricType, enabled: Set<MetricType>) -> MetricColumn? {
+    private func makePairedColumn(
+        top: MetricType,
+        bottom: MetricType,
+        enabled: Set<MetricType>,
+        stackedKind: ColumnKind = .stacked,
+        singleKind: ColumnKind = .singleRegular
+    ) -> MetricColumn? {
         let topEnabled = enabled.contains(top)
         let bottomEnabled = enabled.contains(bottom)
         guard topEnabled || bottomEnabled else { return nil }
@@ -105,13 +125,13 @@ struct MenuBarView: View {
             return MetricColumn(
                 top: metricRow(for: top),
                 bottom: metricRow(for: bottom),
-                kind: .stacked
+                kind: stackedKind
             )
         }
 
         // If only one enabled, it defaults to a single centered layout
         let activeMetric = topEnabled ? top : bottom
-        return MetricColumn(top: metricRow(for: activeMetric), bottom: nil, kind: .singleRegular)
+        return MetricColumn(top: metricRow(for: activeMetric), bottom: nil, kind: singleKind)
     }
 
     private func metricRow(for metric: MetricType) -> MetricRow {
@@ -129,8 +149,9 @@ struct MenuBarView: View {
         let height = rowHeight * 2 + rowSpacing + verticalPadding * 2
         
         let columnWidthStacked: CGFloat = 78
+        let columnWidthStackedCompact: CGFloat = 68
         let columnWidthSingleRegular: CGFloat = 66
-        let columnWidthSingleCompact: CGFloat = 50
+        let columnWidthSingleCompact: CGFloat = 60
         let dividerSpacing: CGFloat = 6
         
         // Calculate total width based on mix of column types
@@ -139,6 +160,7 @@ struct MenuBarView: View {
             totalWidth += width(
                 for: col.kind,
                 stacked: columnWidthStacked,
+                stackedCompact: columnWidthStackedCompact,
                 regular: columnWidthSingleRegular,
                 compact: columnWidthSingleCompact
             )
@@ -155,11 +177,12 @@ struct MenuBarView: View {
             let colWidth = width(
                 for: column.kind,
                 stacked: columnWidthStacked,
+                stackedCompact: columnWidthStackedCompact,
                 regular: columnWidthSingleRegular,
                 compact: columnWidthSingleCompact
             )
 
-            if column.kind == .stacked {
+            if column.kind == .stacked || column.kind == .stackedCompact {
                 // Draw Stacked
                 let topY = verticalPadding + rowHeight + rowSpacing
                 let bottomY = verticalPadding
@@ -190,7 +213,7 @@ struct MenuBarView: View {
     }
 
     private func renderSingleMetricImage(_ row: MetricRow) -> NSImage {
-        let prefersExtraLarge = row.metric == .cpu || row.metric == .memory
+        let prefersExtraLarge = row.metric == .cpu
         let iconPointSize: CGFloat = prefersExtraLarge ? 20 : 16
         let valuePointSize: CGFloat = prefersExtraLarge ? 17 : 16
 
@@ -242,12 +265,15 @@ struct MenuBarView: View {
     private func width(
         for kind: ColumnKind,
         stacked: CGFloat,
+        stackedCompact: CGFloat,
         regular: CGFloat,
         compact: CGFloat
     ) -> CGFloat {
         switch kind {
         case .stacked:
             return stacked
+        case .stackedCompact:
+            return stackedCompact
         case .singleRegular:
             return regular
         case .singleCompact:
@@ -268,7 +294,7 @@ struct MenuBarView: View {
         guard let row else { return }
         let textAttributes = textAttributes(for: valueFont)
 
-        let emphasizesIcon = row.metric == .cpu || row.metric == .memory
+        let emphasizesIcon = row.metric == .cpu
         let config = emphasizesIcon ? emphasizedIconConfig : iconConfig
         let icon = configuredSymbolImage(named: row.symbol, config: config)
         let textSize = measuredTextSize(for: row.value, attributes: textAttributes)
@@ -304,8 +330,10 @@ struct MenuBarView: View {
 
     private func singleMetricWidth(for metric: MetricType) -> CGFloat {
         switch metric {
-        case .cpu, .memory:
+        case .cpu:
             return 84
+        case .gpu, .memory:
+            return 68
         case .temperature, .fan:
             return 104
         case .download, .upload, .diskRead, .diskWrite:
@@ -371,6 +399,7 @@ struct MenuBarView: View {
         case .diskRead: return AppImages.diskRead
         case .diskWrite: return AppImages.diskWrite
         case .cpu: return AppImages.cpuUsage
+        case .gpu: return AppImages.gpuUsage
         case .memory: return AppImages.memory
         case .fan: return AppImages.fan
         case .temperature: return AppImages.temperature
@@ -393,6 +422,7 @@ struct MenuBarView: View {
         case .diskRead: return networkViewModel.diskReadSpeed
         case .diskWrite: return networkViewModel.diskWriteSpeed
         case .cpu: return networkViewModel.cpuUsage
+        case .gpu: return networkViewModel.gpuUsage
         case .memory: return networkViewModel.memoryUsage
         case .fan: return fanViewModel.primaryFanRPM
         case .temperature: return fanViewModel.primaryTemp

@@ -1,0 +1,131 @@
+{
+  "" : {
+    "const-values" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AeroPulse-primary.swiftconstvalues",
+    "dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AeroPulse-primary.d",
+    "diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AeroPulse-primary.dia",
+    "emit-module-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AeroPulse-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AeroPulse-primary-emit-module.dia",
+    "pch" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AeroPulse-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AeroPulse-primary.swiftdeps"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/GeneratedAssetSymbols.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Helpers/AppConstants.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AppConstants.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AppConstants.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/AppConstants.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Models/FanStats.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/FanStats.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/FanStats.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/FanStats.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Models/MetricType.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/MetricType.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/MetricType.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/MetricType.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Models/SMCSensorKeys.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/SMCSensorKeys.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/SMCSensorKeys.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/SMCSensorKeys.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/NetworkSpeedMeterApp.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/NetworkSpeedMeterApp.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/NetworkSpeedMeterApp.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/NetworkSpeedMeterApp.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Services/DiskMonitor.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/DiskMonitor.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/DiskMonitor.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/DiskMonitor.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Services/FanControlClient.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/FanControlClient.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/FanControlClient.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/FanControlClient.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Services/FanMonitor.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/FanMonitor.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/FanMonitor.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/FanMonitor.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Services/LaunchAtLoginManager.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/LaunchAtLoginManager.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/LaunchAtLoginManager.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/LaunchAtLoginManager.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Services/NetworkMonitor.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/NetworkMonitor.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/NetworkMonitor.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/NetworkMonitor.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Services/PrivilegedHelperInstaller.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/PrivilegedHelperInstaller.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/PrivilegedHelperInstaller.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/PrivilegedHelperInstaller.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Services/SMCService.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/SMCService.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/SMCService.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/SMCService.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Services/SystemMonitor.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/SystemMonitor.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/SystemMonitor.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/SystemMonitor.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/ViewModels/FanViewModel.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/FanViewModel.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/FanViewModel.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/FanViewModel.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/ViewModels/NetworkViewModel.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/NetworkViewModel.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/NetworkViewModel.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/NetworkViewModel.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Views/ContentView.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/ContentView.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Views/DashboardMetricCard.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/DashboardMetricCard.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/DashboardMetricCard.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/DashboardMetricCard.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Views/LiquidGlassStyle.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/LiquidGlassStyle.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/LiquidGlassStyle.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/LiquidGlassStyle.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Views/MenuBarDashboardView.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/MenuBarDashboardView.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/MenuBarDashboardView.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/MenuBarDashboardView.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Views/MenuBarView.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/MenuBarView.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/MenuBarView.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/MenuBarView.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Views/SettingsView.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/SettingsView.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/SettingsView.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/SettingsView.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Views/ThermalDetailView.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/ThermalDetailView.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/ThermalDetailView.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/ThermalDetailView.o"
+  },
+  "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/AeroPulse/Views/WaterfallColumnsLayout.swift" : {
+    "index-unit-output-path" : "/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/WaterfallColumnsLayout.o",
+    "llvm-bc" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/WaterfallColumnsLayout.bc",
+    "object" : "/Users/tom/Documents/Flux-MacOSNetworkFanSpeed/.codex_build_release/Build/Intermediates.noindex/AeroPulse.build/Release/AeroPulse.build/Objects-normal/arm64/WaterfallColumnsLayout.o"
+  }
+}

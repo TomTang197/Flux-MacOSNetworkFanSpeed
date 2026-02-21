@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import IOKit
 
 final class SystemMonitor {
     struct CPUTicks {
@@ -18,6 +19,14 @@ final class SystemMonitor {
         let totalBytes: UInt64
         let usedRatio: Double
     }
+
+    private let gpuUtilizationKeys = [
+        "Device Utilization %",
+        "GPU Utilization %",
+        "GPU Usage %",
+        "GPU Busy(%)",
+        "GPU Activity(%)",
+    ]
 
     func currentCPUTicks() -> CPUTicks? {
         var cpuInfo = host_cpu_load_info()
@@ -87,5 +96,97 @@ final class SystemMonitor {
             totalBytes: totalBytes,
             usedRatio: usedRatio
         )
+    }
+
+    func currentGPUUsagePercent() -> Double? {
+        // Different Macs expose GPU data under different accelerator classes.
+        for serviceClass in ["IOAccelerator", "IOAccelerator2D", "AGXAccelerator"] {
+            if let usage = gpuUsagePercent(forServiceClass: serviceClass) {
+                return usage
+            }
+        }
+        return nil
+    }
+
+    private func gpuUsagePercent(forServiceClass serviceClass: String) -> Double? {
+        var iterator: io_iterator_t = 0
+        let result = IOServiceGetMatchingServices(
+            kIOMainPortDefault,
+            IOServiceMatching(serviceClass),
+            &iterator
+        )
+        guard result == KERN_SUCCESS else { return nil }
+        defer { IOObjectRelease(iterator) }
+
+        var samples: [Double] = []
+
+        while true {
+            let service = IOIteratorNext(iterator)
+            guard service != 0 else { break }
+            defer { IOObjectRelease(service) }
+
+            guard
+                let statsObject = IORegistryEntryCreateCFProperty(
+                    service,
+                    "PerformanceStatistics" as CFString,
+                    kCFAllocatorDefault,
+                    0
+                )?.takeRetainedValue(),
+                let stats = statsObject as? [String: Any],
+                let usage = parseGPUUsagePercent(from: stats)
+            else {
+                continue
+            }
+
+            samples.append(usage)
+        }
+
+        guard !samples.isEmpty else { return nil }
+        let average = samples.reduce(0, +) / Double(samples.count)
+        return clampGPUPercent(average)
+    }
+
+    private func parseGPUUsagePercent(from stats: [String: Any]) -> Double? {
+        for key in gpuUtilizationKeys {
+            if let value = numberValue(from: stats[key]) {
+                return clampGPUPercent(value)
+            }
+        }
+
+        // Fallback for some Apple Silicon snapshots where only renderer/tiler values appear.
+        if
+            let renderer = numberValue(from: stats["Renderer Utilization %"]),
+            let tiler = numberValue(from: stats["Tiler Utilization %"])
+        {
+            return clampGPUPercent((renderer + tiler) / 2)
+        }
+
+        return nil
+    }
+
+    private func numberValue(from raw: Any?) -> Double? {
+        if let value = raw as? NSNumber {
+            return value.doubleValue
+        }
+        if let value = raw as? String {
+            return Double(value)
+        }
+        return nil
+    }
+
+    private func clampGPUPercent(_ rawValue: Double) -> Double {
+        guard rawValue.isFinite else { return 0 }
+
+        let normalized: Double
+        if rawValue <= 1 {
+            normalized = rawValue * 100
+        } else if rawValue > 100 && rawValue <= 10_000 {
+            // Some drivers expose centi-percent values.
+            normalized = rawValue / 100
+        } else {
+            normalized = rawValue
+        }
+
+        return min(max(normalized, 0), 100)
     }
 }

@@ -18,46 +18,63 @@ struct DashboardMetricCard: View {
     var action: (() -> Void)? = nil
 
     private var cardCornerRadius: CGFloat {
-        compact ? 18 : 22
+        compact ? 16 : 20
     }
 
     private var cardPadding: CGFloat {
-        compact ? 14 : 20
+        compact ? 13 : 18
     }
 
     private var minimumCardHeight: CGFloat {
-        compact ? 122 : 164
+        compact ? 118 : 158
+    }
+
+    private var iconFont: Font {
+        .system(size: compact ? 13 : 15, weight: .semibold)
+    }
+
+    private var titleFont: Font {
+        .system(size: compact ? 9 : 10, weight: .black)
+    }
+
+    private var valueFont: Font {
+        .system(size: compact ? 21 : 30, weight: .bold, design: .monospaced)
+    }
+
+    private var subtitleFont: Font {
+        .system(size: compact ? 10 : 11, weight: .semibold)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: compact ? 10 : 14) {
+        VStack(alignment: .leading, spacing: compact ? 9 : 12) {
             HStack {
                 Image(systemName: icon)
                     .foregroundColor(color)
-                    .font(compact ? .system(size: 15, weight: .bold) : .title3)
+                    .font(iconFont)
                 Spacer()
                 Text(title.uppercased())
-                    .font(.system(size: compact ? 9 : 10, weight: .black))
+                    .font(titleFont)
                     .foregroundColor(.secondary)
-                    .tracking(1)
+                    .tracking(0.9)
+                    .lineLimit(1)
             }
 
             HStack(alignment: .bottom, spacing: 8) {
                 VStack(alignment: .leading, spacing: compact ? 4 : 6) {
                     Text(value)
-                        .font(.system(size: compact ? 21 : 30, weight: .bold, design: .monospaced))
+                        .font(valueFont)
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
 
                     if let subtitle, !subtitle.isEmpty {
                         Text(subtitle)
-                            .font(.system(size: compact ? 10 : 11, weight: .semibold))
+                            .font(subtitleFont)
                             .foregroundColor(.secondary)
                             .lineLimit(2)
                             .minimumScaleFactor(0.8)
-                    } else if compact {
+                    } else {
                         Text(" ")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(subtitleFont)
                             .hidden()
                     }
                 }
@@ -83,7 +100,7 @@ struct DashboardMetricCard: View {
             cornerRadius: cardCornerRadius,
             tint: color,
             style: .regular,
-            shadowOpacity: compact ? 0.12 : 0.16
+            shadowOpacity: compact ? 0.1 : 0.14
         )
     }
 }
