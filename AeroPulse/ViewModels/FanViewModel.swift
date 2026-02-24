@@ -48,8 +48,14 @@ final class FanViewModel: ObservableObject {
 
     func refreshHelperStatus() {
         let installed = helperInstaller.isInstalled()
-        helperInstalled = installed
-        helperStatusMessage = installed ? AppStrings.helperInstalled : AppStrings.helperMissing
+        let message = installed ? AppStrings.helperInstalled : AppStrings.helperMissing
+
+        if helperInstalled != installed {
+            helperInstalled = installed
+        }
+        if helperStatusMessage != message {
+            helperStatusMessage = message
+        }
     }
 
     func installHelper() {

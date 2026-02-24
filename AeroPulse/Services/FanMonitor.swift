@@ -16,7 +16,8 @@ final class FanMonitor: ObservableObject {
     private static let smcKeySuffixChars = Array("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
     private let expectedPerformanceCoreCount = FanMonitor.readCoreCount("hw.perflevel0.physicalcpu")
     private let expectedEfficiencyCoreCount = FanMonitor.readCoreCount("hw.perflevel1.physicalcpu")
-    private let expectedGPUCoreCount = FanMonitor.readGPUCoreCount()
+    private let expectedGPUCoreCountLock = NSLock()
+    private var cachedExpectedGPUCoreCount: Int?
     private let knownPerformanceCoreKeys = Set(SMCSensorKeys.CPU.PerformanceCores.all.map(\.key))
     private let knownEfficiencyCoreKeys = Set(SMCSensorKeys.CPU.EfficiencyCores.all.map(\.key))
 
@@ -166,7 +167,7 @@ final class FanMonitor: ObservableObject {
     }
 
     private func refreshFanTopology() {
-        let countKey = smc.readKey("Num ") ?? smc.readKey("#pn ")
+        let countKey = smc.readKey("FNum") ?? smc.readKey("Num ") ?? smc.readKey("#pn ")
         if let detectedCount = countKey.map({ Int($0.bytes[0]) }), detectedCount > 0 {
             cachedFanCount = detectedCount
         } else if cachedFanCount == nil {
@@ -394,6 +395,7 @@ final class FanMonitor: ObservableObject {
     }
 
     private func normalizeGPUSensors(_ sensors: [SensorInfo]) -> [SensorInfo] {
+        let expectedGPUCoreCount = resolvedExpectedGPUCoreCount()
         guard expectedGPUCoreCount > 0 else { return sensors }
 
         var potentialGPUSensors: [SensorInfo] = []
@@ -446,6 +448,27 @@ final class FanMonitor: ObservableObject {
         var normalizedSensors = normalizedGPUCores + otherSensors
         normalizedSensors.sort { $0.name < $1.name }
         return normalizedSensors
+    }
+
+    private func resolvedExpectedGPUCoreCount() -> Int {
+        expectedGPUCoreCountLock.lock()
+        if let cached = cachedExpectedGPUCoreCount {
+            expectedGPUCoreCountLock.unlock()
+            return cached
+        }
+        expectedGPUCoreCountLock.unlock()
+
+        // `system_profiler` blocks and internally spins the runloop while waiting.
+        // Avoid running it during `@StateObject` construction on the main thread.
+        let detected = FanMonitor.readGPUCoreCount()
+
+        expectedGPUCoreCountLock.lock()
+        if cachedExpectedGPUCoreCount == nil {
+            cachedExpectedGPUCoreCount = detected
+        }
+        let finalValue = cachedExpectedGPUCoreCount ?? detected
+        expectedGPUCoreCountLock.unlock()
+        return finalValue
     }
 
     private func isPotentialCoreSensor(_ sensor: SensorInfo) -> Bool {

@@ -21,8 +21,12 @@ struct LiquidGlassEffectView: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: NSGlassEffectView, context: Context) {
-        nsView.style = style
-        nsView.cornerRadius = cornerRadius
+        if nsView.style != style {
+            nsView.style = style
+        }
+        if abs(nsView.cornerRadius - cornerRadius) > 0.5 {
+            nsView.cornerRadius = cornerRadius
+        }
     }
 }
 

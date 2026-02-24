@@ -26,36 +26,42 @@ final class LaunchAtLoginManager: ObservableObject {
             } else {
                 try SMAppService.mainApp.unregister()
             }
-            lastError = nil
+            if lastError != nil {
+                lastError = nil
+            }
         } catch {
-            lastError = error.localizedDescription
+            let message = error.localizedDescription
+            if lastError != message {
+                lastError = message
+            }
         }
 
         refreshStatus()
     }
 
     func refreshStatus() {
+        let nextState: (isEnabled: Bool, statusText: String, statusIsWarning: Bool)
         switch SMAppService.mainApp.status {
         case .enabled:
-            isEnabled = true
-            statusText = "Enabled"
-            statusIsWarning = false
+            nextState = (true, "Enabled", false)
         case .requiresApproval:
-            isEnabled = false
-            statusText = "Waiting for approval in System Settings"
-            statusIsWarning = true
+            nextState = (false, "Waiting for approval in System Settings", true)
         case .notFound:
-            isEnabled = false
-            statusText = "App service not found"
-            statusIsWarning = true
+            nextState = (false, "App service not found", true)
         case .notRegistered:
-            isEnabled = false
-            statusText = "Disabled"
-            statusIsWarning = false
+            nextState = (false, "Disabled", false)
         @unknown default:
-            isEnabled = false
-            statusText = "Unknown status"
-            statusIsWarning = true
+            nextState = (false, "Unknown status", true)
+        }
+
+        if isEnabled != nextState.isEnabled {
+            isEnabled = nextState.isEnabled
+        }
+        if statusText != nextState.statusText {
+            statusText = nextState.statusText
+        }
+        if statusIsWarning != nextState.statusIsWarning {
+            statusIsWarning = nextState.statusIsWarning
         }
     }
 }

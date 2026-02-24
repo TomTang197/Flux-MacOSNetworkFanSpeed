@@ -45,6 +45,7 @@ struct MenuBarView: View {
 
     private enum ColumnKind {
         case stacked
+        case stackedWide
         case stackedCompact
         case singleRegular
         case singleCompact
@@ -70,7 +71,14 @@ struct MenuBarView: View {
         if let networkColumn = makePairedColumn(top: .download, bottom: .upload, enabled: enabled) {
             columns.append(networkColumn)
         }
-        if let diskColumn = makePairedColumn(top: .diskRead, bottom: .diskWrite, enabled: enabled) {
+        if
+            let diskColumn = makePairedColumn(
+                top: .diskRead,
+                bottom: .diskWrite,
+                enabled: enabled,
+                stackedKind: .stackedWide
+            )
+        {
             columns.append(diskColumn)
         }
 
@@ -149,9 +157,10 @@ struct MenuBarView: View {
         let height = rowHeight * 2 + rowSpacing + verticalPadding * 2
         
         let columnWidthStacked: CGFloat = 78
-        let columnWidthStackedCompact: CGFloat = 68
+        let columnWidthStackedWide: CGFloat = 84
+        let columnWidthStackedCompact: CGFloat = 62
         let columnWidthSingleRegular: CGFloat = 66
-        let columnWidthSingleCompact: CGFloat = 60
+        let columnWidthSingleCompact: CGFloat = 56
         let dividerSpacing: CGFloat = 6
         
         // Calculate total width based on mix of column types
@@ -160,6 +169,7 @@ struct MenuBarView: View {
             totalWidth += width(
                 for: col.kind,
                 stacked: columnWidthStacked,
+                stackedWide: columnWidthStackedWide,
                 stackedCompact: columnWidthStackedCompact,
                 regular: columnWidthSingleRegular,
                 compact: columnWidthSingleCompact
@@ -177,12 +187,13 @@ struct MenuBarView: View {
             let colWidth = width(
                 for: column.kind,
                 stacked: columnWidthStacked,
+                stackedWide: columnWidthStackedWide,
                 stackedCompact: columnWidthStackedCompact,
                 regular: columnWidthSingleRegular,
                 compact: columnWidthSingleCompact
             )
 
-            if column.kind == .stacked || column.kind == .stackedCompact {
+            if column.kind == .stacked || column.kind == .stackedWide || column.kind == .stackedCompact {
                 // Draw Stacked
                 let topY = verticalPadding + rowHeight + rowSpacing
                 let bottomY = verticalPadding
@@ -213,7 +224,7 @@ struct MenuBarView: View {
     }
 
     private func renderSingleMetricImage(_ row: MetricRow) -> NSImage {
-        let prefersExtraLarge = row.metric == .cpu
+        let prefersExtraLarge = false
         let iconPointSize: CGFloat = prefersExtraLarge ? 20 : 16
         let valuePointSize: CGFloat = prefersExtraLarge ? 17 : 16
 
@@ -265,6 +276,7 @@ struct MenuBarView: View {
     private func width(
         for kind: ColumnKind,
         stacked: CGFloat,
+        stackedWide: CGFloat,
         stackedCompact: CGFloat,
         regular: CGFloat,
         compact: CGFloat
@@ -272,6 +284,8 @@ struct MenuBarView: View {
         switch kind {
         case .stacked:
             return stacked
+        case .stackedWide:
+            return stackedWide
         case .stackedCompact:
             return stackedCompact
         case .singleRegular:
@@ -294,7 +308,7 @@ struct MenuBarView: View {
         guard let row else { return }
         let textAttributes = textAttributes(for: valueFont)
 
-        let emphasizesIcon = row.metric == .cpu
+        let emphasizesIcon = false
         let config = emphasizesIcon ? emphasizedIconConfig : iconConfig
         let icon = configuredSymbolImage(named: row.symbol, config: config)
         let textSize = measuredTextSize(for: row.value, attributes: textAttributes)
@@ -331,9 +345,9 @@ struct MenuBarView: View {
     private func singleMetricWidth(for metric: MetricType) -> CGFloat {
         switch metric {
         case .cpu:
-            return 84
+            return 76
         case .gpu, .memory:
-            return 68
+            return 66
         case .temperature, .fan:
             return 104
         case .download, .upload, .diskRead, .diskWrite:

@@ -277,7 +277,8 @@ final class SMCService {
         for key in ["F\(index)Ac", "Fan\(index)"] {
             if let value = readKey(key) {
                 let rpm = Int(bytesToFloat(value))
-                if rpm > 0 {
+                // Some Apple Silicon Macs legitimately report 0 RPM when the fan is parked.
+                if rpm >= 0 {
                     return rpm
                 }
             }

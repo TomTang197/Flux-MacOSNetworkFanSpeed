@@ -58,41 +58,33 @@ struct MenuBarDashboardView: View {
                     subtitle: "\(AppStrings.diskFree): \(networkViewModel.diskFreeCapacity) • \(AppStrings.diskUsed): \(networkViewModel.diskUsedPercent)"
                 )
                 MetricCard(
-                    title: AppStrings.cpuUsage,
-                    value: networkViewModel.cpuUsage,
-                    icon: AppImages.cpuUsage,
-                    color: .red
-                )
-                MetricCard(
                     title: AppStrings.gpuUsage,
                     value: networkViewModel.gpuUsage,
                     icon: AppImages.gpuUsage,
                     color: .pink
                 )
                 MetricCard(
+                    title: AppStrings.cpuUsage,
+                    value: networkViewModel.cpuUsage,
+                    icon: AppImages.cpuUsage,
+                    color: .red,
+                    processLines: networkViewModel.topCPUProcesses
+                )
+                MetricCard(
                     title: AppStrings.memory,
                     value: networkViewModel.memoryUsage,
                     icon: AppImages.memory,
                     color: .brown,
-                    subtitle: "\(networkViewModel.memoryUsed) / \(networkViewModel.memoryTotal)"
-                )
-                MetricCard(
-                    title: AppStrings.fan,
-                    value: fanViewModel.primaryFanRPM,
-                    icon: AppImages.fan,
-                    color: .indigo
-                )
-                MetricCard(
-                    title: AppStrings.systemTemp,
-                    value: fanViewModel.primaryTemp,
-                    icon: AppImages.temperature,
-                    color: .orange
+                    subtitle: "\(networkViewModel.memoryUsed) / \(networkViewModel.memoryTotal)",
+                    processLines: networkViewModel.topMemoryProcesses
                 )
             }
 
             HStack(spacing: 8) {
                 Button {
-                    openDashboardAndDismiss()
+                    DispatchQueue.main.async {
+                        openDashboardAndDismiss()
+                    }
                 } label: {
                     Label(AppStrings.openSystemHub, systemImage: AppImages.window)
                         .font(.system(size: 10, weight: .semibold))
@@ -101,7 +93,9 @@ struct MenuBarDashboardView: View {
                 .buttonStyle(.borderedProminent)
 
                 Button {
-                    refreshSnapshot()
+                    DispatchQueue.main.async {
+                        refreshSnapshot()
+                    }
                 } label: {
                     Image(systemName: AppImages.refresh)
                         .font(.system(size: 11, weight: .bold))
@@ -130,7 +124,9 @@ struct MenuBarDashboardView: View {
         .padding(13)
         .frame(width: 368)
         .onAppear {
-            fanViewModel.refreshHelperStatus()
+            DispatchQueue.main.async {
+                fanViewModel.refreshHelperStatus()
+            }
         }
     }
 
@@ -209,6 +205,14 @@ private struct MetricCard: View {
     let icon: String
     let color: Color
     var subtitle: String? = nil
+    var processLines: [NetworkViewModel.ProcessUsageLine] = []
+
+    private var cardMinHeight: CGFloat {
+        if processLines.isEmpty {
+            return 88
+        }
+        return 124
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
@@ -236,14 +240,35 @@ private struct MetricCard: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-            } else {
+            } else if processLines.isEmpty {
                 Text(" ")
                     .font(.system(size: 9, weight: .semibold))
                     .hidden()
             }
+
+            if !processLines.isEmpty {
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(Array(processLines.prefix(3))) { line in
+                        HStack(spacing: 6) {
+                            Text(line.name)
+                                .font(.system(size: 8, weight: .semibold))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            Text(line.value)
+                                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                .lineLimit(1)
+                                .frame(minWidth: 34, alignment: .trailing)
+                        }
+                    }
+                }
+                .padding(.top, 1)
+            }
         }
         .padding(10)
-        .frame(maxWidth: .infinity, minHeight: 88, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: cardMinHeight, alignment: .topLeading)
         .liquidGlassCard(cornerRadius: 11, tint: color, style: .regular, shadowOpacity: 0.08)
     }
 }

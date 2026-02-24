@@ -33,26 +33,30 @@ enum MetricType: String, CaseIterable, Identifiable, Codable {
         }
     }
 
-    var icon: Text {
+    var symbolName: String {
         switch self {
         case .download:
-            return Text("\(Image(systemName: "arrow.down.circle"))")
+            return "arrow.down.circle"
         case .upload:
-            return Text("\(Image(systemName: "arrow.up.circle"))")
+            return "arrow.up.circle"
         case .diskRead:
-            return Text("\(Image(systemName: "internaldrive"))")
+            return "internaldrive"
         case .diskWrite:
-            return Text("\(Image(systemName: "internaldrive.fill"))")
+            return "internaldrive.fill"
         case .cpu:
-            return Text("\(Image(systemName: "cpu"))")
+            return "cpu"
         case .gpu:
-            return Text("\(Image(systemName: AppImages.gpuUsage))")
+            return AppImages.gpuUsage
         case .memory:
-            return Text("\(Image(systemName: "memorychip"))")
+            return "memorychip"
         case .fan:
-            return Text("\(Image(systemName: "fanblades"))")
+            return "fanblades"
         case .temperature:
-            return Text("\(Image(systemName: "thermometer"))")
+            return "thermometer"
         }
+    }
+
+    var icon: Text {
+        Text("\(Image(systemName: symbolName))")
     }
 }

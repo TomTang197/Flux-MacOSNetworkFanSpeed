@@ -11,6 +11,14 @@ import SwiftUI
 /// `NetworkViewModel` manages the state of the network speed meter, coordinates updates, and persists settings.
 final class NetworkViewModel: ObservableObject {
 
+    struct ProcessUsageLine: Identifiable, Equatable {
+        let pid: Int
+        let name: String
+        let value: String
+
+        var id: String { "\(pid)-\(name)-\(value)" }
+    }
+
     // MARK: - Published Properties
 
     @Published var downloadSpeed: String = "0 KB/s"
@@ -29,6 +37,11 @@ final class NetworkViewModel: ObservableObject {
     @Published var memoryUsage: String = "0%"
     @Published var memoryUsed: String = "--"
     @Published var memoryTotal: String = "--"
+    @Published var topCPUProcesses: [ProcessUsageLine] = []
+    @Published var topGPUProcesses: [ProcessUsageLine] = [
+        ProcessUsageLine(pid: -1, name: "Per-process GPU", value: "N/A")
+    ]
+    @Published var topMemoryProcesses: [ProcessUsageLine] = []
 
     @Published var enabledMetrics: Set<MetricType> = [.download, .upload] {
         didSet {
@@ -49,6 +62,8 @@ final class NetworkViewModel: ObservableObject {
     private let monitor = NetworkMonitor()
     private let diskMonitor = DiskMonitor()
     private let systemMonitor = SystemMonitor()
+    private let processMonitor = ProcessMonitor()
+    private let processMonitorQueue = DispatchQueue(label: "AeroPulse.ProcessMonitor", qos: .utility)
     private var lastStats: NetworkMonitor.InterfaceStats?
     private var lastDiskStats: DiskMonitor.DiskStats?
     private var lastCPUTicks: SystemMonitor.CPUTicks?
@@ -57,6 +72,8 @@ final class NetworkViewModel: ObservableObject {
     private var lastCapacitySampleTimestamp: Date?
     private var lastMemorySampleTimestamp: Date?
     private var lastGPUSampleTimestamp: Date?
+    private var lastProcessSampleTimestamp: Date?
+    private var isSamplingProcessUsage = false
     private var sessionDownloadBytes: UInt64 = 0
     private var sessionUploadBytes: UInt64 = 0
     private var sessionDiskReadBytes: UInt64 = 0
@@ -66,6 +83,7 @@ final class NetworkViewModel: ObservableObject {
     private let capacitySampleInterval: TimeInterval = 15.0
     private let memorySampleInterval: TimeInterval = 2.0
     private let gpuSampleInterval: TimeInterval = 1.0
+    private let processSampleInterval: TimeInterval = 3.0
     private static let capacityFormatter: ByteCountFormatter = {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
@@ -108,7 +126,10 @@ final class NetworkViewModel: ObservableObject {
         let interval = UserDefaults.standard.double(forKey: "RefreshInterval")
         self.refreshInterval = interval > 0 ? interval : 1.0
 
-        startMonitoring()
+        // Avoid publishing state while SwiftUI is still constructing the StateObject graph.
+        DispatchQueue.main.async { [weak self] in
+            self?.startMonitoring()
+        }
     }
 
     // MARK: - Monitoring Logic
@@ -233,6 +254,8 @@ final class NetworkViewModel: ObservableObject {
             self.lastMemorySampleTimestamp = currentTimestamp
         }
 
+        sampleProcessUsageIfNeeded(at: currentTimestamp)
+
         self.lastStats = currentStats
         self.lastTimestamp = currentTimestamp
     }
@@ -287,7 +310,69 @@ final class NetworkViewModel: ObservableObject {
         return timestamp.timeIntervalSince(lastGPUSampleTimestamp) >= gpuSampleInterval
     }
 
+    private func shouldSampleProcessUsage(at timestamp: Date) -> Bool {
+        guard let lastProcessSampleTimestamp else { return true }
+        return timestamp.timeIntervalSince(lastProcessSampleTimestamp) >= processSampleInterval
+    }
+
+    private func sampleProcessUsageIfNeeded(at timestamp: Date) {
+        guard shouldSampleProcessUsage(at: timestamp), !isSamplingProcessUsage else { return }
+
+        isSamplingProcessUsage = true
+        lastProcessSampleTimestamp = timestamp
+
+        processMonitorQueue.async { [weak self] in
+            guard let self else { return }
+            let snapshot = self.processMonitor.currentTopProcesses(limit: 3)
+
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                if let snapshot {
+                    self.applyProcessUsageSnapshot(snapshot)
+                }
+                self.isSamplingProcessUsage = false
+            }
+        }
+    }
+
+    private func applyProcessUsageSnapshot(_ snapshot: ProcessMonitor.Snapshot) {
+        setIfChanged(&self.topCPUProcesses, snapshot.topCPU.map { stat in
+            ProcessUsageLine(
+                pid: stat.pid,
+                name: stat.name,
+                value: String(format: "%.0f%%", stat.cpuPercent)
+            )
+        })
+
+        setIfChanged(&self.topMemoryProcesses, snapshot.topMemory.map { stat in
+            ProcessUsageLine(
+                pid: stat.pid,
+                name: stat.name,
+                value: formatCompactMemory(stat.rssBytes)
+            )
+        })
+    }
+
+    private func formatCompactMemory(_ bytes: UInt64) -> String {
+        let mb = Double(bytes) / (1024 * 1024)
+        let gb = mb / 1024
+
+        if gb >= 1 {
+            return String(format: "%.1fG", gb)
+        } else if mb >= 10 {
+            return String(format: "%.0fM", mb)
+        } else {
+            return String(format: "%.1fM", mb)
+        }
+    }
+
     private func setIfChanged(_ value: inout String, _ newValue: String) {
+        if value != newValue {
+            value = newValue
+        }
+    }
+
+    private func setIfChanged<T: Equatable>(_ value: inout [T], _ newValue: [T]) {
         if value != newValue {
             value = newValue
         }
@@ -299,5 +384,101 @@ final class NetworkViewModel: ObservableObject {
         } else {
             value += delta
         }
+    }
+}
+
+private final class ProcessMonitor {
+    struct ProcessStat {
+        let pid: Int
+        let name: String
+        let cpuPercent: Double
+        let rssBytes: UInt64
+    }
+
+    struct Snapshot {
+        let topCPU: [ProcessStat]
+        let topMemory: [ProcessStat]
+    }
+
+    func currentTopProcesses(limit: Int) -> Snapshot? {
+        let rows = fetchProcessStats()
+        guard !rows.isEmpty else { return nil }
+
+        let cpuCandidates = rows.filter { $0.cpuPercent > 0.1 }
+        let topCPUSource = cpuCandidates.isEmpty ? rows : cpuCandidates
+        let topCPU = topCPUSource
+            .sorted {
+                if $0.cpuPercent != $1.cpuPercent { return $0.cpuPercent > $1.cpuPercent }
+                return $0.rssBytes > $1.rssBytes
+            }
+            .prefix(limit)
+
+        let topMemory = rows
+            .sorted {
+                if $0.rssBytes != $1.rssBytes { return $0.rssBytes > $1.rssBytes }
+                return $0.cpuPercent > $1.cpuPercent
+            }
+            .prefix(limit)
+
+        return Snapshot(topCPU: Array(topCPU), topMemory: Array(topMemory))
+    }
+
+    private func fetchProcessStats() -> [ProcessStat] {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/ps")
+        process.arguments = ["-A", "-o", "pid=,pcpu=,rss=,comm="]
+
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        do {
+            try process.run()
+        } catch {
+            return []
+        }
+
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else { return [] }
+
+        let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        guard let output = String(data: data, encoding: .utf8) else { return [] }
+
+        let currentPID = Int(ProcessInfo.processInfo.processIdentifier)
+        return output
+            .split(whereSeparator: \.isNewline)
+            .compactMap { line in parseProcessLine(String(line)) }
+            .filter { $0.pid != currentPID && $0.name != "ps" }
+    }
+
+    private func parseProcessLine(_ line: String) -> ProcessStat? {
+        let parts = line.split(
+            maxSplits: 3,
+            omittingEmptySubsequences: true,
+            whereSeparator: \.isWhitespace
+        )
+        guard parts.count >= 4 else { return nil }
+
+        guard
+            let pid = Int(parts[0]),
+            let cpuPercent = Double(parts[1]),
+            let rssKilobytes = UInt64(parts[2])
+        else {
+            return nil
+        }
+
+        let rawCommand = String(parts[3]).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !rawCommand.isEmpty else { return nil }
+
+        let displayName = URL(fileURLWithPath: rawCommand).lastPathComponent
+        let name = displayName.isEmpty ? rawCommand : displayName
+
+        return ProcessStat(
+            pid: pid,
+            name: name,
+            cpuPercent: max(cpuPercent, 0),
+            rssBytes: rssKilobytes * 1024
+        )
     }
 }

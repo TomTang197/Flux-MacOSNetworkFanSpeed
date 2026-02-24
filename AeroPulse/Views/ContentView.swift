@@ -162,7 +162,9 @@ struct ContentView: View {
                                 compact: true,
                                 showInfoButton: false,
                                 action: {
-                                    fanViewModel.isShowingThermalDetails = true
+                                    DispatchQueue.main.async {
+                                        fanViewModel.isShowingThermalDetails = true
+                                    }
                                 }
                             )
                             DashboardMetricCard(
@@ -217,9 +219,11 @@ struct ContentView: View {
         .frame(minWidth: minimumWindowSize.width, minHeight: minimumWindowSize.height)
         .background(dashboardBackground)
         .onAppear {
-            NSApp.setActivationPolicy(.regular)
-            NSApp.unhide(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            DispatchQueue.main.async {
+                NSApp.setActivationPolicy(.regular)
+                NSApp.unhide(nil)
+                NSApp.activate(ignoringOtherApps: true)
+            }
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 if let window = NSApp.windows.first(where: { $0.canBecomeKey }) {
@@ -232,7 +236,9 @@ struct ContentView: View {
             }
         }
         .onDisappear {
-            NSApplication.shared.setActivationPolicy(.accessory)
+            DispatchQueue.main.async {
+                NSApplication.shared.setActivationPolicy(.accessory)
+            }
         }
         .sheet(isPresented: $fanViewModel.isShowingThermalDetails) {
             ThermalDetailView(fanViewModel: fanViewModel)
