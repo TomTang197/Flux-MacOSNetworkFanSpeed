@@ -41,6 +41,9 @@ struct SettingsView: View {
         return 1
     }
 
+    private let cardActionButtonMinHeight: CGFloat = 24
+    private let cardActionButtonFont = Font.system(size: 10, weight: .semibold)
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             headerSection
@@ -107,6 +110,18 @@ struct SettingsView: View {
                             label: AppStrings.cpuUsage,
                             value: networkViewModel.cpuUsage,
                             color: .red
+                        )
+                        StatRow(
+                            icon: AppImages.powerUsage,
+                            label: AppStrings.powerUsage,
+                            value: networkViewModel.powerUsage,
+                            color: .yellow
+                        )
+                        StatRow(
+                            icon: AppImages.chargingPower,
+                            label: AppStrings.chargingPower,
+                            value: networkViewModel.chargingPowerUsage,
+                            color: .orange
                         )
                         StatRow(
                             icon: AppImages.gpuUsage,
@@ -203,9 +218,10 @@ struct SettingsView: View {
                                 launchAtLoginManager.refreshStatus()
                             }
                         }
-                        .buttonStyle(.plain)
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.blue)
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .font(cardActionButtonFont)
+                        .frame(minHeight: cardActionButtonMinHeight)
                     }
                 }
 
@@ -255,8 +271,8 @@ struct SettingsView: View {
                             }
                         } label: {
                             Text(AppStrings.retryConnection)
-                                .font(.system(size: 10, weight: .bold))
-                                .frame(maxWidth: .infinity)
+                                .font(cardActionButtonFont)
+                                .frame(maxWidth: .infinity, minHeight: cardActionButtonMinHeight)
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
@@ -290,6 +306,8 @@ struct SettingsView: View {
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
+                        .font(cardActionButtonFont)
+                        .frame(minHeight: cardActionButtonMinHeight)
                         .disabled(fanViewModel.isInstallingHelper)
 
                         Button(AppStrings.launchAtLoginRefresh) {
@@ -299,6 +317,8 @@ struct SettingsView: View {
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
+                        .font(cardActionButtonFont)
+                        .frame(minHeight: cardActionButtonMinHeight)
                         .disabled(fanViewModel.isInstallingHelper)
                     }
                 }
@@ -330,8 +350,8 @@ struct SettingsView: View {
                         isShowingBugFeedback = true
                     } label: {
                         Text(AppStrings.bugFeedbackOpen)
-                            .font(.system(size: 10, weight: .bold))
-                            .frame(maxWidth: .infinity)
+                            .font(cardActionButtonFont)
+                            .frame(maxWidth: .infinity, minHeight: cardActionButtonMinHeight)
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
@@ -562,6 +582,8 @@ private struct BugFeedbackSheet: View {
                     dismiss()
                 }
                 .buttonStyle(.bordered)
+                .controlSize(.small)
+                .font(.system(size: 10, weight: .semibold))
 
                 Spacer()
 
@@ -569,9 +591,11 @@ private struct BugFeedbackSheet: View {
                     sendFeedbackByMail()
                 } label: {
                     Text(AppStrings.bugFeedbackSend)
-                        .frame(minWidth: 120)
+                        .font(.system(size: 10, weight: .semibold))
+                        .frame(minWidth: 120, minHeight: 24)
                 }
                 .buttonStyle(.borderedProminent)
+                .controlSize(.small)
                 .disabled(!canSend)
             }
         }

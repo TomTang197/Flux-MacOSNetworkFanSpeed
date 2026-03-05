@@ -7,7 +7,7 @@
         "key": "Sampling",
         "location": {
           "startingColumn": 30,
-          "startingLine": 204
+          "startingLine": 214
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "",
         "location": {
           "startingColumn": 32,
-          "startingLine": 208
+          "startingLine": 218
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "0.5s",
         "location": {
           "startingColumn": 34,
-          "startingLine": 209
+          "startingLine": 219
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "1.0s",
         "location": {
           "startingColumn": 34,
-          "startingLine": 210
+          "startingLine": 220
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "2.0s",
         "location": {
           "startingColumn": 34,
-          "startingLine": 211
+          "startingLine": 221
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "5.0s",
         "location": {
           "startingColumn": 34,
-          "startingLine": 212
+          "startingLine": 222
         }
       },
       {
@@ -55,7 +55,7 @@
         "key": "Live telemetry and fan RPM",
         "location": {
           "startingColumn": 22,
-          "startingLine": 359
+          "startingLine": 377
         }
       },
       {
@@ -63,7 +63,7 @@
         "key": "%lld %@",
         "location": {
           "startingColumn": 22,
-          "startingLine": 653
+          "startingLine": 702
         }
       },
       {
@@ -71,7 +71,7 @@
         "key": "%lld MIN",
         "location": {
           "startingColumn": 22,
-          "startingLine": 663
+          "startingLine": 712
         }
       },
       {
@@ -79,7 +79,7 @@
         "key": "%lld MAX",
         "location": {
           "startingColumn": 22,
-          "startingLine": 665
+          "startingLine": 714
         }
       }
     ]

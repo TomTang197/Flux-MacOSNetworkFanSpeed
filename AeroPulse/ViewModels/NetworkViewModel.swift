@@ -11,6 +11,11 @@ import SwiftUI
 /// `NetworkViewModel` manages the state of the network speed meter, coordinates updates, and persists settings.
 final class NetworkViewModel: ObservableObject {
 
+    enum DetailedSamplingSource: Hashable {
+        case dashboardWindow
+        case menuBarPopover
+    }
+
     struct ProcessUsageLine: Identifiable, Equatable {
         let pid: Int
         let name: String
@@ -33,6 +38,8 @@ final class NetworkViewModel: ObservableObject {
     @Published var diskFreeCapacity: String = "--"
     @Published var diskUsedPercent: String = "--"
     @Published var cpuUsage: String = "0%"
+    @Published var powerUsage: String = "-- W"
+    @Published var chargingPowerUsage: String = "-- W"
     @Published var gpuUsage: String = "--"
     @Published var memoryUsage: String = "0%"
     @Published var memoryUsed: String = "--"
@@ -71,9 +78,11 @@ final class NetworkViewModel: ObservableObject {
     private var lastDiskSampleTimestamp: Date?
     private var lastCapacitySampleTimestamp: Date?
     private var lastMemorySampleTimestamp: Date?
+    private var lastPowerSampleTimestamp: Date?
     private var lastGPUSampleTimestamp: Date?
     private var lastProcessSampleTimestamp: Date?
     private var isSamplingProcessUsage = false
+    private var detailedSamplingSources: Set<DetailedSamplingSource> = []
     private var sessionDownloadBytes: UInt64 = 0
     private var sessionUploadBytes: UInt64 = 0
     private var sessionDiskReadBytes: UInt64 = 0
@@ -82,7 +91,9 @@ final class NetworkViewModel: ObservableObject {
     private let diskSampleInterval: TimeInterval = 2.0
     private let capacitySampleInterval: TimeInterval = 15.0
     private let memorySampleInterval: TimeInterval = 2.0
-    private let gpuSampleInterval: TimeInterval = 1.0
+    private let powerSampleInterval: TimeInterval = 2.0
+    private let gpuSampleIntervalDetailed: TimeInterval = 1.0
+    private let gpuSampleIntervalBackground: TimeInterval = 2.0
     private let processSampleInterval: TimeInterval = 3.0
     private static let capacityFormatter: ByteCountFormatter = {
         let formatter = ByteCountFormatter()
@@ -133,6 +144,33 @@ final class NetworkViewModel: ObservableObject {
     }
 
     // MARK: - Monitoring Logic
+
+    var isDetailedSamplingEnabled: Bool {
+        !detailedSamplingSources.isEmpty
+    }
+
+    func setDetailedSampling(_ enabled: Bool, source: DetailedSamplingSource) {
+        let wasEnabled = isDetailedSamplingEnabled
+
+        if enabled {
+            detailedSamplingSources.insert(source)
+        } else {
+            detailedSamplingSources.remove(source)
+        }
+
+        let isEnabled = isDetailedSamplingEnabled
+        guard wasEnabled != isEnabled else { return }
+
+        lastGPUSampleTimestamp = nil
+
+        if isEnabled {
+            lastProcessSampleTimestamp = nil
+            sampleProcessUsageIfNeeded(at: Date())
+        } else {
+            setIfChanged(&topCPUProcesses, [])
+            setIfChanged(&topMemoryProcesses, [])
+        }
+    }
 
     func startMonitoring() {
         restartTimer()
@@ -192,6 +230,22 @@ final class NetworkViewModel: ObservableObject {
                 setIfChanged(&self.cpuUsage, String(format: "%.0f%%", cpuPercent))
             }
             self.lastCPUTicks = currentCPUTicks
+        }
+
+        if shouldSamplePower(at: currentTimestamp) {
+            if let powerWatts = systemMonitor.currentPowerUsageWatts() {
+                setIfChanged(&self.powerUsage, formatPower(powerWatts))
+            } else {
+                setIfChanged(&self.powerUsage, "-- W")
+            }
+
+            if let chargingWatts = systemMonitor.currentChargingPowerWatts() {
+                setIfChanged(&self.chargingPowerUsage, formatPower(chargingWatts))
+            } else {
+                setIfChanged(&self.chargingPowerUsage, "-- W")
+            }
+
+            self.lastPowerSampleTimestamp = currentTimestamp
         }
 
         if shouldSampleGPU(at: currentTimestamp) {
@@ -290,6 +344,19 @@ final class NetworkViewModel: ObservableObject {
         Self.totalFormatter.string(fromByteCount: Int64(bytes))
     }
 
+    private func formatPower(_ watts: Double) -> String {
+        guard watts.isFinite, watts >= 0 else { return "-- W" }
+        if watts < 0.05 { return "0 W" }
+
+        if watts >= 100 {
+            return String(format: "%.0f W", watts)
+        } else if watts >= 10 {
+            return String(format: "%.1f W", watts)
+        } else {
+            return String(format: "%.2f W", watts)
+        }
+    }
+
     private func shouldSampleDisk(at timestamp: Date) -> Bool {
         guard let lastDiskSampleTimestamp else { return true }
         return timestamp.timeIntervalSince(lastDiskSampleTimestamp) >= diskSampleInterval
@@ -305,9 +372,15 @@ final class NetworkViewModel: ObservableObject {
         return timestamp.timeIntervalSince(lastMemorySampleTimestamp) >= memorySampleInterval
     }
 
+    private func shouldSamplePower(at timestamp: Date) -> Bool {
+        guard let lastPowerSampleTimestamp else { return true }
+        return timestamp.timeIntervalSince(lastPowerSampleTimestamp) >= powerSampleInterval
+    }
+
     private func shouldSampleGPU(at timestamp: Date) -> Bool {
+        let sampleInterval = isDetailedSamplingEnabled ? gpuSampleIntervalDetailed : gpuSampleIntervalBackground
         guard let lastGPUSampleTimestamp else { return true }
-        return timestamp.timeIntervalSince(lastGPUSampleTimestamp) >= gpuSampleInterval
+        return timestamp.timeIntervalSince(lastGPUSampleTimestamp) >= sampleInterval
     }
 
     private func shouldSampleProcessUsage(at timestamp: Date) -> Bool {
@@ -316,6 +389,7 @@ final class NetworkViewModel: ObservableObject {
     }
 
     private func sampleProcessUsageIfNeeded(at timestamp: Date) {
+        guard isDetailedSamplingEnabled else { return }
         guard shouldSampleProcessUsage(at: timestamp), !isSamplingProcessUsage else { return }
 
         isSamplingProcessUsage = true
@@ -327,7 +401,7 @@ final class NetworkViewModel: ObservableObject {
 
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
-                if let snapshot {
+                if let snapshot, self.isDetailedSamplingEnabled {
                     self.applyProcessUsageSnapshot(snapshot)
                 }
                 self.isSamplingProcessUsage = false

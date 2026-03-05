@@ -16,6 +16,8 @@ struct MenuBarDashboardView: View {
         GridItem(.flexible(), spacing: 10),
         GridItem(.flexible(), spacing: 10),
     ]
+    private let actionButtonHeight: CGFloat = 28
+    private let actionButtonFont = Font.system(size: 10, weight: .semibold)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 11) {
@@ -78,6 +80,18 @@ struct MenuBarDashboardView: View {
                     subtitle: "\(networkViewModel.memoryUsed) / \(networkViewModel.memoryTotal)",
                     processLines: networkViewModel.topMemoryProcesses
                 )
+                MetricCard(
+                    title: AppStrings.powerUsage,
+                    value: networkViewModel.powerUsage,
+                    icon: AppImages.powerUsage,
+                    color: .yellow
+                )
+                MetricCard(
+                    title: AppStrings.chargingPower,
+                    value: networkViewModel.chargingPowerUsage,
+                    icon: AppImages.chargingPower,
+                    color: .orange
+                )
             }
 
             HStack(spacing: 8) {
@@ -87,10 +101,11 @@ struct MenuBarDashboardView: View {
                     }
                 } label: {
                     Label(AppStrings.openSystemHub, systemImage: AppImages.window)
-                        .font(.system(size: 10, weight: .semibold))
-                        .frame(maxWidth: .infinity)
+                        .font(actionButtonFont)
+                        .frame(maxWidth: .infinity, minHeight: actionButtonHeight)
                 }
                 .buttonStyle(.borderedProminent)
+                .controlSize(.small)
 
                 Button {
                     DispatchQueue.main.async {
@@ -98,10 +113,11 @@ struct MenuBarDashboardView: View {
                     }
                 } label: {
                     Image(systemName: AppImages.refresh)
-                        .font(.system(size: 11, weight: .bold))
-                        .frame(width: 30, height: 26)
+                        .font(actionButtonFont)
+                        .frame(width: 32, height: actionButtonHeight)
                 }
                 .buttonStyle(.bordered)
+                .controlSize(.small)
             }
 
             HStack(spacing: 6) {
@@ -116,17 +132,26 @@ struct MenuBarDashboardView: View {
                     NSApplication.shared.terminate(nil)
                 } label: {
                     Label(AppStrings.quitApplication, systemImage: AppImages.power)
-                        .font(.system(size: 9, weight: .bold))
+                        .font(actionButtonFont)
+                        .frame(minHeight: 24)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .tint(.red.opacity(0.82))
             }
         }
         .padding(13)
         .frame(width: 368)
         .onAppear {
+            networkViewModel.setDetailedSampling(true, source: .menuBarPopover)
+            fanViewModel.setDetailedSampling(true, source: .menuBarPopover)
             DispatchQueue.main.async {
                 fanViewModel.refreshHelperStatus()
             }
+        }
+        .onDisappear {
+            networkViewModel.setDetailedSampling(false, source: .menuBarPopover)
+            fanViewModel.setDetailedSampling(false, source: .menuBarPopover)
         }
     }
 

@@ -10,6 +10,11 @@ import Combine
 import Foundation
 
 final class FanViewModel: ObservableObject {
+    enum DetailedSamplingSource: Hashable {
+        case dashboardWindow
+        case menuBarPopover
+    }
+
     @Published var fans: [FanInfo] = []
     @Published var sensors: [SensorInfo] = []
     @Published var isShowingThermalDetails: Bool = false
@@ -19,10 +24,14 @@ final class FanViewModel: ObservableObject {
 
     private let monitor = FanMonitor()
     private let helperInstaller = PrivilegedHelperInstaller.shared
+    private let samplingQueue = DispatchQueue(label: "AeroPulse.FanMonitorSampling", qos: .utility)
     private var timer: AnyCancellable?
-    private let refreshInterval: TimeInterval = 2.0
+    private let detailedRefreshInterval: TimeInterval = 2.0
+    private let backgroundRefreshInterval: TimeInterval = 4.0
     private var helperPollCounter = 0
     private var emptySampleCounter = 0
+    private var isSamplingData = false
+    private var detailedSamplingSources: Set<DetailedSamplingSource> = []
 
     init() {
         DispatchQueue.main.async { [weak self] in
@@ -35,15 +44,42 @@ final class FanViewModel: ObservableObject {
         timer?.cancel()
     }
 
+    private var refreshInterval: TimeInterval {
+        isDetailedSamplingEnabled ? detailedRefreshInterval : backgroundRefreshInterval
+    }
+
+    private var isDetailedSamplingEnabled: Bool {
+        !detailedSamplingSources.isEmpty
+    }
+
+    func setDetailedSampling(_ enabled: Bool, source: DetailedSamplingSource) {
+        let wasEnabled = isDetailedSamplingEnabled
+
+        if enabled {
+            detailedSamplingSources.insert(source)
+        } else {
+            detailedSamplingSources.remove(source)
+        }
+
+        guard wasEnabled != isDetailedSamplingEnabled else { return }
+        restartTimer()
+        if isDetailedSamplingEnabled {
+            refreshData()
+        }
+    }
+
     func startMonitoring() {
+        restartTimer()
+        refreshData()
+    }
+
+    private func restartTimer() {
         timer?.cancel()
         timer = Timer.publish(every: refreshInterval, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
                 self?.refreshData()
             }
-
-        refreshData()
     }
 
     func refreshHelperStatus() {
@@ -119,7 +155,10 @@ final class FanViewModel: ObservableObject {
     }
 
     private func refreshData() {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        guard !isSamplingData else { return }
+        isSamplingData = true
+
+        samplingQueue.async { [weak self] in
             guard let self else { return }
             let sampledFans = self.monitor.getFans().sorted { $0.id < $1.id }
             let sampledSensors = self.monitor.getSensors()
@@ -148,6 +187,7 @@ final class FanViewModel: ObservableObject {
                     self.helperPollCounter = 0
                     self.refreshHelperStatus()
                 }
+                self.isSamplingData = false
             }
         }
     }

@@ -54,7 +54,7 @@ struct MenuBarView: View {
     private func enabledMetricRows() -> [MetricRow] {
         let enabled = networkViewModel.enabledMetrics
         let orderedMetrics: [MetricType] = [
-            .download, .upload, .diskRead, .diskWrite, .cpu, .gpu, .memory, .temperature, .fan,
+            .download, .upload, .diskRead, .diskWrite, .power, .gpu, .memory, .cpu, .chargingPower, .temperature, .fan,
         ]
 
         return orderedMetrics.compactMap { metric in
@@ -82,10 +82,10 @@ struct MenuBarView: View {
             columns.append(diskColumn)
         }
 
-        // Memory/GPU are grouped in one stacked slot.
+        // Total power/GPU are grouped in one stacked slot.
         if
             let computeColumn = makePairedColumn(
-                top: .memory,
+                top: .power,
                 bottom: .gpu,
                 enabled: enabled,
                 stackedKind: .stackedCompact,
@@ -95,23 +95,33 @@ struct MenuBarView: View {
             columns.append(computeColumn)
         }
 
+        // Memory/CPU are grouped in one stacked slot.
+        if
+            let memoryCPUColumn = makePairedColumn(
+                top: .memory,
+                bottom: .cpu,
+                enabled: enabled,
+                stackedKind: .stackedCompact,
+                singleKind: .singleCompact
+            )
+        {
+            columns.append(memoryCPUColumn)
+        }
+
         // Temperature/Fan are grouped in one stacked slot.
         if let thermalColumn = makePairedColumn(top: .temperature, bottom: .fan, enabled: enabled) {
             columns.append(thermalColumn)
         }
 
-        // CPU stays single but uses compact width.
-        let singles: [MetricType] = [.cpu]
-        for metric in singles {
-            if enabled.contains(metric) {
-                columns.append(
-                    MetricColumn(
-                        top: metricRow(for: metric),
-                        bottom: nil,
-                        kind: .singleCompact
-                    )
+        // Charging power stays single.
+        if enabled.contains(.chargingPower) {
+            columns.append(
+                MetricColumn(
+                    top: metricRow(for: .chargingPower),
+                    bottom: nil,
+                    kind: .singleCompact
                 )
-            }
+            )
         }
 
         return columns
@@ -344,7 +354,7 @@ struct MenuBarView: View {
 
     private func singleMetricWidth(for metric: MetricType) -> CGFloat {
         switch metric {
-        case .cpu:
+        case .power, .chargingPower, .cpu:
             return 76
         case .gpu, .memory:
             return 66
@@ -413,6 +423,8 @@ struct MenuBarView: View {
         case .diskRead: return AppImages.diskRead
         case .diskWrite: return AppImages.diskWrite
         case .cpu: return AppImages.cpuUsage
+        case .power: return AppImages.powerUsage
+        case .chargingPower: return AppImages.chargingPower
         case .gpu: return AppImages.gpuUsage
         case .memory: return AppImages.memory
         case .fan: return AppImages.fan
@@ -436,6 +448,8 @@ struct MenuBarView: View {
         case .diskRead: return networkViewModel.diskReadSpeed
         case .diskWrite: return networkViewModel.diskWriteSpeed
         case .cpu: return networkViewModel.cpuUsage
+        case .power: return networkViewModel.powerUsage
+        case .chargingPower: return networkViewModel.chargingPowerUsage
         case .gpu: return networkViewModel.gpuUsage
         case .memory: return networkViewModel.memoryUsage
         case .fan: return fanViewModel.primaryFanRPM

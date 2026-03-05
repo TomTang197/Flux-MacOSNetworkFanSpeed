@@ -133,6 +133,20 @@ struct ContentView: View {
                                 compact: true
                             )
                             DashboardMetricCard(
+                                title: AppStrings.powerUsage,
+                                value: networkViewModel.powerUsage,
+                                icon: AppImages.powerUsage,
+                                color: .yellow,
+                                compact: true
+                            )
+                            DashboardMetricCard(
+                                title: AppStrings.chargingPower,
+                                value: networkViewModel.chargingPowerUsage,
+                                icon: AppImages.chargingPower,
+                                color: .orange,
+                                compact: true
+                            )
+                            DashboardMetricCard(
                                 title: AppStrings.gpuUsage,
                                 value: networkViewModel.gpuUsage,
                                 icon: AppImages.gpuUsage,
@@ -219,6 +233,8 @@ struct ContentView: View {
         .frame(minWidth: minimumWindowSize.width, minHeight: minimumWindowSize.height)
         .background(dashboardBackground)
         .onAppear {
+            networkViewModel.setDetailedSampling(true, source: .dashboardWindow)
+            fanViewModel.setDetailedSampling(true, source: .dashboardWindow)
             DispatchQueue.main.async {
                 NSApp.setActivationPolicy(.regular)
                 NSApp.unhide(nil)
@@ -236,6 +252,8 @@ struct ContentView: View {
             }
         }
         .onDisappear {
+            networkViewModel.setDetailedSampling(false, source: .dashboardWindow)
+            fanViewModel.setDetailedSampling(false, source: .dashboardWindow)
             DispatchQueue.main.async {
                 NSApplication.shared.setActivationPolicy(.accessory)
             }
