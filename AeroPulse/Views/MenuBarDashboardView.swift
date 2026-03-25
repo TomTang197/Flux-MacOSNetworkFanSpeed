@@ -90,7 +90,8 @@ struct MenuBarDashboardView: View {
                     title: AppStrings.chargingPower,
                     value: networkViewModel.chargingPowerUsage,
                     icon: AppImages.chargingPower,
-                    color: .orange
+                    color: .orange,
+                    subtitle: networkViewModel.chargingPowerSubtitle
                 )
             }
 

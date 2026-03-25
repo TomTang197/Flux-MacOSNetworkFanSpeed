@@ -5,7 +5,6 @@
 
 import Foundation
 import IOKit
-import IOKit.ps
 
 final class SystemMonitor {
     struct CPUTicks {
@@ -21,6 +20,13 @@ final class SystemMonitor {
         let usedRatio: Double
     }
 
+    struct PowerSnapshot {
+        let systemPowerWatts: Double?
+        let systemPowerInWatts: Double?
+        let batteryPowerWatts: Double?
+        let chargingPowerWatts: Double?
+    }
+
     private let gpuUtilizationKeys = [
         "Device Utilization %",
         "GPU Utilization %",
@@ -28,14 +34,6 @@ final class SystemMonitor {
         "GPU Busy(%)",
         "GPU Activity(%)",
     ]
-    private let totalPowerTelemetryKeys = [
-        "SystemPowerIn",
-        "SystemLoad",
-    ]
-    private let chargingPowerTelemetryKeys = [
-        "BatteryPower",
-    ]
-
     func currentCPUTicks() -> CPUTicks? {
         var cpuInfo = host_cpu_load_info()
         var count = mach_msg_type_number_t(
@@ -107,130 +105,120 @@ final class SystemMonitor {
     }
 
     func currentPowerUsageWatts() -> Double? {
-        if let totalPower = currentTotalPowerUsageWatts() {
-            return totalPower
-        }
-
-        guard
-            let snapshot = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
-            let sources = IOPSCopyPowerSourcesList(snapshot)?.takeRetainedValue() as? [CFTypeRef]
-        else {
-            return nil
-        }
-
-        var samples: [Double] = []
-
-        for source in sources {
-            guard
-                let description = IOPSGetPowerSourceDescription(snapshot, source)?
-                    .takeUnretainedValue() as? [String: Any],
-                (description[kIOPSIsPresentKey as String] as? Bool) != false
-            else {
-                continue
-            }
-
-            guard
-                let amperage = numberValue(from: description[kIOPSCurrentKey as String]),
-                let voltage = numberValue(from: description[kIOPSVoltageKey as String])
-            else {
-                continue
-            }
-
-            let watts = abs(amperage * voltage) / 1_000_000
-            guard watts.isFinite, watts > 0 else { continue }
-            samples.append(watts)
-        }
-
-        guard !samples.isEmpty else { return nil }
-        return samples.reduce(0, +) / Double(samples.count)
+        currentPowerSnapshot()?.systemPowerWatts
     }
 
     func currentChargingPowerWatts() -> Double? {
-        guard let snapshot = currentSmartBatterySnapshot() else { return nil }
-
-        if let isCharging = snapshot.isCharging, !isCharging {
-            return 0
-        }
-
-        if let telemetry = snapshot.telemetry {
-            for key in chargingPowerTelemetryKeys {
-                if let raw = numberValue(from: telemetry[key]) {
-                    let watts = normalizePowerValue(abs(raw))
-                    if watts > 0 { return watts }
-                }
-            }
-
-            if
-                let inputRaw = numberValue(from: telemetry["SystemPowerIn"]),
-                let loadRaw = numberValue(from: telemetry["SystemLoad"])
-            {
-                let watts = normalizePowerValue(max(inputRaw - loadRaw, 0))
-                if watts > 0 { return watts }
-            }
-        }
-
-        if let isCharging = snapshot.isCharging, !isCharging {
-            return 0
-        }
-
-        guard
-            let currentMilliamp = snapshot.amperage,
-            let voltageMillivolt = snapshot.voltage
-        else {
-            return nil
-        }
-
-        if snapshot.isCharging == nil, currentMilliamp <= 0 {
-            return 0
-        }
-
-        let watts = abs(currentMilliamp * voltageMillivolt) / 1_000_000
-        guard watts.isFinite else { return nil }
-        return max(watts, 0)
+        currentPowerSnapshot()?.chargingPowerWatts
     }
 
-    private func currentTotalPowerUsageWatts() -> Double? {
-        return withSmartBatteryService { service in
-            guard
-                let telemetryObject = IORegistryEntryCreateCFProperty(
-                    service,
-                    "PowerTelemetryData" as CFString,
-                    kCFAllocatorDefault,
-                    0
-                )?.takeRetainedValue(),
-                let telemetry = telemetryObject as? [String: Any]
-            else {
-                return nil
-            }
+    func currentPowerSnapshot() -> PowerSnapshot? {
+        guard let snapshot = currentSmartBatterySnapshot() else { return nil }
 
-            for key in totalPowerTelemetryKeys {
-                if let raw = numberValue(from: telemetry[key]) {
-                    let watts = normalizePowerValue(raw)
-                    if watts > 0 { return watts }
-                }
-            }
+        let systemPowerInWatts = snapshot.telemetry.flatMap {
+            telemetryPowerWatts(for: "SystemPowerIn", in: $0)
+        }
+        let batteryPowerWatts = snapshot.telemetry.flatMap {
+            telemetryPowerWatts(for: "BatteryPower", in: $0)
+        }
+        let systemLoadWatts = snapshot.telemetry.flatMap {
+            telemetryPowerWatts(for: "SystemLoad", in: $0)
+        }
 
-            if
-                let currentMilliamp = numberValue(from: telemetry["SystemCurrentIn"]),
-                let voltageMillivolt = numberValue(from: telemetry["SystemVoltageIn"])
-            {
-                let watts = abs(currentMilliamp * voltageMillivolt) / 1_000_000
+        let systemPowerWatts: Double? = {
+            if let systemPowerInWatts, let batteryPowerWatts {
+                // Exclude energy flowing into the battery from the displayed system draw.
+                let watts = systemPowerInWatts - batteryPowerWatts
                 if watts.isFinite, watts > 0 {
                     return watts
                 }
             }
 
-            return nil
-        }
+            if let systemLoadWatts, systemLoadWatts.isFinite, systemLoadWatts > 0 {
+                return systemLoadWatts
+            }
+
+            // On battery power, pack current is the best available fallback.
+            if let externalConnected = snapshot.externalConnected, externalConnected {
+                return nil
+            }
+
+            guard
+                let currentMilliamp = snapshot.amperage,
+                let voltageMillivolt = snapshot.voltage
+            else {
+                return nil
+            }
+
+            let watts = abs(currentMilliamp * voltageMillivolt) / 1_000_000
+            guard watts.isFinite, watts > 0 else { return nil }
+            return watts
+        }()
+
+        let chargingPowerWatts: Double? = {
+            if let batteryPowerWatts {
+                if batteryPowerWatts > 0 {
+                    return batteryPowerWatts
+                }
+                if batteryPowerWatts < 0 {
+                    return 0
+                }
+            }
+
+            if let isCharging = snapshot.isCharging, !isCharging {
+                return 0
+            }
+
+            if let systemPowerInWatts, let systemLoadWatts {
+                let watts = max(systemPowerInWatts - systemLoadWatts, 0)
+                if watts > 0 { return watts }
+            }
+
+            guard
+                let currentMilliamp = snapshot.amperage,
+                let voltageMillivolt = snapshot.voltage
+            else {
+                return nil
+            }
+
+            if snapshot.isCharging == nil, currentMilliamp <= 0 {
+                return 0
+            }
+
+            let watts = abs(currentMilliamp * voltageMillivolt) / 1_000_000
+            guard watts.isFinite else { return nil }
+            return max(watts, 0)
+        }()
+
+        return PowerSnapshot(
+            systemPowerWatts: systemPowerWatts,
+            systemPowerInWatts: systemPowerInWatts,
+            batteryPowerWatts: batteryPowerWatts,
+            chargingPowerWatts: chargingPowerWatts
+        )
     }
 
-    private func normalizePowerValue(_ raw: Double) -> Double {
-        guard raw.isFinite, raw > 0 else { return 0 }
+    private func telemetryPowerWatts(for key: String, in telemetry: [String: Any]) -> Double? {
+        guard let raw = signedNumberValue(from: telemetry[key]) else { return nil }
 
-        // Battery telemetry fields are typically reported in mW.
-        if raw >= 500 {
+        let watts = normalizeTelemetryPowerValue(raw)
+        guard watts.isFinite else { return nil }
+        return watts
+    }
+
+    private func normalizeTelemetryPowerValue(_ raw: Double) -> Double {
+        guard raw.isFinite else { return 0 }
+
+        let magnitude = abs(raw)
+        guard magnitude > 0 else { return 0 }
+
+        // AppleSmartBattery power telemetry is typically reported in mW, but some systems
+        // already expose watts. Values beyond a laptop-typical wattage envelope are treated
+        // as mW and scaled down.
+        if magnitude > 200 {
             return raw / 1000
         }
+
         return raw
     }
 
@@ -310,6 +298,35 @@ final class SystemMonitor {
         return nil
     }
 
+    private func signedNumberValue(from raw: Any?) -> Double? {
+        if let value = raw as? NSNumber {
+            if CFGetTypeID(value) == CFBooleanGetTypeID() {
+                return value.boolValue ? 1 : 0
+            }
+
+            let unsignedValue = value.uint64Value
+            if unsignedValue > UInt64(Int64.max) {
+                return Double(Int64(bitPattern: unsignedValue))
+            }
+
+            return Double(value.int64Value)
+        }
+
+        if let value = raw as? String {
+            if let signedValue = Int64(value) {
+                return Double(signedValue)
+            }
+
+            if let unsignedValue = UInt64(value) {
+                return Double(Int64(bitPattern: unsignedValue))
+            }
+
+            return Double(value)
+        }
+
+        return nil
+    }
+
     private func boolValue(from raw: Any?) -> Bool? {
         if let value = raw as? Bool {
             return value
@@ -340,6 +357,7 @@ final class SystemMonitor {
     private struct SmartBatterySnapshot {
         let telemetry: [String: Any]?
         let isCharging: Bool?
+        let externalConnected: Bool?
         let amperage: Double?
         let voltage: Double?
     }
@@ -362,14 +380,23 @@ final class SystemMonitor {
                 )?.takeRetainedValue()
             )
 
-            let amperage = numberValue(
+            let externalConnected = boolValue(
+                from: IORegistryEntryCreateCFProperty(
+                    service,
+                    "ExternalConnected" as CFString,
+                    kCFAllocatorDefault,
+                    0
+                )?.takeRetainedValue()
+            )
+
+            let amperage = signedNumberValue(
                 from: IORegistryEntryCreateCFProperty(
                     service,
                     "Amperage" as CFString,
                     kCFAllocatorDefault,
                     0
                 )?.takeRetainedValue()
-            ) ?? numberValue(
+            ) ?? signedNumberValue(
                 from: IORegistryEntryCreateCFProperty(
                     service,
                     "InstantAmperage" as CFString,
@@ -390,6 +417,7 @@ final class SystemMonitor {
             return SmartBatterySnapshot(
                 telemetry: telemetry,
                 isCharging: isCharging,
+                externalConnected: externalConnected,
                 amperage: amperage,
                 voltage: voltage
             )

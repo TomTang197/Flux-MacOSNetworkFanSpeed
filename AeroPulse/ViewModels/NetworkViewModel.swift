@@ -40,6 +40,7 @@ final class NetworkViewModel: ObservableObject {
     @Published var cpuUsage: String = "0%"
     @Published var powerUsage: String = "-- W"
     @Published var chargingPowerUsage: String = "-- W"
+    @Published var chargingPowerSubtitle: String = ""
     @Published var gpuUsage: String = "--"
     @Published var memoryUsage: String = "0%"
     @Published var memoryUsed: String = "--"
@@ -233,16 +234,33 @@ final class NetworkViewModel: ObservableObject {
         }
 
         if shouldSamplePower(at: currentTimestamp) {
-            if let powerWatts = systemMonitor.currentPowerUsageWatts() {
-                setIfChanged(&self.powerUsage, formatPower(powerWatts))
+            if let powerSnapshot = systemMonitor.currentPowerSnapshot() {
+                if let powerWatts = powerSnapshot.systemPowerWatts {
+                    setIfChanged(&self.powerUsage, formatPower(powerWatts))
+                } else {
+                    setIfChanged(&self.powerUsage, "-- W")
+                }
+
+                if let batteryPowerWatts = powerSnapshot.batteryPowerWatts {
+                    setIfChanged(&self.chargingPowerUsage, formatTelemetryPower(batteryPowerWatts))
+                } else if let chargingWatts = powerSnapshot.chargingPowerWatts {
+                    setIfChanged(&self.chargingPowerUsage, formatPower(chargingWatts))
+                } else {
+                    setIfChanged(&self.chargingPowerUsage, "-- W")
+                }
+
+                if let inputWatts = powerSnapshot.systemPowerInWatts {
+                    setIfChanged(
+                        &self.chargingPowerSubtitle,
+                        "SystemPowerIn: \(formatTelemetryPower(inputWatts))"
+                    )
+                } else {
+                    setIfChanged(&self.chargingPowerSubtitle, "")
+                }
             } else {
                 setIfChanged(&self.powerUsage, "-- W")
-            }
-
-            if let chargingWatts = systemMonitor.currentChargingPowerWatts() {
-                setIfChanged(&self.chargingPowerUsage, formatPower(chargingWatts))
-            } else {
                 setIfChanged(&self.chargingPowerUsage, "-- W")
+                setIfChanged(&self.chargingPowerSubtitle, "")
             }
 
             self.lastPowerSampleTimestamp = currentTimestamp
@@ -355,6 +373,12 @@ final class NetworkViewModel: ObservableObject {
         } else {
             return String(format: "%.2f W", watts)
         }
+    }
+
+    private func formatTelemetryPower(_ watts: Double) -> String {
+        guard watts.isFinite else { return "-- W" }
+        if abs(watts) < 0.0005 { return "0.000 W" }
+        return String(format: "%.3f W", watts)
     }
 
     private func shouldSampleDisk(at timestamp: Date) -> Bool {

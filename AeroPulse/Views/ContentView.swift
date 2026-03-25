@@ -144,6 +144,7 @@ struct ContentView: View {
                                 value: networkViewModel.chargingPowerUsage,
                                 icon: AppImages.chargingPower,
                                 color: .orange,
+                                subtitle: networkViewModel.chargingPowerSubtitle,
                                 compact: true
                             )
                             DashboardMetricCard(
