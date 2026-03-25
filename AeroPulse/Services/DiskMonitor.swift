@@ -68,7 +68,7 @@ final class DiskMonitor {
             ?? values.volumeAvailableCapacity.map(Int64.init)
             ?? values.volumeAvailableCapacityForOpportunisticUsage
 
-        guard let available, available > 0 else { return nil }
+        guard let available, available >= 0 else { return nil }
 
         return DiskCapacity(
             totalBytes: UInt64(total),
