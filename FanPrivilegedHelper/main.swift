@@ -8,6 +8,7 @@
 import Foundation
 import IOKit
 import os.log
+import Security
 
 // MARK: - XPC Protocol (helper side)
 
@@ -426,10 +427,19 @@ final class FanHelper: NSObject, FanHelperProtocol {
 
 final class ServiceDelegate: NSObject, NSXPCListenerDelegate {
     private let exportedObject = FanHelper()
+    private let allowedClientBundleIdentifier = "com.bandan.me.AeroPulse"
     private let logger = Logger(
         subsystem: "com.bandan.me.AeroPulse.FanService",
         category: "XPC"
     )
+    private lazy var allowedClientRequirement: String = {
+        let identifierClause = "identifier \"\(allowedClientBundleIdentifier)\""
+        guard let teamIdentifier = helperTeamIdentifier(), !teamIdentifier.isEmpty else {
+            return identifierClause
+        }
+        return
+            "anchor apple generic and \(identifierClause) and certificate leaf[subject.OU] = \"\(teamIdentifier)\""
+    }()
     private lazy var exportedInterface: NSXPCInterface = {
         let interface = NSXPCInterface(with: FanHelperProtocol.self)
         configureSecureCodingClasses(on: interface)
@@ -439,11 +449,12 @@ final class ServiceDelegate: NSObject, NSXPCListenerDelegate {
     func listener(_ listener: NSXPCListener, shouldAcceptNewConnection connection: NSXPCConnection) -> Bool {
         guard isConnectionAllowed(connection) else {
             logger.error(
-                "Rejected XPC client uid=\(connection.effectiveUserIdentifier, privacy: .public)"
+                "Rejected XPC client pid=\(connection.processIdentifier, privacy: .public) uid=\(connection.effectiveUserIdentifier, privacy: .public)"
             )
             return false
         }
 
+        connection.setCodeSigningRequirement(allowedClientRequirement)
         connection.exportedInterface = exportedInterface
         connection.exportedObject = exportedObject
         connection.resume()
@@ -451,13 +462,37 @@ final class ServiceDelegate: NSObject, NSXPCListenerDelegate {
     }
 
     private func isConnectionAllowed(_ connection: NSXPCConnection) -> Bool {
-        // Keep helper access limited to non-root user clients. This avoids PID-based
-        // code-sign checks that can trigger noisy task-port permission logs.
-        if connection.effectiveUserIdentifier > 0 {
-            return true
+        connection.effectiveUserIdentifier > 0 && connection.processIdentifier > 0
+    }
+
+    private func helperTeamIdentifier() -> String? {
+        guard let executableURL = Bundle.main.executableURL as CFURL? else { return nil }
+
+        var staticCode: SecStaticCode?
+        guard
+            SecStaticCodeCreateWithPath(
+                executableURL,
+                SecCSFlags(rawValue: 0),
+                &staticCode
+            ) == errSecSuccess,
+            let staticCode
+        else {
+            return nil
         }
 
-        return false
+        var signingInformation: CFDictionary?
+        guard
+            SecCodeCopySigningInformation(
+                staticCode,
+                SecCSFlags(rawValue: kSecCSSigningInformation),
+                &signingInformation
+            ) == errSecSuccess,
+            let signingInformation = signingInformation as? [String: Any]
+        else {
+            return nil
+        }
+
+        return signingInformation[kSecCodeInfoTeamIdentifier as String] as? String
     }
 
     private func configureSecureCodingClasses(on interface: NSXPCInterface) {

@@ -381,6 +381,7 @@ struct SettingsView: View {
         .frame(maxWidth: preferredWidth == nil ? .infinity : preferredWidth, alignment: .leading)
         .onAppear {
             DispatchQueue.main.async {
+                launchAtLoginManager.refreshStatus()
                 fanViewModel.refreshHelperStatus()
             }
         }

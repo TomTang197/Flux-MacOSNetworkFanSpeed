@@ -147,6 +147,7 @@ struct MenuBarDashboardView: View {
             networkViewModel.setDetailedSampling(true, source: .menuBarPopover)
             fanViewModel.setDetailedSampling(true, source: .menuBarPopover)
             DispatchQueue.main.async {
+                launchAtLoginManager.refreshStatus()
                 fanViewModel.refreshHelperStatus()
             }
         }

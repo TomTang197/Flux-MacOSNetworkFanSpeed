@@ -15,6 +15,18 @@ final class PrivilegedHelperInstaller {
         "\(serviceIdentifier).plist"
     }
 
+    private var bundledHelperPath: String {
+        Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Library/LaunchServices/\(helperExecutableName)")
+            .path
+    }
+
+    private var bundledLaunchdPlistPath: String {
+        Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Library/LaunchServices/\(launchdPlistName)")
+            .path
+    }
+
     private var installedHelperPath: String {
         "/Library/PrivilegedHelperTools/\(serviceIdentifier)"
     }
@@ -53,93 +65,20 @@ final class PrivilegedHelperInstaller {
 
     private func resolveInstallSources() throws -> (helperSourcePath: String, plistSourcePath: String) {
         let fileManager = FileManager.default
-
-        let helperCandidates: [String] = [
-            Bundle.main.bundleURL
-                .deletingLastPathComponent()
-                .appendingPathComponent(helperExecutableName)
-                .path,
-            Bundle.main.bundleURL
-                .appendingPathComponent("Contents/Library/LaunchServices/\(helperExecutableName)")
-                .path,
-            URL(fileURLWithPath: fileManager.currentDirectoryPath)
-                .appendingPathComponent(helperExecutableName)
-                .path,
-        ]
-
-        let plistCandidates: [String] = [
-            Bundle.main.bundleURL
-                .appendingPathComponent("Contents/Library/LaunchServices/\(launchdPlistName)")
-                .path,
-            URL(fileURLWithPath: fileManager.currentDirectoryPath)
-                .appendingPathComponent(launchdPlistName)
-                .path,
-        ]
-
-        let existingHelperCandidates = helperCandidates
-            .removingDuplicates()
-            .filter { fileManager.fileExists(atPath: $0) }
-
-        guard !existingHelperCandidates.isEmpty else {
+        guard fileManager.fileExists(atPath: bundledHelperPath) else {
             throw InstallerError.missingHelperBinary(
-                searchedPaths: helperCandidates
+                searchedPaths: [bundledHelperPath]
             )
         }
 
-        let helperSourcePath = selectBestHelperCandidate(from: existingHelperCandidates)
-
-        let existingPlistCandidates = plistCandidates
-            .removingDuplicates()
-            .filter { fileManager.fileExists(atPath: $0) }
-
-        guard !existingPlistCandidates.isEmpty else {
+        guard fileManager.fileExists(atPath: bundledLaunchdPlistPath) else {
             throw InstallerError.missingLaunchdPlist(
-                searchedPaths: plistCandidates
+                searchedPaths: [bundledLaunchdPlistPath]
             )
         }
 
-        let plistSourcePath = existingPlistCandidates.first!
-
-        return (helperSourcePath, plistSourcePath)
-    }
-
-    private func selectBestHelperCandidate(from candidates: [String]) -> String {
-        let fileManager = FileManager.default
-
-        let rankedCandidates = candidates.map { path in
-            let attributes = try? fileManager.attributesOfItem(atPath: path)
-            let modifiedAt = attributes?[.modificationDate] as? Date ?? .distantPast
-            let supportsMachService = helperBinaryLooksCurrent(at: path)
-            return (path: path, modifiedAt: modifiedAt, supportsMachService: supportsMachService)
-        }
-
-        let sorted = rankedCandidates.sorted { lhs, rhs in
-            if lhs.supportsMachService != rhs.supportsMachService {
-                return lhs.supportsMachService && !rhs.supportsMachService
-            }
-            if lhs.modifiedAt != rhs.modifiedAt {
-                return lhs.modifiedAt > rhs.modifiedAt
-            }
-            return lhs.path < rhs.path
-        }
-
-        if let selected = sorted.first {
-            logger.notice(
-                "Selected helper source: \(selected.path, privacy: .public) (supportsMachService=\(selected.supportsMachService, privacy: .public))"
-            )
-            return selected.path
-        }
-
-        return candidates[0]
-    }
-
-    private func helperBinaryLooksCurrent(at path: String) -> Bool {
-        guard let data = FileManager.default.contents(atPath: path) else { return false }
-        guard let binaryText = String(data: data, encoding: .isoLatin1) else { return false }
-
-        // Current helper entrypoint is expected to include mach-service listener symbols.
-        return binaryText.contains("initWithMachServiceName:")
-            || binaryText.contains("machServiceName:")
+        logger.notice("Selected bundled helper source: \(self.bundledHelperPath, privacy: .public)")
+        return (bundledHelperPath, bundledLaunchdPlistPath)
     }
 
     private func installWithAdministratorPrivileges(helperSourcePath: String, plistSourcePath: String) throws {
@@ -188,13 +127,6 @@ final class PrivilegedHelperInstaller {
 
     private func shellQuote(_ value: String) -> String {
         "'\(value.replacingOccurrences(of: "'", with: "'\"'\"'"))'"
-    }
-}
-
-private extension Array where Element: Hashable {
-    func removingDuplicates() -> [Element] {
-        var seen = Set<Element>()
-        return filter { seen.insert($0).inserted }
     }
 }
 

@@ -158,7 +158,6 @@ struct MenuBarView: View {
 
     private func renderGroupedMetricsImage(_ columns: [MetricColumn]) -> NSImage {
         let iconConfig = NSImage.SymbolConfiguration(pointSize: 10, weight: .bold)
-        let emphasizedIconConfig = NSImage.SymbolConfiguration(pointSize: 13, weight: .bold)
         let valueFont = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .bold)
 
         let rowHeight: CGFloat = 12
@@ -207,12 +206,12 @@ struct MenuBarView: View {
                 // Draw Stacked
                 let topY = verticalPadding + rowHeight + rowSpacing
                 let bottomY = verticalPadding
-                drawRow(column.top, xOrigin: currentX, columnWidth: colWidth, yOrigin: topY, rowHeight: rowHeight, iconConfig: iconConfig, emphasizedIconConfig: emphasizedIconConfig, valueFont: valueFont)
-                drawRow(column.bottom, xOrigin: currentX, columnWidth: colWidth, yOrigin: bottomY, rowHeight: rowHeight, iconConfig: iconConfig, emphasizedIconConfig: emphasizedIconConfig, valueFont: valueFont)
+                drawRow(column.top, xOrigin: currentX, columnWidth: colWidth, yOrigin: topY, rowHeight: rowHeight, iconConfig: iconConfig, valueFont: valueFont)
+                drawRow(column.bottom, xOrigin: currentX, columnWidth: colWidth, yOrigin: bottomY, rowHeight: rowHeight, iconConfig: iconConfig, valueFont: valueFont)
             } else {
                 // Draw Single Centered
                 let centerY = (height - rowHeight) / 2
-                drawRow(column.top, xOrigin: currentX, columnWidth: colWidth, yOrigin: centerY, rowHeight: rowHeight, iconConfig: iconConfig, emphasizedIconConfig: emphasizedIconConfig, valueFont: valueFont)
+                drawRow(column.top, xOrigin: currentX, columnWidth: colWidth, yOrigin: centerY, rowHeight: rowHeight, iconConfig: iconConfig, valueFont: valueFont)
             }
 
             if index < columns.count - 1 {
@@ -312,20 +311,17 @@ struct MenuBarView: View {
         yOrigin: CGFloat,
         rowHeight: CGFloat,
         iconConfig: NSImage.SymbolConfiguration,
-        emphasizedIconConfig: NSImage.SymbolConfiguration,
         valueFont: NSFont
     ) {
         guard let row else { return }
         let textAttributes = textAttributes(for: valueFont)
 
-        let emphasizesIcon = false
-        let config = emphasizesIcon ? emphasizedIconConfig : iconConfig
-        let icon = configuredSymbolImage(named: row.symbol, config: config)
+        let icon = configuredSymbolImage(named: row.symbol, config: iconConfig)
         let textSize = measuredTextSize(for: row.value, attributes: textAttributes)
-        let leadingPadding: CGFloat = emphasizesIcon ? 2 : 3
+        let leadingPadding: CGFloat = 3
         let trailingPadding: CGFloat = 2
-        let iconSlotWidth: CGFloat = emphasizesIcon ? 15 : 12
-        let iconTextSpacing: CGFloat = emphasizesIcon ? 1 : 2
+        let iconSlotWidth: CGFloat = 12
+        let iconTextSpacing: CGFloat = 2
 
         let iconX = xOrigin + leadingPadding + floor((iconSlotWidth - icon.size.width) / 2)
         let iconY = yOrigin + max(0, (rowHeight - icon.size.height) / 2)

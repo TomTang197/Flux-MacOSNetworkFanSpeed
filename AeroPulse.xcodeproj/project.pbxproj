@@ -9,8 +9,19 @@
 /* Begin PBXBuildFile section */
 		C22C2B622F30B13600F46443 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = C22C2B602F30B13600F46443 /* LICENSE */; };
 		C22C2B632F30B13600F46443 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = C22C2B612F30B13600F46443 /* README.md */; };
+		D1A0A0012F40000000AAAAAA /* FanPrivilegedHelper in CopyFiles */ = {isa = PBXBuildFile; fileRef = C22F655C2F3208E80043993C /* FanPrivilegedHelper */; };
 		C22F70002F32123400AAAAAA /* com.bandan.me.AeroPulse.FanService.plist in CopyFiles */ = {isa = PBXBuildFile; fileRef = C22F6FFF2F32123400AAAAAA /* com.bandan.me.AeroPulse.FanService.plist */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D1A0A0022F40000000AAAAAA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C2BEB9BB2F2B504D00DAC1DD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C22F655B2F3208E80043993C;
+			remoteInfo = FanPrivilegedHelper;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		C22F655A2F3208E80043993C /* CopyFiles */ = {
@@ -28,6 +39,7 @@
 			dstPath = Contents/Library/LaunchServices;
 			dstSubfolderSpec = 1;
 			files = (
+				D1A0A0012F40000000AAAAAA /* FanPrivilegedHelper in CopyFiles */,
 				C22F70002F32123400AAAAAA /* com.bandan.me.AeroPulse.FanService.plist in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -144,6 +156,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				D1A0A0032F40000000AAAAAA /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				C2BEB9C52F2B504D00DAC1DD /* AeroPulse */,
@@ -221,6 +234,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D1A0A0032F40000000AAAAAA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C22F655B2F3208E80043993C /* FanPrivilegedHelper */;
+			targetProxy = D1A0A0022F40000000AAAAAA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		C22F65612F3208E80043993C /* Debug */ = {
