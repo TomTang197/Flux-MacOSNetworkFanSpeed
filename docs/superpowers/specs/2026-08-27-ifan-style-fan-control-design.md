@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-27
 
-**Status:** Approved in conversation; pending written-spec review
+**Status:** Approved for implementation
 
 **Scope:** Complete fan telemetry, system/maximum/manual/custom fan modes, and temperature-threshold automation
 
