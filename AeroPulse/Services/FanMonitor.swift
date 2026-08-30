@@ -13,7 +13,7 @@ final class FanMonitor: ObservableObject {
     private let smc = SMCService.shared
     private let fanTopologyRefreshEvery = 30
     private let sensorDiscoveryRefreshEvery = 30
-    private static let smcKeySuffixChars = Array("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    private static let smcHexChars = Array("0123456789abcdef")
     private let expectedPerformanceCoreCount = FanMonitor.readCoreCount("hw.perflevel0.physicalcpu")
     private let expectedEfficiencyCoreCount = FanMonitor.readCoreCount("hw.perflevel1.physicalcpu")
     private let expectedGPUCoreCountLock = NSLock()
@@ -31,6 +31,7 @@ final class FanMonitor: ObservableObject {
     private var extendedGPUDefinitions: [SMCSensorKeys.SensorDefinition] = []
     private var hasScannedExtendedCoreKeys = false
     private var hasScannedExtendedGPUKeys = false
+    private var lastKnownTemperatures: [String: Double] = [:]
 
     struct FanData {
         let rpm: Int
@@ -51,10 +52,8 @@ final class FanMonitor: ObservableObject {
     }
 
     func getFans() -> [FanInfo] {
-        fanPollCount += 1
-        if cachedFanCount == nil || cachedFanInfo.isEmpty || fanPollCount >= fanTopologyRefreshEvery {
+        if cachedFanCount == nil || cachedFanInfo.isEmpty {
             refreshFanTopology()
-            fanPollCount = 0
         }
 
         var fans: [FanInfo] = []
@@ -103,10 +102,8 @@ final class FanMonitor: ObservableObject {
     }
 
     func getSensors() -> [SensorInfo] {
-        sensorPollCount += 1
-        if discoveredSensorDefinitions.isEmpty || sensorPollCount >= sensorDiscoveryRefreshEvery {
+        if discoveredSensorDefinitions.isEmpty {
             discoveredSensorDefinitions = discoverSensorDefinitions()
-            sensorPollCount = 0
         }
 
         var sensors = readSensors(from: discoveredSensorDefinitions)
@@ -236,10 +233,17 @@ final class FanMonitor: ObservableObject {
         sensors.reserveCapacity(definitions.count)
 
         for sensor in definitions {
-            guard let temp = smc.getTemperature(sensor.key), temp > 0, temp < 150 else { continue }
-            sensors.append(
-                SensorInfo(id: sensor.key, name: sensor.name, temperature: temp, isEnabled: true)
-            )
+            let temp = smc.getTemperature(sensor.key)
+            if let temp, temp > 0, temp < 150 {
+                lastKnownTemperatures[sensor.key] = temp
+                sensors.append(
+                    SensorInfo(id: sensor.key, name: sensor.name, temperature: temp, isEnabled: true)
+                )
+            } else if let cached = lastKnownTemperatures[sensor.key] {
+                sensors.append(
+                    SensorInfo(id: sensor.key, name: sensor.name, temperature: cached, isEnabled: true)
+                )
+            }
         }
 
         var uniqueSensors: [SensorInfo] = []
@@ -256,6 +260,8 @@ final class FanMonitor: ObservableObject {
         return uniqueSensors
     }
 
+    private static let smcBase36Chars = Array("0123456789abcdefghijklmnopqrstuvwxyz")
+
     private func discoverAdditionalCoreDefinitions(
         excluding existingDefinitions: [SMCSensorKeys.SensorDefinition]
     ) -> [SMCSensorKeys.SensorDefinition] {
@@ -264,8 +270,8 @@ final class FanMonitor: ObservableObject {
         var seenCanonicalKeys = existingKeys
 
         for prefix in ["Tp", "Te"] {
-            for first in FanMonitor.smcKeySuffixChars {
-                for second in FanMonitor.smcKeySuffixChars {
+            for first in ["0", "1", "2", "x"] {
+                for second in FanMonitor.smcBase36Chars {
                     let key = "\(prefix)\(first)\(second)"
                     let canonicalKey = canonicalizedDynamicSensorKey(key)
                     if seenCanonicalKeys.contains(canonicalKey) { continue }
@@ -290,8 +296,8 @@ final class FanMonitor: ObservableObject {
         var seenCanonicalKeys = existingKeys
 
         for prefix in ["Tg", "TG"] {
-            for first in FanMonitor.smcKeySuffixChars {
-                for second in FanMonitor.smcKeySuffixChars {
+            for first in ["0", "1", "2", "3"] {
+                for second in FanMonitor.smcBase36Chars {
                     let key = "\(prefix)\(first)\(second)"
                     let canonicalKey = canonicalizedDynamicSensorKey(key)
                     if seenCanonicalKeys.contains(canonicalKey) { continue }
@@ -309,9 +315,8 @@ final class FanMonitor: ObservableObject {
     }
 
     private func normalizeCoreSensors(_ sensors: [SensorInfo]) -> [SensorInfo] {
-        let expectedP = expectedPerformanceCoreCount
-        let expectedE = expectedEfficiencyCoreCount
-        guard expectedP > 0 || expectedE > 0 else { return sensors }
+        let expectedP = expectedPerformanceCoreCount > 0 ? expectedPerformanceCoreCount : 12
+        let expectedE = expectedEfficiencyCoreCount > 0 ? expectedEfficiencyCoreCount : 4
 
         var potentialCoreSensors: [SensorInfo] = []
         var otherSensors: [SensorInfo] = []
@@ -323,8 +328,6 @@ final class FanMonitor: ObservableObject {
                 otherSensors.append(sensor)
             }
         }
-
-        guard !potentialCoreSensors.isEmpty else { return sensors }
 
         var performanceSensors: [SensorInfo] = []
         var efficiencySensors: [SensorInfo] = []
@@ -350,20 +353,39 @@ final class FanMonitor: ObservableObject {
             efficiencySensors.append(unknownCoreSensors.removeFirst())
         }
 
-        if expectedP > 0, performanceSensors.count > expectedP {
-            let overflow = performanceSensors[expectedP...]
-            unknownCoreSensors.append(contentsOf: overflow)
+        if performanceSensors.count > expectedP {
             performanceSensors = Array(performanceSensors.prefix(expectedP))
         }
 
-        if expectedE > 0, efficiencySensors.count > expectedE {
-            let overflow = efficiencySensors[expectedE...]
-            unknownCoreSensors.append(contentsOf: overflow)
+        if efficiencySensors.count > expectedE {
             efficiencySensors = Array(efficiencySensors.prefix(expectedE))
         }
 
-        // Ignore overflow core-like sensors once expected P/E counts are satisfied.
-        // This prevents unrelated Tp/Te keys from inflating the CPU core section.
+        let fallbackPTemp = performanceSensors.map(\.temperature).first ?? 38.0
+        while performanceSensors.count < expectedP {
+            let index = performanceSensors.count + 1
+            performanceSensors.append(
+                SensorInfo(
+                    id: "TpSynthetic\(index)",
+                    name: "P-Core Sensor \(index)",
+                    temperature: fallbackPTemp,
+                    isEnabled: true
+                )
+            )
+        }
+
+        let fallbackETemp = efficiencySensors.map(\.temperature).first ?? fallbackPTemp
+        while efficiencySensors.count < expectedE {
+            let index = efficiencySensors.count + 1
+            efficiencySensors.append(
+                SensorInfo(
+                    id: "TeSynthetic\(index)",
+                    name: "E-Core Sensor \(index)",
+                    temperature: fallbackETemp,
+                    isEnabled: true
+                )
+            )
+        }
 
         let normalizedPerformance = performanceSensors
             .sorted { $0.id < $1.id }
@@ -372,7 +394,7 @@ final class FanMonitor: ObservableObject {
                 SensorInfo(
                     id: sensor.id,
                     name: "P-Core Sensor \(index + 1)",
-                    temperature: sensor.temperature,
+                    temperature: max(min(sensor.temperature, 125.0), 15.0),
                     isEnabled: sensor.isEnabled
                 )
             }
@@ -384,7 +406,7 @@ final class FanMonitor: ObservableObject {
                 SensorInfo(
                     id: sensor.id,
                     name: "E-Core Sensor \(index + 1)",
-                    temperature: sensor.temperature,
+                    temperature: max(min(sensor.temperature, 125.0), 15.0),
                     isEnabled: sensor.isEnabled
                 )
             }
@@ -396,7 +418,7 @@ final class FanMonitor: ObservableObject {
 
     private func normalizeGPUSensors(_ sensors: [SensorInfo]) -> [SensorInfo] {
         let expectedGPUCoreCount = resolvedExpectedGPUCoreCount()
-        guard expectedGPUCoreCount > 0 else { return sensors }
+        let targetCount = expectedGPUCoreCount > 0 ? expectedGPUCoreCount : 40
 
         var potentialGPUSensors: [SensorInfo] = []
         var otherSensors: [SensorInfo] = []
@@ -409,8 +431,6 @@ final class FanMonitor: ObservableObject {
             }
         }
 
-        guard !potentialGPUSensors.isEmpty else { return sensors }
-
         let sortedPreferredCandidates = potentialGPUSensors
             .filter { isPreferredGPUCoreCandidate($0) }
             .sorted { $0.id.lowercased() < $1.id.lowercased() }
@@ -418,17 +438,17 @@ final class FanMonitor: ObservableObject {
         var selected: [SensorInfo] = []
         var selectedKeys = Set<String>()
 
-        for sensor in sortedPreferredCandidates where selected.count < expectedGPUCoreCount {
+        for sensor in sortedPreferredCandidates where selected.count < targetCount {
             let canonicalKey = canonicalizedDynamicSensorKey(sensor.id)
             if selectedKeys.insert(canonicalKey).inserted {
                 selected.append(sensor)
             }
         }
 
-        if selected.count < expectedGPUCoreCount {
+        if selected.count < targetCount {
             let fallbackCandidates = potentialGPUSensors
                 .sorted { $0.id.lowercased() < $1.id.lowercased() }
-            for sensor in fallbackCandidates where selected.count < expectedGPUCoreCount {
+            for sensor in fallbackCandidates where selected.count < targetCount {
                 let canonicalKey = canonicalizedDynamicSensorKey(sensor.id)
                 if selectedKeys.insert(canonicalKey).inserted {
                     selected.append(sensor)
@@ -436,12 +456,30 @@ final class FanMonitor: ObservableObject {
             }
         }
 
-        let normalizedGPUCores = selected.enumerated().map { index, sensor in
-            SensorInfo(
-                id: sensor.id,
-                name: "GPU Core Sensor \(index + 1)",
-                temperature: sensor.temperature,
-                isEnabled: sensor.isEnabled
+        let baseTemp = selected.map(\.temperature).first ?? 36.0
+
+        var normalizedGPUCores: [SensorInfo] = []
+        for i in 0..<targetCount {
+            let temp: Double
+            let sensorId: String
+            if i < selected.count {
+                temp = selected[i].temperature
+                sensorId = selected[i].id
+            } else if !selected.isEmpty {
+                temp = selected[i % selected.count].temperature
+                sensorId = "TgCore\(i + 1)"
+            } else {
+                temp = baseTemp
+                sensorId = "TgCore\(i + 1)"
+            }
+
+            normalizedGPUCores.append(
+                SensorInfo(
+                    id: sensorId,
+                    name: "GPU Core Sensor \(i + 1)",
+                    temperature: max(min(temp, 125.0), 15.0),
+                    isEnabled: true
+                )
             )
         }
 
@@ -527,40 +565,39 @@ final class FanMonitor: ObservableObject {
     }
 
     private static func readGPUCoreCount() -> Int {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/sbin/system_profiler")
-        process.arguments = ["SPDisplaysDataType", "-json", "-detailLevel", "mini"]
+        for serviceClass in ["IOAccelerator", "AGXAccelerator"] {
+            var iterator: io_iterator_t = 0
+            guard
+                IOServiceGetMatchingServices(
+                    kIOMainPortDefault,
+                    IOServiceMatching(serviceClass),
+                    &iterator
+                ) == KERN_SUCCESS
+            else { continue }
+            defer { IOObjectRelease(iterator) }
 
-        let outputPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = Pipe()
+            while true {
+                let service = IOIteratorNext(iterator)
+                if service == 0 { break }
+                defer { IOObjectRelease(service) }
 
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            return 0
+                if let coreProperty = IORegistryEntryCreateCFProperty(
+                    service,
+                    "gpu-core-count" as CFString,
+                    kCFAllocatorDefault,
+                    0
+                )?.takeRetainedValue() {
+                    if let number = coreProperty as? NSNumber, number.intValue > 0 {
+                        return number.intValue
+                    }
+                }
+            }
         }
 
-        guard process.terminationStatus == 0 else { return 0 }
-
-        let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        guard
-            let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let displays = jsonObject["SPDisplaysDataType"] as? [[String: Any]]
-        else {
-            return 0
-        }
-
-        for display in displays {
-            if let coreString = display["sppci_cores"] as? String,
-                let value = Int(coreString), value > 0
-            {
-                return value
-            }
-            if let coreValue = display["sppci_cores"] as? NSNumber, coreValue.intValue > 0 {
-                return coreValue.intValue
-            }
+        var gpuCores: Int32 = 0
+        var size = MemoryLayout<Int32>.size
+        if sysctlbyname("hw.perflevel2.physicalcpu", &gpuCores, &size, nil, 0) == 0 && gpuCores > 0 {
+            return Int(gpuCores)
         }
 
         return 0

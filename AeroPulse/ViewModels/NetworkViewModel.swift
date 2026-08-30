@@ -6,6 +6,7 @@
 //
 
 import Combine
+import Darwin
 import SwiftUI
 
 /// `NetworkViewModel` manages the state of the network speed meter, coordinates updates, and persists settings.
@@ -173,6 +174,9 @@ final class NetworkViewModel: ObservableObject {
         }
     }
 
+    private let samplingQueue = DispatchQueue(label: "AeroPulse.NetworkSampling", qos: .utility)
+    private var isSampling = false
+
     func startMonitoring() {
         restartTimer()
         updateSpeed()
@@ -188,92 +192,108 @@ final class NetworkViewModel: ObservableObject {
     }
 
     private func updateSpeed() {
-        let currentStats = monitor.getNetworkUsage()
+        guard !isSampling else { return }
+        isSampling = true
         let currentTimestamp = Date()
+
+        samplingQueue.async { [weak self] in
+            guard let self else { return }
+            self.performSampling(at: currentTimestamp)
+        }
+    }
+
+    private func performSampling(at currentTimestamp: Date) {
+        let currentStats = monitor.getNetworkUsage()
         let currentCPUTicks = systemMonitor.currentCPUTicks()
+
+        var newDownloadSpeed: String?
+        var newUploadSpeed: String?
+        var newDownloadTotal: String?
+        var newUploadTotal: String?
+        var newBytesInDelta: UInt64 = 0
+        var newBytesOutDelta: UInt64 = 0
 
         if
             let lastStats = self.lastStats,
             let lastTimestamp = self.lastTimestamp
         {
             let timeInterval = currentTimestamp.timeIntervalSince(lastTimestamp)
-            guard timeInterval > 0 else {
-                self.lastStats = currentStats
-                self.lastTimestamp = currentTimestamp
-                return
+            if timeInterval > 0 {
+                let bytesInDelta =
+                    currentStats.bytesIn >= lastStats.bytesIn ? currentStats.bytesIn - lastStats.bytesIn : 0
+                let bytesOutDelta =
+                    currentStats.bytesOut >= lastStats.bytesOut ? currentStats.bytesOut - lastStats.bytesOut : 0
+
+                let diffIn = Double(bytesInDelta)
+                let diffOut = Double(bytesOutDelta)
+
+                let downBps = diffIn / timeInterval
+                let upBps = diffOut / timeInterval
+
+                newDownloadSpeed = formatSpeed(downBps)
+                newUploadSpeed = formatSpeed(upBps)
+                newBytesInDelta = bytesInDelta
+                newBytesOutDelta = bytesOutDelta
             }
-
-            // Speed = (Current Bytes - Last Bytes) / Time Interval
-            // We use max(0, ...) to handle potential overflows or counter resets (rare).
-            let bytesInDelta =
-                currentStats.bytesIn >= lastStats.bytesIn ? currentStats.bytesIn - lastStats.bytesIn : 0
-            let bytesOutDelta =
-                currentStats.bytesOut >= lastStats.bytesOut ? currentStats.bytesOut - lastStats.bytesOut : 0
-
-            let diffIn = Double(bytesInDelta)
-            let diffOut = Double(bytesOutDelta)
-
-            let downBps = diffIn / timeInterval
-            let upBps = diffOut / timeInterval
-
-            setIfChanged(&self.downloadSpeed, formatSpeed(downBps))
-            setIfChanged(&self.uploadSpeed, formatSpeed(upBps))
-            accumulate(&sessionDownloadBytes, delta: bytesInDelta)
-            accumulate(&sessionUploadBytes, delta: bytesOutDelta)
-            setIfChanged(&self.downloadTotal, formatTransferTotal(sessionDownloadBytes))
-            setIfChanged(&self.uploadTotal, formatTransferTotal(sessionUploadBytes))
         }
 
+        var newCPUUsage: String?
         if let currentCPUTicks {
             if let lastCPUTicks = self.lastCPUTicks,
                 let cpuPercent = systemMonitor.cpuUsagePercent(previous: lastCPUTicks, current: currentCPUTicks)
             {
-                setIfChanged(&self.cpuUsage, String(format: "%.0f%%", cpuPercent))
+                newCPUUsage = String(format: "%.0f%%", cpuPercent)
             }
             self.lastCPUTicks = currentCPUTicks
         }
 
+        var newPowerUsage: String?
+        var newChargingPowerUsage: String?
+        var newChargingPowerSubtitle: String?
+
         if shouldSamplePower(at: currentTimestamp) {
             if let powerSnapshot = systemMonitor.currentPowerSnapshot() {
                 if let powerWatts = powerSnapshot.systemPowerWatts {
-                    setIfChanged(&self.powerUsage, formatPower(powerWatts))
+                    newPowerUsage = formatPower(powerWatts)
                 } else {
-                    setIfChanged(&self.powerUsage, "-- W")
+                    newPowerUsage = "-- W"
                 }
 
                 if let batteryPowerWatts = powerSnapshot.batteryPowerWatts {
-                    setIfChanged(&self.chargingPowerUsage, formatTelemetryPower(batteryPowerWatts))
+                    newChargingPowerUsage = formatTelemetryPower(batteryPowerWatts)
                 } else if let chargingWatts = powerSnapshot.chargingPowerWatts {
-                    setIfChanged(&self.chargingPowerUsage, formatPower(chargingWatts))
+                    newChargingPowerUsage = formatPower(chargingWatts)
                 } else {
-                    setIfChanged(&self.chargingPowerUsage, "-- W")
+                    newChargingPowerUsage = "-- W"
                 }
 
                 if let inputWatts = powerSnapshot.systemPowerInWatts {
-                    setIfChanged(
-                        &self.chargingPowerSubtitle,
-                        "SystemPowerIn: \(formatTelemetryPower(inputWatts))"
-                    )
+                    newChargingPowerSubtitle = "SystemPowerIn: \(formatTelemetryPower(inputWatts))"
                 } else {
-                    setIfChanged(&self.chargingPowerSubtitle, "")
+                    newChargingPowerSubtitle = ""
                 }
             } else {
-                setIfChanged(&self.powerUsage, "-- W")
-                setIfChanged(&self.chargingPowerUsage, "-- W")
-                setIfChanged(&self.chargingPowerSubtitle, "")
+                newPowerUsage = "-- W"
+                newChargingPowerUsage = "-- W"
+                newChargingPowerSubtitle = ""
             }
-
             self.lastPowerSampleTimestamp = currentTimestamp
         }
 
+        var newGPUUsage: String?
         if shouldSampleGPU(at: currentTimestamp) {
             if let gpuPercent = systemMonitor.currentGPUUsagePercent() {
-                setIfChanged(&self.gpuUsage, String(format: "%.0f%%", gpuPercent))
+                newGPUUsage = String(format: "%.0f%%", gpuPercent)
             } else {
-                setIfChanged(&self.gpuUsage, "--")
+                newGPUUsage = "--"
             }
             self.lastGPUSampleTimestamp = currentTimestamp
         }
+
+        var newDiskReadSpeed: String?
+        var newDiskWriteSpeed: String?
+        var newDiskReadDelta: UInt64 = 0
+        var newDiskWriteDelta: UInt64 = 0
 
         if shouldSampleDisk(at: currentTimestamp) {
             let currentDiskStats = diskMonitor.getDiskUsage()
@@ -296,12 +316,10 @@ final class NetworkViewModel: ObservableObject {
                     let diskReadBps = diskReadDiff / diskInterval
                     let diskWriteBps = diskWriteDiff / diskInterval
 
-                    setIfChanged(&self.diskReadSpeed, formatSpeed(diskReadBps))
-                    setIfChanged(&self.diskWriteSpeed, formatSpeed(diskWriteBps))
-                    accumulate(&sessionDiskReadBytes, delta: diskReadDelta)
-                    accumulate(&sessionDiskWriteBytes, delta: diskWriteDelta)
-                    setIfChanged(&self.diskReadTotal, formatTransferTotal(sessionDiskReadBytes))
-                    setIfChanged(&self.diskWriteTotal, formatTransferTotal(sessionDiskWriteBytes))
+                    newDiskReadSpeed = formatSpeed(diskReadBps)
+                    newDiskWriteSpeed = formatSpeed(diskWriteBps)
+                    newDiskReadDelta = diskReadDelta
+                    newDiskWriteDelta = diskWriteDelta
                 }
             }
 
@@ -309,20 +327,28 @@ final class NetworkViewModel: ObservableObject {
             self.lastDiskSampleTimestamp = currentTimestamp
         }
 
+        var newDiskTotal: String?
+        var newDiskFree: String?
+        var newDiskUsedPercent: String?
+
         if shouldSampleCapacity(at: currentTimestamp), let capacity = diskMonitor.getDiskCapacity(),
             capacity.totalBytes > 0
         {
-            setIfChanged(&self.diskTotalCapacity, formatCapacity(capacity.totalBytes))
-            setIfChanged(&self.diskFreeCapacity, formatCapacity(capacity.freeBytes))
+            newDiskTotal = formatCapacity(capacity.totalBytes)
+            newDiskFree = formatCapacity(capacity.freeBytes)
             let usedRatio = Double(capacity.usedBytes) / Double(capacity.totalBytes)
-            setIfChanged(&self.diskUsedPercent, String(format: "%.0f%%", usedRatio * 100))
+            newDiskUsedPercent = String(format: "%.0f%%", usedRatio * 100)
             self.lastCapacitySampleTimestamp = currentTimestamp
         }
 
+        var newMemoryUsage: String?
+        var newMemoryUsed: String?
+        var newMemoryTotal: String?
+
         if shouldSampleMemory(at: currentTimestamp), let memorySample = systemMonitor.currentMemorySample() {
-            setIfChanged(&self.memoryUsage, String(format: "%.0f%%", memorySample.usedRatio * 100))
-            setIfChanged(&self.memoryUsed, formatMemory(memorySample.usedBytes))
-            setIfChanged(&self.memoryTotal, formatMemory(memorySample.totalBytes))
+            newMemoryUsage = String(format: "%.0f%%", memorySample.usedRatio * 100)
+            newMemoryUsed = formatMemory(memorySample.usedBytes)
+            newMemoryTotal = formatMemory(memorySample.totalBytes)
             self.lastMemorySampleTimestamp = currentTimestamp
         }
 
@@ -330,6 +356,48 @@ final class NetworkViewModel: ObservableObject {
 
         self.lastStats = currentStats
         self.lastTimestamp = currentTimestamp
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+
+            if let newDownloadSpeed { setIfChanged(&self.downloadSpeed, newDownloadSpeed) }
+            if let newUploadSpeed { setIfChanged(&self.uploadSpeed, newUploadSpeed) }
+            if newBytesInDelta > 0 {
+                accumulate(&self.sessionDownloadBytes, delta: newBytesInDelta)
+                setIfChanged(&self.downloadTotal, formatTransferTotal(self.sessionDownloadBytes))
+            }
+            if newBytesOutDelta > 0 {
+                accumulate(&self.sessionUploadBytes, delta: newBytesOutDelta)
+                setIfChanged(&self.uploadTotal, formatTransferTotal(self.sessionUploadBytes))
+            }
+
+            if let newCPUUsage { setIfChanged(&self.cpuUsage, newCPUUsage) }
+            if let newPowerUsage { setIfChanged(&self.powerUsage, newPowerUsage) }
+            if let newChargingPowerUsage { setIfChanged(&self.chargingPowerUsage, newChargingPowerUsage) }
+            if let newChargingPowerSubtitle { setIfChanged(&self.chargingPowerSubtitle, newChargingPowerSubtitle) }
+            if let newGPUUsage { setIfChanged(&self.gpuUsage, newGPUUsage) }
+
+            if let newDiskReadSpeed { setIfChanged(&self.diskReadSpeed, newDiskReadSpeed) }
+            if let newDiskWriteSpeed { setIfChanged(&self.diskWriteSpeed, newDiskWriteSpeed) }
+            if newDiskReadDelta > 0 {
+                accumulate(&self.sessionDiskReadBytes, delta: newDiskReadDelta)
+                setIfChanged(&self.diskReadTotal, formatTransferTotal(self.sessionDiskReadBytes))
+            }
+            if newDiskWriteDelta > 0 {
+                accumulate(&self.sessionDiskWriteBytes, delta: newDiskWriteDelta)
+                setIfChanged(&self.diskWriteTotal, formatTransferTotal(self.sessionDiskWriteBytes))
+            }
+
+            if let newDiskTotal { setIfChanged(&self.diskTotalCapacity, newDiskTotal) }
+            if let newDiskFree { setIfChanged(&self.diskFreeCapacity, newDiskFree) }
+            if let newDiskUsedPercent { setIfChanged(&self.diskUsedPercent, newDiskUsedPercent) }
+
+            if let newMemoryUsage { setIfChanged(&self.memoryUsage, newMemoryUsage) }
+            if let newMemoryUsed { setIfChanged(&self.memoryUsed, newMemoryUsed) }
+            if let newMemoryTotal { setIfChanged(&self.memoryTotal, newMemoryTotal) }
+
+            self.isSampling = false
+        }
     }
 
     /// Formats raw bytes per second into human-readable strings.
@@ -498,6 +566,8 @@ private final class ProcessMonitor {
         let topMemory: [ProcessStat]
     }
 
+    private var previousCPUTimes: [pid_t: (time: UInt64, date: Date)] = [:]
+
     func currentTopProcesses(limit: Int) -> Snapshot? {
         let rows = fetchProcessStats()
         guard !rows.isEmpty else { return nil }
@@ -522,61 +592,69 @@ private final class ProcessMonitor {
     }
 
     private func fetchProcessStats() -> [ProcessStat] {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/ps")
-        process.arguments = ["-A", "-o", "pid=,pcpu=,rss=,comm="]
+        var pids = [pid_t](repeating: 0, count: 2048)
+        let bytes = proc_listallpids(&pids, Int32(pids.count * MemoryLayout<pid_t>.size))
+        guard bytes > 0 else { return [] }
 
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
+        let count = min(Int(bytes) / MemoryLayout<pid_t>.size, pids.count)
+        let now = Date()
+        var results: [ProcessStat] = []
+        results.reserveCapacity(count)
 
-        do {
-            try process.run()
-        } catch {
-            return []
+        let myPid = getpid()
+        var currentActivePids = Set<pid_t>()
+        currentActivePids.reserveCapacity(count)
+
+        for pid in pids[0..<count] where pid > 0 && pid != myPid {
+            currentActivePids.insert(pid)
+            var taskInfo = proc_taskallinfo()
+            let res = proc_pidinfo(
+                pid,
+                PROC_PIDTASKALLINFO,
+                0,
+                &taskInfo,
+                Int32(MemoryLayout<proc_taskallinfo>.size)
+            )
+            guard res == Int32(MemoryLayout<proc_taskallinfo>.size) else { continue }
+
+            var nameBuffer = [CChar](repeating: 0, count: 256)
+            _ = proc_name(pid, &nameBuffer, UInt32(nameBuffer.count))
+            var name = String(cString: nameBuffer)
+            if name.isEmpty {
+                name = withUnsafeBytes(of: taskInfo.pbsd.pbi_comm) { rawBuffer in
+                    guard let base = rawBuffer.baseAddress?.assumingMemoryBound(to: CChar.self) else { return "" }
+                    return String(cString: base)
+                }
+            }
+            guard !name.isEmpty else { continue }
+
+            let rssBytes = taskInfo.ptinfo.pti_resident_size
+            let cpuTimeNano = taskInfo.ptinfo.pti_total_user + taskInfo.ptinfo.pti_total_system
+            var cpuPercent = 0.0
+
+            if let prev = previousCPUTimes[pid] {
+                let dt = now.timeIntervalSince(prev.date)
+                if dt > 0 && cpuTimeNano >= prev.time {
+                    let dCpuSec = Double(cpuTimeNano - prev.time) / 1_000_000_000.0
+                    cpuPercent = (dCpuSec / dt) * 100.0
+                }
+            }
+            previousCPUTimes[pid] = (cpuTimeNano, now)
+
+            results.append(
+                ProcessStat(
+                    pid: Int(pid),
+                    name: name,
+                    cpuPercent: max(cpuPercent, 0),
+                    rssBytes: rssBytes
+                )
+            )
         }
 
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else { return [] }
-
-        let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        guard let output = String(data: data, encoding: .utf8) else { return [] }
-
-        let currentPID = Int(ProcessInfo.processInfo.processIdentifier)
-        return output
-            .split(whereSeparator: \.isNewline)
-            .compactMap { line in parseProcessLine(String(line)) }
-            .filter { $0.pid != currentPID && $0.name != "ps" }
-    }
-
-    private func parseProcessLine(_ line: String) -> ProcessStat? {
-        let parts = line.split(
-            maxSplits: 3,
-            omittingEmptySubsequences: true,
-            whereSeparator: \.isWhitespace
-        )
-        guard parts.count >= 4 else { return nil }
-
-        guard
-            let pid = Int(parts[0]),
-            let cpuPercent = Double(parts[1]),
-            let rssKilobytes = UInt64(parts[2])
-        else {
-            return nil
+        if previousCPUTimes.count > currentActivePids.count * 2 {
+            previousCPUTimes = previousCPUTimes.filter { currentActivePids.contains($0.key) }
         }
 
-        let rawCommand = String(parts[3]).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !rawCommand.isEmpty else { return nil }
-
-        let displayName = URL(fileURLWithPath: rawCommand).lastPathComponent
-        let name = displayName.isEmpty ? rawCommand : displayName
-
-        return ProcessStat(
-            pid: pid,
-            name: name,
-            cpuPercent: max(cpuPercent, 0),
-            rssBytes: rssKilobytes * 1024
-        )
+        return results
     }
 }

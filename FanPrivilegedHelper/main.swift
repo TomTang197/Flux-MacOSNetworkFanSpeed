@@ -3,6 +3,7 @@
 //  FanPrivilegedHelper
 //
 //  Created by Bandan.K on 03/02/26.
+//  Updated with complete SMC control & reset engine on 30/08/26.
 //
 
 import Foundation
@@ -16,6 +17,7 @@ import Security
     func ping(withReply reply: @escaping (Bool) -> Void)
     func setFanMode(index: Int, manual: Bool, withReply reply: @escaping (Int32) -> Void)
     func setFanTargetRPM(index: Int, rpm: Int, withReply reply: @escaping (Int32) -> Void)
+    func resetToAutomatic(withReply reply: @escaping (Int32) -> Void)
 }
 
 // MARK: - SMC Low-Level Implementation (write-focused)
@@ -27,7 +29,7 @@ final class SMCWriter {
         category: "SMCWriter"
     )
     private var openedConnectionType: UInt32?
-    private var hasLoggedMissingModeKeys = false
+    private var isFanModeKeyLower: Bool? = nil
 
     init?() {
         guard open() else { return nil }
@@ -43,8 +45,9 @@ final class SMCWriter {
             logger.error("AppleSMC service not found")
             return false
         }
+        defer { IOObjectRelease(service) }
 
-        // Prefer write-capable type 2, but keep fallbacks for models where type 1/0 works.
+        // Type 2 is write-capable, fall back to 1 and 0 for broader hardware compatibility.
         var result: kern_return_t = kIOReturnError
         for type in [UInt32(2), 1, 0] {
             result = IOServiceOpen(service, mach_task_self_, type, &connection)
@@ -52,18 +55,14 @@ final class SMCWriter {
                 openedConnectionType = type
                 logger.notice("Opened AppleSMC with connection type \(type)")
                 break
-            } else {
-                logger.debug("IOServiceOpen type \(type) failed: \(result)")
             }
         }
-        IOObjectRelease(service)
 
         guard result == kIOReturnSuccess, connection != 0 else {
             logger.error("Failed to open AppleSMC connection: \(result)")
             return false
         }
 
-        unlockDiagnosticsIfAvailable()
         return true
     }
 
@@ -72,13 +71,6 @@ final class SMCWriter {
             IOServiceClose(connection)
             connection = 0
         }
-    }
-
-    struct SMCVal {
-        var key: UInt32 = 0
-        var dataSize: UInt32 = 0
-        var dataType: UInt32 = 0
-        var bytes: [UInt8] = Array(repeating: 0, count: 32)
     }
 
     struct SMCParamStruct {
@@ -113,13 +105,14 @@ final class SMCWriter {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
             )
+        init() {}
     }
 
-    enum SMCSelector: UInt32 {
+    private enum SMCSelector: UInt32 {
         case callMethod = 2
     }
 
-    enum SMCCmd: UInt8 {
+    private enum SMCCmd: UInt8 {
         case readValue = 5
         case writeValue = 6
         case readInfo = 9
@@ -127,7 +120,7 @@ final class SMCWriter {
 
     private func stringToKey(_ name: String) -> UInt32 {
         var key: UInt32 = 0
-        for char in name.utf8 {
+        for char in name.utf8.prefix(4) {
             key = (key << 8) | UInt32(char)
         }
         return key
@@ -163,237 +156,173 @@ final class SMCWriter {
         inputStruct.key = stringToKey(name)
 
         let res = callSMC(.readInfo, inputStruct: &inputStruct)
-        guard res == kIOReturnSuccess, inputStruct.result == 0 else { return nil }
+        guard res == kIOReturnSuccess, inputStruct.result == 0, inputStruct.dataSize > 0 else { return nil }
         return (inputStruct.dataSize, inputStruct.dataType)
     }
 
-    private func readKey(_ name: String, dataSize: UInt32) -> SMCVal? {
+    private func writeKeyRaw(_ name: String, dataType: UInt32, bytes: [UInt8]) -> kern_return_t {
         var inputStruct = SMCParamStruct()
         inputStruct.key = stringToKey(name)
-        inputStruct.dataSize = dataSize
-
-        let res = callSMC(.readValue, inputStruct: &inputStruct)
-        guard res == kIOReturnSuccess, inputStruct.result == 0 else { return nil }
-
-        var val = SMCVal()
-        val.key = inputStruct.key
-        val.dataSize = inputStruct.dataSize
-        val.dataType = inputStruct.dataType
-        val.bytes = withUnsafeBytes(of: inputStruct.bytes) { Array($0) }
-        return val
-    }
-
-    private func mapSMCResultToIOReturn(_ smcResult: UInt8) -> kern_return_t {
-        switch smcResult {
-        case 0:
-            return kIOReturnSuccess
-        case 132:
-            return kIOReturnNotFound
-        default:
-            return kIOReturnError
-        }
-    }
-
-    private func writeKey(_ name: String, val: SMCVal) -> kern_return_t {
-        var inputStruct = SMCParamStruct()
-        inputStruct.key = stringToKey(name)
-        inputStruct.dataSize = val.dataSize
-        inputStruct.dataType = val.dataType
+        inputStruct.dataSize = UInt32(bytes.count)
+        inputStruct.dataType = dataType
         inputStruct.dataAttributes = 0x80
 
-        for (i, byte) in val.bytes.enumerated() {
-            if i >= 32 { break }
-            withUnsafeMutablePointer(to: &inputStruct.bytes) { pointer in
-                let bPointer = UnsafeMutableRawPointer(pointer).assumingMemoryBound(to: UInt8.self)
-                bPointer[i] = byte
+        withUnsafeMutableBytes(of: &inputStruct.bytes) { ptr in
+            for (i, byte) in bytes.enumerated() where i < 32 {
+                ptr[i] = byte
             }
         }
 
-        let res = callSMC(.writeValue, inputStruct: &inputStruct)
-        guard res == kIOReturnSuccess else { return res }
-        if inputStruct.result == 0 { return kIOReturnSuccess }
+        // Retry loop: retry up to 10 times with 50ms interval (identical to iFan)
+        var lastRes: kern_return_t = kIOReturnError
+        for _ in 0..<10 {
+            lastRes = callSMC(.writeValue, inputStruct: &inputStruct)
+            if lastRes == kIOReturnSuccess && inputStruct.result == 0 {
+                return kIOReturnSuccess
+            }
+            usleep(50000)
+        }
 
         logger.debug(
-            "SMC write rejected key=\(name, privacy: .public) smcResult=\(inputStruct.result) status=\(inputStruct.status) dataType=\(inputStruct.dataType) dataSize=\(inputStruct.dataSize) openType=\(self.openedConnectionType ?? 999)"
+            "SMC write failed key=\(name, privacy: .public) smcResult=\(inputStruct.result) status=\(inputStruct.status) dataType=\(inputStruct.dataType) dataSize=\(inputStruct.dataSize)"
         )
-        return mapSMCResultToIOReturn(inputStruct.result)
+        return lastRes == kIOReturnSuccess ? (inputStruct.result == 0 ? kIOReturnSuccess : kIOReturnError) : lastRes
     }
 
-    private func unlockDiagnosticsIfAvailable() {
-        guard let info = getInfo("Ftst") else { return }
-
-        var val = SMCVal()
-        val.dataSize = max(info.size, 1)
-        val.dataType = info.type
-        val.bytes[0] = 1
-        _ = writeKey("Ftst", val: val)
-    }
-
-    private func writeRPMBytes(to val: inout SMCVal, rpm: Int) {
-        let clampedRPM = max(rpm, 0)
-        let typeFPE2 = stringToKey("fpe2")
-        let typeFLT = stringToKey("flt ")
-        let typeUI16 = stringToKey("ui16")
-        let typeUI32 = stringToKey("ui32")
-
-        if val.dataType == typeFLT || (val.dataType == 0 && val.dataSize >= 4) {
-            var floatRPM = Float(clampedRPM)
-            withUnsafeBytes(of: &floatRPM) { src in
-                let count = min(Int(val.dataSize), src.count)
-                for idx in 0..<count {
-                    val.bytes[idx] = src[idx]
-                }
-            }
-            return
+    private func resolveFanModeKey(index: Int) -> String {
+        if let isLower = isFanModeKeyLower {
+            return isLower ? "F\(index)md" : "F\(index)Md"
         }
-
-        if val.dataType == typeUI32 {
-            let encoded = UInt32(clampedRPM)
-            val.bytes[0] = UInt8((encoded >> 24) & 0xFF)
-            val.bytes[1] = UInt8((encoded >> 16) & 0xFF)
-            val.bytes[2] = UInt8((encoded >> 8) & 0xFF)
-            val.bytes[3] = UInt8(encoded & 0xFF)
-            return
-        }
-
-        if val.dataType == typeUI16 {
-            let encoded = UInt16(min(clampedRPM, Int(UInt16.max)))
-            val.bytes[0] = UInt8((encoded >> 8) & 0xFF)
-            val.bytes[1] = UInt8(encoded & 0xFF)
-            return
-        }
-
-        if val.dataType == typeFPE2 || val.dataSize <= 2 {
-            let encoded = UInt16(min(clampedRPM, Int(UInt16.max >> 2))) << 2
-            val.bytes[0] = UInt8((encoded >> 8) & 0xFF)
-            val.bytes[1] = UInt8(encoded & 0xFF)
-            return
-        }
-
-        var floatRPM = Float(clampedRPM)
-        withUnsafeBytes(of: &floatRPM) { src in
-            let count = min(Int(val.dataSize), src.count)
-            for idx in 0..<count {
-                val.bytes[idx] = src[idx]
-            }
+        if getInfo("F0md") != nil {
+            isFanModeKeyLower = true
+            return "F\(index)md"
+        } else {
+            isFanModeKeyLower = false
+            return "F\(index)Md"
         }
     }
 
-    // MARK: - Public fan helpers
+    // MARK: - SMC Tool Runner with Direct IOKit Fallback
+
+    private func runSMCTool(args: [String]) -> Bool {
+        let candidates = [
+            "/Library/PrivilegedHelperTools/SMC",
+            "/Applications/iFan.app/Contents/Resources/SMC",
+            Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("SMC").path,
+            Bundle.main.resourceURL?.appendingPathComponent("SMC").path ?? "",
+        ]
+
+        guard let executablePath = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else {
+            return false
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: executablePath)
+        process.arguments = args
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
+        } catch {
+            return false
+        }
+    }
+
+    // MARK: - Public fan control methods
 
     func setFanMode(index: Int, manual: Bool) -> kern_return_t {
-        let modeKey = "F\(index)Md"
-        let forceKey = "FS! "
-        var hadModeControlKey = false
-        var lastFailure: kern_return_t = kIOReturnSuccess
-
-        if let info = getInfo(modeKey) {
-            hadModeControlKey = true
-
-            var modeVal = SMCVal()
-            modeVal.dataSize = max(info.size, 1)
-            modeVal.dataType = info.type == 0 ? stringToKey("ui8 ") : info.type
-            modeVal.bytes[0] = manual ? 1 : 0
-
-            let modeRes = writeKey(modeKey, val: modeVal)
-            if modeRes != kIOReturnSuccess && modeRes != kIOReturnNotFound {
-                return modeRes
-            }
-            lastFailure = modeRes
-        } else {
-            // Some models do not expose key info but still accept direct mode writes.
-            var modeVal = SMCVal()
-            modeVal.dataSize = 1
-            modeVal.dataType = stringToKey("ui8 ")
-            modeVal.bytes[0] = manual ? 1 : 0
-
-            let modeRes = writeKey(modeKey, val: modeVal)
-            if modeRes == kIOReturnSuccess {
-                hadModeControlKey = true
-                lastFailure = kIOReturnSuccess
-            } else if modeRes != kIOReturnNotFound {
-                return modeRes
-            }
-        }
-
-        if let info = getInfo(forceKey) {
-            hadModeControlKey = true
-
-            let mask = UInt16(1 << index)
-            var currentMask: UInt16 = 0
-            if let existing = readKey(forceKey, dataSize: max(info.size, 2)), existing.dataSize >= 2 {
-                currentMask = UInt16(existing.bytes[0]) << 8 | UInt16(existing.bytes[1])
-            }
-
-            if manual {
-                currentMask |= mask
-            } else {
-                currentMask &= ~mask
-            }
-
-            var fsVal = SMCVal()
-            fsVal.dataSize = max(info.size, 2)
-            fsVal.dataType = info.type == 0 ? stringToKey("ui16") : info.type
-            fsVal.bytes[0] = UInt8((currentMask >> 8) & 0xFF)
-            fsVal.bytes[1] = UInt8(currentMask & 0xFF)
-
-            let fsRes = writeKey(forceKey, val: fsVal)
-            if fsRes != kIOReturnSuccess && fsRes != kIOReturnNotFound {
-                return fsRes
-            }
-            lastFailure = fsRes
-        } else {
-            // Fallback blind write for models that hide FS! from read-info.
-            let mask = UInt16(1 << index)
-            var currentMask: UInt16 = 0
-            if let existing = readKey(forceKey, dataSize: 2), existing.dataSize >= 2 {
-                currentMask = UInt16(existing.bytes[0]) << 8 | UInt16(existing.bytes[1])
-            }
-
-            if manual {
-                currentMask |= mask
-            } else {
-                currentMask &= ~mask
-            }
-
-            var fsVal = SMCVal()
-            fsVal.dataSize = 2
-            fsVal.dataType = stringToKey("ui16")
-            fsVal.bytes[0] = UInt8((currentMask >> 8) & 0xFF)
-            fsVal.bytes[1] = UInt8(currentMask & 0xFF)
-
-            let fsRes = writeKey(forceKey, val: fsVal)
-            if fsRes == kIOReturnSuccess {
-                hadModeControlKey = true
-                lastFailure = kIOReturnSuccess
-            } else if fsRes != kIOReturnNotFound {
-                return fsRes
-            }
-        }
-
-        if !hadModeControlKey {
-            if !hasLoggedMissingModeKeys {
-                logger.notice("Fan mode keys unavailable on this model; target-only fan control will be used")
-                hasLoggedMissingModeKeys = true
-            }
+        if runSMCTool(args: ["fan", "\(index)", "-m", manual ? "1" : "0"]) {
             return kIOReturnSuccess
         }
 
-        return lastFailure == kIOReturnNotFound ? kIOReturnSuccess : lastFailure
+        let modeKey = resolveFanModeKey(index: index)
+        let modeVal: UInt8 = manual ? 1 : 0
+        let ui8Type = stringToKey("ui8 ")
+        let modeRes = writeKeyRaw(modeKey, dataType: ui8Type, bytes: [modeVal])
+
+        // On Intel Macs, also update the FS! bitmask
+        let forceKey = "FS! "
+        if let info = getInfo(forceKey) {
+            let mask = UInt16(1 << index)
+            var currentMask: UInt16 = 0
+            var readParam = SMCParamStruct()
+            readParam.key = stringToKey(forceKey)
+            readParam.dataSize = 2
+            if callSMC(.readValue, inputStruct: &readParam) == kIOReturnSuccess && readParam.result == 0 {
+                currentMask = UInt16(readParam.bytes.0) << 8 | UInt16(readParam.bytes.1)
+            }
+            if manual {
+                currentMask |= mask
+            } else {
+                currentMask &= ~mask
+            }
+            let ui16Type = info.type != 0 ? info.type : stringToKey("ui16")
+            let fsBytes: [UInt8] = [UInt8((currentMask >> 8) & 0xFF), UInt8(currentMask & 0xFF)]
+            _ = writeKeyRaw(forceKey, dataType: ui16Type, bytes: fsBytes)
+        }
+
+        return modeRes
     }
 
     func setFanTargetRPM(index: Int, rpm: Int) -> kern_return_t {
-        guard let info = getInfo("F\(index)Tg") else {
+        if runSMCTool(args: ["fan", "\(index)", "-v", "\(rpm)"]) {
+            return kIOReturnSuccess
+        }
+
+        // First ensure fan is switched to manual mode
+        _ = setFanMode(index: index, manual: true)
+
+        let tgKey = "F\(index)Tg"
+        guard let info = getInfo(tgKey) else {
             logger.error("Fan target key F\(index)Tg not found")
             return kIOReturnNotFound
         }
 
-        var val = SMCVal()
-        val.dataSize = max(info.size, 2)
-        val.dataType = info.type
-        writeRPMBytes(to: &val, rpm: rpm)
+        var dataBytes: [UInt8] = []
+        let typeFLT = stringToKey("flt ")
 
-        return writeKey("F\(index)Tg", val: val)
+        if info.type == typeFLT || (info.type == 0 && info.size >= 4) {
+            // Apple Silicon (M1/M2/M3/M4): IEEE 754 Float32 little-endian
+            var floatRPM = Float(max(rpm, 0))
+            withUnsafeBytes(of: &floatRPM) { src in
+                dataBytes = Array(src)
+            }
+        } else {
+            // Intel: 14.2 fixed-point (RPM * 4) big-endian
+            let clamped = UInt16(min(max(rpm, 0), 16383)) << 2
+            dataBytes = [UInt8((clamped >> 8) & 0xFF), UInt8(clamped & 0xFF)]
+        }
+
+        return writeKeyRaw(tgKey, dataType: info.type, bytes: dataBytes)
+    }
+
+    func resetToAutomatic() -> kern_return_t {
+        if runSMCTool(args: ["reset"]) {
+            return kIOReturnSuccess
+        }
+
+        // Apple Silicon: write 0 to Ftst to exit test/manual override
+        if getInfo("Ftst") != nil {
+            let res = writeKeyRaw("Ftst", dataType: stringToKey("ui8 "), bytes: [0])
+            if res == kIOReturnSuccess {
+                return kIOReturnSuccess
+            }
+        }
+
+        // Fallback: iterate over all fans and restore automatic mode
+        var fanCount = 2
+        var fnumParam = SMCParamStruct()
+        fnumParam.key = stringToKey("FNum")
+        fnumParam.dataSize = 1
+        if callSMC(.readValue, inputStruct: &fnumParam) == kIOReturnSuccess && fnumParam.result == 0 {
+            fanCount = max(Int(fnumParam.bytes.0), 1)
+        }
+
+        for i in 0..<fanCount {
+            _ = setFanMode(index: i, manual: false)
+        }
+        return kIOReturnSuccess
     }
 }
 
@@ -401,49 +330,55 @@ final class SMCWriter {
 
 final class FanHelper: NSObject, FanHelperProtocol {
     private let smcWriter = SMCWriter()
+    private let logger = Logger(subsystem: "com.bandan.me.AeroPulse.FanService", category: "FanHelper")
 
     func ping(withReply reply: @escaping (Bool) -> Void) {
+        logger.notice("Received ping")
         reply(smcWriter != nil)
     }
 
     func setFanMode(index: Int, manual: Bool, withReply reply: @escaping (Int32) -> Void) {
         guard let writer = smcWriter else {
+            logger.error("setFanMode failed: smcWriter is nil")
             reply(kIOReturnNotOpen)
             return
         }
         let result = writer.setFanMode(index: index, manual: manual)
+        logger.notice("setFanMode(index: \(index), manual: \(manual)) -> \(result)")
         reply(result)
     }
 
     func setFanTargetRPM(index: Int, rpm: Int, withReply reply: @escaping (Int32) -> Void) {
         guard let writer = smcWriter else {
+            logger.error("setFanTargetRPM failed: smcWriter is nil")
             reply(kIOReturnNotOpen)
             return
         }
         let result = writer.setFanTargetRPM(index: index, rpm: rpm)
+        logger.notice("setFanTargetRPM(index: \(index), rpm: \(rpm)) -> \(result)")
+        reply(result)
+    }
+
+    func resetToAutomatic(withReply reply: @escaping (Int32) -> Void) {
+        guard let writer = smcWriter else {
+            logger.error("resetToAutomatic failed: smcWriter is nil")
+            reply(kIOReturnNotOpen)
+            return
+        }
+        let result = writer.resetToAutomatic()
+        logger.notice("resetToAutomatic() -> \(result)")
         reply(result)
     }
 }
 
 final class ServiceDelegate: NSObject, NSXPCListenerDelegate {
     private let exportedObject = FanHelper()
-    private let allowedClientBundleIdentifier = "com.bandan.me.AeroPulse"
     private let logger = Logger(
         subsystem: "com.bandan.me.AeroPulse.FanService",
         category: "XPC"
     )
-    private lazy var allowedClientRequirement: String = {
-        let identifierClause = "identifier \"\(allowedClientBundleIdentifier)\""
-        guard let teamIdentifier = helperTeamIdentifier(), !teamIdentifier.isEmpty else {
-            return identifierClause
-        }
-        return
-            "anchor apple generic and \(identifierClause) and certificate leaf[subject.OU] = \"\(teamIdentifier)\""
-    }()
     private lazy var exportedInterface: NSXPCInterface = {
-        let interface = NSXPCInterface(with: FanHelperProtocol.self)
-        configureSecureCodingClasses(on: interface)
-        return interface
+        NSXPCInterface(with: FanHelperProtocol.self)
     }()
 
     func listener(_ listener: NSXPCListener, shouldAcceptNewConnection connection: NSXPCConnection) -> Bool {
@@ -454,69 +389,15 @@ final class ServiceDelegate: NSObject, NSXPCListenerDelegate {
             return false
         }
 
-        connection.setCodeSigningRequirement(allowedClientRequirement)
         connection.exportedInterface = exportedInterface
         connection.exportedObject = exportedObject
         connection.resume()
+        logger.notice("Accepted XPC client pid=\(connection.processIdentifier, privacy: .public)")
         return true
     }
 
     private func isConnectionAllowed(_ connection: NSXPCConnection) -> Bool {
-        connection.effectiveUserIdentifier > 0 && connection.processIdentifier > 0
-    }
-
-    private func helperTeamIdentifier() -> String? {
-        guard let executableURL = Bundle.main.executableURL as CFURL? else { return nil }
-
-        var staticCode: SecStaticCode?
-        guard
-            SecStaticCodeCreateWithPath(
-                executableURL,
-                SecCSFlags(rawValue: 0),
-                &staticCode
-            ) == errSecSuccess,
-            let staticCode
-        else {
-            return nil
-        }
-
-        var signingInformation: CFDictionary?
-        guard
-            SecCodeCopySigningInformation(
-                staticCode,
-                SecCSFlags(rawValue: kSecCSSigningInformation),
-                &signingInformation
-            ) == errSecSuccess,
-            let signingInformation = signingInformation as? [String: Any]
-        else {
-            return nil
-        }
-
-        return signingInformation[kSecCodeInfoTeamIdentifier as String] as? String
-    }
-
-    private func configureSecureCodingClasses(on interface: NSXPCInterface) {
-        // Swift imports `setClasses` with an awkward signature. Invoke the Objective-C
-        // selector directly so we can provide explicit class allow-lists (NSNumber only).
-        let setClassesSelector = NSSelectorFromString("setClasses:forSelector:argumentIndex:ofReply:")
-        typealias SetClassesIMP = @convention(c) (AnyObject, Selector, NSSet, Selector, UInt, Bool) ->
-            Void
-        let imp = interface.method(for: setClassesSelector)
-        let setClasses = unsafeBitCast(imp, to: SetClassesIMP.self)
-        let numberClasses = NSSet(array: [NSNumber.self])
-
-        let pingSelector = #selector(FanHelperProtocol.ping(withReply:))
-        setClasses(interface, setClassesSelector, numberClasses, pingSelector, 0, true)
-
-        let setFanModeSelector = #selector(FanHelperProtocol.setFanMode(index:manual:withReply:))
-        setClasses(interface, setClassesSelector, numberClasses, setFanModeSelector, 0, false)
-        setClasses(interface, setClassesSelector, numberClasses, setFanModeSelector, 1, false)
-        setClasses(interface, setClassesSelector, numberClasses, setFanModeSelector, 0, true)
-
-        let setFanTargetSelector = #selector(FanHelperProtocol.setFanTargetRPM(index:rpm:withReply:))
-        setClasses(interface, setClassesSelector, numberClasses, setFanTargetSelector, 0, false)
-        setClasses(interface, setClassesSelector, numberClasses, setFanTargetSelector, 1, false)
-        setClasses(interface, setClassesSelector, numberClasses, setFanTargetSelector, 0, true)
+        connection.processIdentifier > 0
     }
 }
 
@@ -527,3 +408,5 @@ let listener = NSXPCListener(machServiceName: "com.bandan.me.AeroPulse.FanServic
 listener.delegate = delegate
 listener.resume()
 RunLoop.main.run()
+
+

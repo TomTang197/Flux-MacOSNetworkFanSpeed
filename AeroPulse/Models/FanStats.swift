@@ -35,10 +35,32 @@ struct FanInfo: Identifiable, Equatable {
     }
 }
 
-enum FanMode: String, Equatable {
+enum FanMode: String, CaseIterable, Identifiable, Equatable {
     case auto = "Auto"
+    case fullBlast = "Max"
     case manual = "Manual"
-    case fullBlast = "Full Blast"
+    case custom = "Rules"
+
+    var id: String { rawValue }
+}
+
+struct FanThresholdRule: Identifiable, Codable, Equatable {
+    var id: UUID
+    var temperature: Double
+    var speedPercentage: Int
+
+    init(id: UUID = UUID(), temperature: Double, speedPercentage: Int) {
+        self.id = id
+        self.temperature = temperature
+        self.speedPercentage = max(0, min(100, speedPercentage))
+    }
+
+    static let defaultRules: [FanThresholdRule] = [
+        FanThresholdRule(temperature: 45, speedPercentage: 30),
+        FanThresholdRule(temperature: 60, speedPercentage: 50),
+        FanThresholdRule(temperature: 72, speedPercentage: 75),
+        FanThresholdRule(temperature: 82, speedPercentage: 100),
+    ]
 }
 
 struct SensorInfo: Identifiable, Equatable {

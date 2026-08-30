@@ -20,8 +20,10 @@ struct MenuBarDashboardView: View {
     private let actionButtonFont = Font.system(size: 10, weight: .semibold)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 11) {
+        VStack(alignment: .leading, spacing: 10) {
             header
+
+            fanQuickControlSection
 
             LazyVGrid(columns: columns, spacing: 10) {
                 MetricCard(
@@ -30,48 +32,48 @@ struct MenuBarDashboardView: View {
                     icon: AppImages.download,
                     color: .blue,
                     subtitle: "\(AppStrings.total): \(networkViewModel.downloadTotal)"
-                )
+                ).equatable()
                 MetricCard(
                     title: AppStrings.upload,
                     value: networkViewModel.uploadSpeed,
                     icon: AppImages.upload,
                     color: .green,
                     subtitle: "\(AppStrings.total): \(networkViewModel.uploadTotal)"
-                )
+                ).equatable()
                 MetricCard(
                     title: AppStrings.diskRead,
                     value: networkViewModel.diskReadSpeed,
                     icon: AppImages.diskRead,
                     color: .teal,
                     subtitle: "\(AppStrings.total): \(networkViewModel.diskReadTotal)"
-                )
+                ).equatable()
                 MetricCard(
                     title: AppStrings.diskWrite,
                     value: networkViewModel.diskWriteSpeed,
                     icon: AppImages.diskWrite,
                     color: .mint,
                     subtitle: "\(AppStrings.total): \(networkViewModel.diskWriteTotal)"
-                )
+                ).equatable()
                 MetricCard(
                     title: AppStrings.diskCapacity,
                     value: "\(networkViewModel.diskFreeCapacity) / \(networkViewModel.diskTotalCapacity)",
                     icon: AppImages.diskCapacity,
                     color: .cyan,
                     subtitle: "\(AppStrings.diskFree): \(networkViewModel.diskFreeCapacity) • \(AppStrings.diskUsed): \(networkViewModel.diskUsedPercent)"
-                )
+                ).equatable()
                 MetricCard(
                     title: AppStrings.gpuUsage,
                     value: networkViewModel.gpuUsage,
                     icon: AppImages.gpuUsage,
                     color: .pink
-                )
+                ).equatable()
                 MetricCard(
                     title: AppStrings.cpuUsage,
                     value: networkViewModel.cpuUsage,
                     icon: AppImages.cpuUsage,
                     color: .red,
                     processLines: networkViewModel.topCPUProcesses
-                )
+                ).equatable()
                 MetricCard(
                     title: AppStrings.memory,
                     value: networkViewModel.memoryUsage,
@@ -79,20 +81,20 @@ struct MenuBarDashboardView: View {
                     color: .brown,
                     subtitle: "\(networkViewModel.memoryUsed) / \(networkViewModel.memoryTotal)",
                     processLines: networkViewModel.topMemoryProcesses
-                )
+                ).equatable()
                 MetricCard(
                     title: AppStrings.powerUsage,
                     value: networkViewModel.powerUsage,
                     icon: AppImages.powerUsage,
                     color: .yellow
-                )
+                ).equatable()
                 MetricCard(
                     title: AppStrings.chargingPower,
                     value: networkViewModel.chargingPowerUsage,
                     icon: AppImages.chargingPower,
                     color: .orange,
                     subtitle: networkViewModel.chargingPowerSubtitle
-                )
+                ).equatable()
             }
 
             HStack(spacing: 8) {
@@ -173,6 +175,80 @@ struct MenuBarDashboardView: View {
         }
     }
 
+    private var fanQuickControlSection: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: AppImages.fan)
+                        .foregroundColor(.indigo)
+                        .font(.system(size: 11, weight: .bold))
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("FAN MODE")
+                            .font(.system(size: 8, weight: .black))
+                            .foregroundColor(.secondary)
+                            .tracking(0.6)
+                        Text("\(fanViewModel.primaryFanRPM) • \(fanViewModel.primaryTemp)")
+                            .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                    }
+                }
+
+                Spacer(minLength: 4)
+
+                Picker("", selection: Binding(
+                    get: { fanViewModel.currentMode },
+                    set: { newMode in
+                        DispatchQueue.main.async {
+                            fanViewModel.setFanMode(newMode)
+                        }
+                    }
+                )) {
+                    ForEach(FanMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .controlSize(.mini)
+                .frame(maxWidth: 190)
+            }
+
+            if fanViewModel.currentMode == .manual, let firstFan = fanViewModel.fans.first {
+                let currentTarget = fanViewModel.manualTargetRPM[firstFan.id] ?? firstFan.currentRPM
+                HStack(spacing: 8) {
+                    Text("RPM")
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundColor(.secondary)
+                    Slider(
+                        value: Binding(
+                            get: { Double(currentTarget) },
+                            set: { fanViewModel.setTargetRPM(fanIndex: firstFan.id, rpm: Int($0)) }
+                        ),
+                        in: Double(firstFan.minRPM)...Double(firstFan.maxRPM),
+                        step: 50
+                    )
+                    .controlSize(.mini)
+                    Text("\(currentTarget)")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundColor(.indigo)
+                        .frame(minWidth: 34, alignment: .trailing)
+                }
+                .padding(.top, 1)
+            } else if fanViewModel.currentMode == .custom, let activeRule = fanViewModel.activeRule {
+                HStack(spacing: 4) {
+                    Circle().fill(Color.green).frame(width: 5, height: 5)
+                    Text("Triggered: ≥ \(Int(activeRule.temperature))°C → \(activeRule.speedPercentage)%")
+                        .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.green)
+                    Spacer()
+                }
+                .padding(.top, 1)
+            }
+        }
+        .padding(9)
+        .liquidGlassCard(cornerRadius: 10, tint: .indigo, style: .regular, shadowOpacity: 0.08)
+    }
+
     private func refreshSnapshot() {
         SMCService.shared.reconnect()
         fanViewModel.startMonitoring()
@@ -226,13 +302,22 @@ struct MenuBarDashboardView: View {
     }
 }
 
-private struct MetricCard: View {
+private struct MetricCard: View, Equatable {
     let title: String
     let value: String
     let icon: String
     let color: Color
     var subtitle: String? = nil
     var processLines: [NetworkViewModel.ProcessUsageLine] = []
+
+    static func == (lhs: MetricCard, rhs: MetricCard) -> Bool {
+        lhs.title == rhs.title
+            && lhs.value == rhs.value
+            && lhs.icon == rhs.icon
+            && lhs.color == rhs.color
+            && lhs.subtitle == rhs.subtitle
+            && lhs.processLines == rhs.processLines
+    }
 
     private var cardMinHeight: CGFloat {
         if processLines.isEmpty {

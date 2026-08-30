@@ -40,13 +40,14 @@ private struct LiquidGlassCardModifier: ViewModifier {
         content
             .background {
                 ZStack {
-                    LiquidGlassEffectView(cornerRadius: cornerRadius, style: style)
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(Color(NSColor.controlBackgroundColor).opacity(0.72))
 
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(0.14),
-                            tint.opacity(0.12),
-                            Color.black.opacity(0.05),
+                            Color.white.opacity(0.12),
+                            tint.opacity(0.08),
+                            Color.clear,
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -60,8 +61,8 @@ private struct LiquidGlassCardModifier: ViewModifier {
                     .strokeBorder(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.32),
-                                tint.opacity(0.22),
+                                Color.white.opacity(0.25),
+                                tint.opacity(0.18),
                                 Color.clear,
                             ],
                             startPoint: .topLeading,
@@ -71,7 +72,7 @@ private struct LiquidGlassCardModifier: ViewModifier {
                     )
                     .allowsHitTesting(false)
             }
-            .shadow(color: Color.black.opacity(shadowOpacity), radius: 16, x: 0, y: 8)
+            .shadow(color: Color.black.opacity(shadowOpacity * 0.4), radius: 3, x: 0, y: 1.5)
     }
 }
 

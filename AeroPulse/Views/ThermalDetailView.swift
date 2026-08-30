@@ -84,23 +84,25 @@ struct ThermalDetailView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
-                    WaterfallColumnsLayout(columns: thermalColumnCount, spacing: 10) {
-                        sensorCategoryCard(
-                            title: "\(AppStrings.cpu) (\(cpuSensors.count))",
-                            sensors: cpuSensors,
-                            color: .orange
-                        )
-                        sensorCategoryCard(
-                            title: "\(AppStrings.gpu) (\(gpuSensors.count))",
-                            sensors: gpuSensors,
-                            color: .blue
-                        )
-                    }
+                    sensorCategoryCard(
+                        title: "\(AppStrings.cpu) (\(cpuSensors.count))",
+                        sensors: cpuSensors,
+                        color: .orange,
+                        useTwoColumns: true
+                    )
+
+                    sensorCategoryCard(
+                        title: "\(AppStrings.gpu) (\(gpuSensors.count))",
+                        sensors: gpuSensors,
+                        color: .blue,
+                        useTwoColumns: true
+                    )
 
                     sensorCategoryCard(
                         title: "\(AppStrings.system) (\(otherSensors.count))",
                         sensors: otherSensors,
-                        color: .green
+                        color: .green,
+                        useTwoColumns: true
                     )
                 }
                 .padding(.horizontal, 10)
@@ -160,12 +162,14 @@ struct ThermalDetailView: View {
     private func sensorCategoryCard(
         title: String,
         sensors: [SensorInfo],
-        color: Color
+        color: Color,
+        useTwoColumns: Bool = false
     ) -> some View {
         SensorCategoryColumn(
             title: title,
             sensors: sensors,
-            color: color
+            color: color,
+            useTwoColumns: useTwoColumns
         )
         .liquidGlassCard(
             cornerRadius: 12,
@@ -176,55 +180,131 @@ struct ThermalDetailView: View {
     }
 }
 
-struct SensorCategoryColumn: View {
+struct SensorCategoryColumn: View, Equatable {
     let title: String
     let sensors: [SensorInfo]
     let color: Color
+    var useTwoColumns: Bool = false
+
+    static func == (lhs: SensorCategoryColumn, rhs: SensorCategoryColumn) -> Bool {
+        lhs.title == rhs.title
+            && lhs.color == rhs.color
+            && lhs.sensors == rhs.sensors
+            && lhs.useTwoColumns == rhs.useTwoColumns
+    }
+
+    private var gridColumns: [GridItem] {
+        if sensors.count >= 20 {
+            return [
+                GridItem(.flexible(), spacing: 5),
+                GridItem(.flexible(), spacing: 5),
+                GridItem(.flexible(), spacing: 5),
+                GridItem(.flexible(), spacing: 5)
+            ]
+        }
+        if useTwoColumns && sensors.count > 3 {
+            return [
+                GridItem(.flexible(), spacing: 6),
+                GridItem(.flexible(), spacing: 6)
+            ]
+        }
+        return [GridItem(.flexible())]
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            Text(title)
-                .font(.system(size: 9, weight: .black))
-                .foregroundColor(color)
-                .frame(maxWidth: .infinity)
-                .tracking(0.9)
-                .padding(.vertical, 8)
-                .background(color.opacity(0.1))
+            HStack {
+                Text(title)
+                    .font(.system(size: 9, weight: .black))
+                    .foregroundColor(color)
+                    .tracking(0.9)
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(color.opacity(0.08))
 
             if sensors.isEmpty {
                 Text(AppStrings.noData)
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .padding(.vertical, 20)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
             } else {
-                VStack(spacing: 4) {
+                LazyVGrid(columns: gridColumns, spacing: 5) {
                     ForEach(Array(sensors.enumerated()), id: \.element.id) { index, sensor in
-                        HStack(spacing: 8) {
-                            Text(sensor.name)
-                                .font(.system(size: 11, weight: .semibold))
-                                .lineLimit(2)
-                                .minimumScaleFactor(0.75)
-                                .layoutPriority(1)
-                            Spacer(minLength: 6)
-                            Text(String(format: AppStrings.temperatureFormat, sensor.temperature))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.75)
-                                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                .frame(minWidth: 84, alignment: .trailing)
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.primary.opacity(index.isMultiple(of: 2) ? 0.055 : 0.03))
-                        )
+                        SensorRowView(index: index, sensor: sensor, accentColor: color)
+                            .equatable()
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 8)
+                .padding(8)
             }
         }
-        .frame(minWidth: 180, maxWidth: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+private struct SensorRowView: View, Equatable {
+    let index: Int
+    let sensor: SensorInfo
+    let accentColor: Color
+
+    static func == (lhs: SensorRowView, rhs: SensorRowView) -> Bool {
+        lhs.index == rhs.index
+            && lhs.sensor == rhs.sensor
+            && lhs.accentColor == rhs.accentColor
+    }
+
+    private var displayName: String {
+        if sensor.name.hasPrefix("GPU Core Sensor ") {
+            return "GPU \(sensor.name.dropFirst(16))"
+        }
+        if sensor.name.hasPrefix("P-Core Sensor ") {
+            return "P-Core \(sensor.name.dropFirst(14))"
+        }
+        if sensor.name.hasPrefix("E-Core Sensor ") {
+            return "E-Core \(sensor.name.dropFirst(14))"
+        }
+        return sensor.name
+    }
+
+    private var tempColor: Color {
+        if sensor.temperature >= 80 {
+            return .red
+        } else if sensor.temperature >= 60 {
+            return .orange
+        } else {
+            return .green
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(tempColor)
+                .frame(width: 4.5, height: 4.5)
+
+            Text(displayName)
+                .font(.system(size: 9.5, weight: .medium))
+                .foregroundColor(.primary.opacity(0.88))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .layoutPriority(1)
+
+            Spacer(minLength: 2)
+
+            Text(String(format: "%.0f°C", sensor.temperature))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(.primary)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 5)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color(NSColor.controlBackgroundColor).opacity(0.6))
+        )
     }
 }

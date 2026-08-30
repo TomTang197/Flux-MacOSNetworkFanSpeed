@@ -17,7 +17,10 @@ struct MenuBarView: View {
         let singleMetricRows = enabledMetricRows()
 
         if singleMetricRows.count == 1, let row = singleMetricRows.first {
-            let image = renderSingleMetricImage(row)
+            let cacheKey = "single:\(row.metric.rawValue):\(row.symbol):\(row.value)"
+            let image = MenuBarImageCache.shared.image(for: cacheKey) {
+                renderSingleMetricImage(row)
+            }
             return Image(nsImage: image)
         }
 
@@ -26,7 +29,12 @@ struct MenuBarView: View {
         if columns.isEmpty {
             return Image(systemName: AppImages.rocket)
         } else {
-            let combinedImage = renderGroupedMetricsImage(columns)
+            let cacheKey = columns.map {
+                "\($0.kind)-\($0.top?.metric.rawValue ?? ""):\($0.top?.value ?? "")|\($0.bottom?.metric.rawValue ?? ""):\($0.bottom?.value ?? "")"
+            }.joined(separator: ";")
+            let combinedImage = MenuBarImageCache.shared.image(for: cacheKey) {
+                renderGroupedMetricsImage(columns)
+            }
             return Image(nsImage: combinedImage)
         }
     }
@@ -156,9 +164,33 @@ struct MenuBarView: View {
         MetricRow(metric: metric, symbol: symbolForMetric(metric), value: valueForMetric(metric))
     }
 
+    private static let iconConfigGrouped = NSImage.SymbolConfiguration(pointSize: 10, weight: .bold)
+    private static let valueFontGrouped = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .bold)
+    private static let textAttributesGrouped: [NSAttributedString.Key: Any] = {
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .right
+        paragraphStyle.lineBreakMode = .byTruncatingMiddle
+        return [
+            .font: valueFontGrouped,
+            .paragraphStyle: paragraphStyle,
+        ]
+    }()
+
+    private static let iconConfigSingle = NSImage.SymbolConfiguration(pointSize: 16, weight: .bold)
+    private static let valueFontSingle = NSFont.monospacedDigitSystemFont(ofSize: 16, weight: .bold)
+    private static let textAttributesSingle: [NSAttributedString.Key: Any] = {
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .right
+        paragraphStyle.lineBreakMode = .byTruncatingMiddle
+        return [
+            .font: valueFontSingle,
+            .paragraphStyle: paragraphStyle,
+        ]
+    }()
+
     private func renderGroupedMetricsImage(_ columns: [MetricColumn]) -> NSImage {
-        let iconConfig = NSImage.SymbolConfiguration(pointSize: 10, weight: .bold)
-        let valueFont = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .bold)
+        let iconConfig = Self.iconConfigGrouped
+        let valueFont = Self.valueFontGrouped
 
         let rowHeight: CGFloat = 12
         let rowSpacing: CGFloat = 2
@@ -233,19 +265,14 @@ struct MenuBarView: View {
     }
 
     private func renderSingleMetricImage(_ row: MetricRow) -> NSImage {
-        let prefersExtraLarge = false
-        let iconPointSize: CGFloat = prefersExtraLarge ? 20 : 16
-        let valuePointSize: CGFloat = prefersExtraLarge ? 17 : 16
-
-        let iconConfig = NSImage.SymbolConfiguration(pointSize: iconPointSize, weight: .bold)
-        let valueFont = NSFont.monospacedDigitSystemFont(ofSize: valuePointSize, weight: .bold)
-        let textAttributes = textAttributes(for: valueFont)
+        let iconConfig = Self.iconConfigSingle
+        let textAttributes = Self.textAttributesSingle
 
         let height: CGFloat = 24
-        let leadingPadding: CGFloat = prefersExtraLarge ? 3 : 4
+        let leadingPadding: CGFloat = 4
         let trailingPadding: CGFloat = 3
-        let iconSlotWidth: CGFloat = prefersExtraLarge ? 18 : 15
-        let iconTextSpacing: CGFloat = prefersExtraLarge ? 1 : 2
+        let iconSlotWidth: CGFloat = 15
+        let iconTextSpacing: CGFloat = 2
         let icon = configuredSymbolImage(named: row.symbol, config: iconConfig)
         let width = singleMetricWidth(for: row.metric)
 
@@ -314,7 +341,7 @@ struct MenuBarView: View {
         valueFont: NSFont
     ) {
         guard let row else { return }
-        let textAttributes = textAttributes(for: valueFont)
+        let textAttributes = Self.textAttributesGrouped
 
         let icon = configuredSymbolImage(named: row.symbol, config: iconConfig)
         let textSize = measuredTextSize(for: row.value, attributes: textAttributes)
@@ -453,3 +480,23 @@ struct MenuBarView: View {
         }
     }
 }
+
+private final class MenuBarImageCache {
+    static let shared = MenuBarImageCache()
+    private var lastKey: String = ""
+    private var lastImage: NSImage?
+    private let lock = NSLock()
+
+    func image(for key: String, generator: () -> NSImage) -> NSImage {
+        lock.lock()
+        defer { lock.unlock() }
+        if key == lastKey, let lastImage {
+            return lastImage
+        }
+        let image = generator()
+        lastKey = key
+        lastImage = image
+        return image
+    }
+}
+

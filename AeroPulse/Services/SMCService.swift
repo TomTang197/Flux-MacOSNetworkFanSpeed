@@ -14,6 +14,7 @@ final class SMCService {
 
     private var connection: io_connect_t = 0
     private var keyInfoCache: [String: (size: UInt32, type: UInt32)] = [:]
+    private var invalidKeys: Set<String> = []
     private let keyInfoCacheLock = NSLock()
 
     var isConnected: Bool { connection != 0 }
@@ -72,6 +73,7 @@ final class SMCService {
     private func clearCache() {
         keyInfoCacheLock.lock()
         keyInfoCache.removeAll()
+        invalidKeys.removeAll()
         keyInfoCacheLock.unlock()
     }
 
@@ -164,6 +166,10 @@ final class SMCService {
 
     private func getInfo(_ name: String) -> (size: UInt32, type: UInt32)? {
         keyInfoCacheLock.lock()
+        if invalidKeys.contains(name) {
+            keyInfoCacheLock.unlock()
+            return nil
+        }
         if let cached = keyInfoCache[name] {
             keyInfoCacheLock.unlock()
             return cached
@@ -202,6 +208,13 @@ final class SMCService {
     }
 
     func readKey(_ name: String) -> SMCVal? {
+        keyInfoCacheLock.lock()
+        if invalidKeys.contains(name) {
+            keyInfoCacheLock.unlock()
+            return nil
+        }
+        keyInfoCacheLock.unlock()
+
         if let info = getInfo(name),
             let value = readKey(name, dataSize: max(info.size, 1), dataType: info.type)
         {
@@ -214,6 +227,10 @@ final class SMCService {
                 return value
             }
         }
+
+        keyInfoCacheLock.lock()
+        invalidKeys.insert(name)
+        keyInfoCacheLock.unlock()
 
         return nil
     }
@@ -289,7 +306,9 @@ final class SMCService {
     func getTemperature(_ key: String) -> Double? {
         guard let value = readKey(key) else { return nil }
         let temperature = Double(bytesToFloat(value))
-        guard temperature > 0, temperature < 150 else { return nil }
+        // Realistic operating temperatures on macOS are between 15°C and 125°C.
+        // Glitch readings (e.g. raw 0x0001 = 1.9°C from sleeping/uncalibrated sensors) are rejected.
+        guard temperature >= 15.0, temperature <= 125.0 else { return nil }
         return temperature
     }
 

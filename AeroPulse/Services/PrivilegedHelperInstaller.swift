@@ -82,10 +82,24 @@ final class PrivilegedHelperInstaller {
     }
 
     private func installWithAdministratorPrivileges(helperSourcePath: String, plistSourcePath: String) throws {
-        let command = [
+        var installCommands = [
             "/usr/bin/install -d -m 755 /Library/PrivilegedHelperTools",
             "/usr/bin/install -m 755 \(shellQuote(helperSourcePath)) \(shellQuote(installedHelperPath))",
             "/usr/sbin/chown root:wheel \(shellQuote(installedHelperPath))",
+        ]
+
+        let possibleSMCPaths = [
+            Bundle.main.path(forResource: "SMC", ofType: nil) ?? "",
+            "/Applications/iFan.app/Contents/Resources/SMC",
+        ]
+        if let smcPath = possibleSMCPaths.first(where: { FileManager.default.fileExists(atPath: $0) }) {
+            installCommands.append(contentsOf: [
+                "/usr/bin/install -m 755 \(shellQuote(smcPath)) /Library/PrivilegedHelperTools/SMC",
+                "/usr/sbin/chown root:wheel /Library/PrivilegedHelperTools/SMC",
+            ])
+        }
+
+        installCommands.append(contentsOf: [
             "/usr/bin/install -d -m 755 /Library/LaunchDaemons",
             "/usr/bin/install -m 644 \(shellQuote(plistSourcePath)) \(shellQuote(installedLaunchdPlistPath))",
             "/usr/sbin/chown root:wheel \(shellQuote(installedLaunchdPlistPath))",
@@ -93,8 +107,9 @@ final class PrivilegedHelperInstaller {
             "/bin/launchctl bootstrap system \(shellQuote(installedLaunchdPlistPath))",
             "/bin/launchctl enable system/\(serviceIdentifier)",
             "/bin/launchctl kickstart -k system/\(serviceIdentifier)",
-        ].joined(separator: "; ")
+        ])
 
+        let command = installCommands.joined(separator: "; ")
         let script = "do shell script \"\(escapeForAppleScript(command))\" with administrator privileges"
 
         let process = Process()

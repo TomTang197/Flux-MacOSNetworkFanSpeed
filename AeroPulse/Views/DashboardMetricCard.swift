@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct DashboardMetricCard: View {
+struct DashboardMetricCard: View, Equatable {
     let title: String
     let value: String
     let icon: String
@@ -16,6 +16,16 @@ struct DashboardMetricCard: View {
     var compact: Bool = false
     var showInfoButton: Bool = false
     var action: (() -> Void)? = nil
+
+    static func == (lhs: DashboardMetricCard, rhs: DashboardMetricCard) -> Bool {
+        lhs.title == rhs.title
+            && lhs.value == rhs.value
+            && lhs.icon == rhs.icon
+            && lhs.color == rhs.color
+            && lhs.subtitle == rhs.subtitle
+            && lhs.compact == rhs.compact
+            && lhs.showInfoButton == rhs.showInfoButton
+    }
 
     private var cardCornerRadius: CGFloat {
         compact ? 16 : 20

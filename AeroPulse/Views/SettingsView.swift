@@ -145,26 +145,7 @@ struct SettingsView: View {
                     }
                 }
 
-                SettingsCard(title: "Fan RPM Monitor", symbol: AppImages.fan, tint: .indigo) {
-                    if sortedFans.isEmpty {
-                        Text(AppStrings.noData)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.vertical, 8)
-                    } else {
-                        HStack(spacing: 10) {
-                            FanBadge(title: "Fans", value: "\(sortedFans.count)")
-                            FanBadge(title: "Average", value: "\(averageFanRPM) \(AppStrings.rpmUnit)")
-                        }
-
-                        VStack(spacing: 8) {
-                            ForEach(sortedFans) { fan in
-                                FanSpeedRow(fan: fan)
-                            }
-                        }
-                    }
-                }
+                FanControlCard(fanViewModel: fanViewModel)
 
                 SettingsCard(title: AppStrings.menuBarMetrics, symbol: AppImages.checklist, tint: .cyan) {
                     let metrics = MetricType.allCases
@@ -706,8 +687,12 @@ private struct FanBadge: View {
     }
 }
 
-private struct FanSpeedRow: View {
+private struct FanSpeedRow: View, Equatable {
     let fan: FanInfo
+
+    static func == (lhs: FanSpeedRow, rhs: FanSpeedRow) -> Bool {
+        lhs.fan == rhs.fan
+    }
 
     private var utilization: Double {
         guard fan.maxRPM > fan.minRPM else { return 0 }
@@ -729,9 +714,16 @@ private struct FanSpeedRow: View {
                     .frame(minWidth: 96, alignment: .trailing)
             }
 
-            ProgressView(value: utilization)
-                .progressViewStyle(.linear)
-                .tint(.indigo.opacity(0.92))
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.primary.opacity(0.08))
+                    Capsule()
+                        .fill(Color.indigo.opacity(0.92))
+                        .frame(width: max(0, min(geo.size.width * CGFloat(utilization), geo.size.width)))
+                }
+            }
+            .frame(height: 4)
 
             HStack {
                 Text("\(fan.minRPM) MIN")
@@ -750,11 +742,18 @@ private struct FanSpeedRow: View {
     }
 }
 
-private struct StatRow: View {
+private struct StatRow: View, Equatable {
     let icon: String
     let label: String
     let value: String
     let color: Color
+
+    static func == (lhs: StatRow, rhs: StatRow) -> Bool {
+        lhs.icon == rhs.icon
+            && lhs.label == rhs.label
+            && lhs.value == rhs.value
+            && lhs.color == rhs.color
+    }
 
     var body: some View {
         HStack(spacing: 8) {

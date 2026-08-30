@@ -23,36 +23,15 @@ struct ContentView: View {
     }
 
     private var dashboardBackground: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    Color(NSColor.windowBackgroundColor),
-                    Color(NSColor.controlBackgroundColor).opacity(0.96),
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            RadialGradient(
-                colors: [
-                    Color.blue.opacity(0.12),
-                    .clear,
-                ],
-                center: .topLeading,
-                startRadius: 10,
-                endRadius: 520
-            )
-
-            RadialGradient(
-                colors: [
-                    Color.indigo.opacity(0.08),
-                    .clear,
-                ],
-                center: .bottomTrailing,
-                startRadius: 40,
-                endRadius: 640
-            )
-        }
+        LinearGradient(
+            colors: [
+                Color(NSColor.windowBackgroundColor),
+                Color.blue.opacity(0.04),
+                Color(NSColor.controlBackgroundColor).opacity(0.96),
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
         .ignoresSafeArea()
     }
 
@@ -100,7 +79,7 @@ struct ContentView: View {
                                 color: .blue,
                                 subtitle: "\(AppStrings.total): \(networkViewModel.downloadTotal)",
                                 compact: true
-                            )
+                            ).equatable()
                             DashboardMetricCard(
                                 title: AppStrings.upload,
                                 value: networkViewModel.uploadSpeed,
@@ -108,7 +87,7 @@ struct ContentView: View {
                                 color: .green,
                                 subtitle: "\(AppStrings.total): \(networkViewModel.uploadTotal)",
                                 compact: true
-                            )
+                            ).equatable()
                             DashboardMetricCard(
                                 title: AppStrings.diskRead,
                                 value: networkViewModel.diskReadSpeed,
@@ -116,7 +95,7 @@ struct ContentView: View {
                                 color: .teal,
                                 subtitle: "\(AppStrings.total): \(networkViewModel.diskReadTotal)",
                                 compact: true
-                            )
+                            ).equatable()
                             DashboardMetricCard(
                                 title: AppStrings.diskWrite,
                                 value: networkViewModel.diskWriteSpeed,
@@ -124,21 +103,21 @@ struct ContentView: View {
                                 color: .mint,
                                 subtitle: "\(AppStrings.total): \(networkViewModel.diskWriteTotal)",
                                 compact: true
-                            )
+                            ).equatable()
                             DashboardMetricCard(
                                 title: AppStrings.cpuUsage,
                                 value: networkViewModel.cpuUsage,
                                 icon: AppImages.cpuUsage,
                                 color: .red,
                                 compact: true
-                            )
+                            ).equatable()
                             DashboardMetricCard(
                                 title: AppStrings.powerUsage,
                                 value: networkViewModel.powerUsage,
                                 icon: AppImages.powerUsage,
                                 color: .yellow,
                                 compact: true
-                            )
+                            ).equatable()
                             DashboardMetricCard(
                                 title: AppStrings.chargingPower,
                                 value: networkViewModel.chargingPowerUsage,
@@ -146,14 +125,14 @@ struct ContentView: View {
                                 color: .orange,
                                 subtitle: networkViewModel.chargingPowerSubtitle,
                                 compact: true
-                            )
+                            ).equatable()
                             DashboardMetricCard(
                                 title: AppStrings.gpuUsage,
                                 value: networkViewModel.gpuUsage,
                                 icon: AppImages.gpuUsage,
                                 color: .pink,
                                 compact: true
-                            )
+                            ).equatable()
                             DashboardMetricCard(
                                 title: AppStrings.memory,
                                 value: networkViewModel.memoryUsage,
@@ -161,14 +140,14 @@ struct ContentView: View {
                                 color: .brown,
                                 subtitle: "\(networkViewModel.memoryUsed) / \(networkViewModel.memoryTotal)",
                                 compact: true
-                            )
+                            ).equatable()
                             DashboardMetricCard(
                                 title: AppStrings.fan,
                                 value: fanViewModel.primaryFanRPM,
                                 icon: AppImages.fan,
                                 color: .indigo,
                                 compact: true
-                            )
+                            ).equatable()
                             DashboardMetricCard(
                                 title: AppStrings.systemTemp,
                                 value: fanViewModel.primaryTemp,
@@ -181,7 +160,7 @@ struct ContentView: View {
                                         fanViewModel.isShowingThermalDetails = true
                                     }
                                 }
-                            )
+                            ).equatable()
                             DashboardMetricCard(
                                 title: AppStrings.diskCapacity,
                                 value: "\(networkViewModel.diskFreeCapacity) / \(networkViewModel.diskTotalCapacity)",
@@ -189,7 +168,7 @@ struct ContentView: View {
                                 color: .cyan,
                                 subtitle: "\(AppStrings.diskFree): \(networkViewModel.diskFreeCapacity) • \(AppStrings.diskUsed): \(networkViewModel.diskUsedPercent)",
                                 compact: true
-                            )
+                            ).equatable()
                             .gridCellColumns(2)
                         }
                         .padding(.horizontal, 24)
@@ -299,6 +278,8 @@ struct ContentView: View {
         )
         window.styleMask.insert(.resizable)
         window.standardWindowButton(.zoomButton)?.isEnabled = true
+        window.isOpaque = true
+        window.backgroundColor = NSColor.windowBackgroundColor
     }
 }
 

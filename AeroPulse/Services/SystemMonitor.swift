@@ -428,11 +428,9 @@ final class SystemMonitor {
         guard rawValue.isFinite else { return 0 }
 
         let normalized: Double
-        if rawValue <= 1 {
-            normalized = rawValue * 100
-        } else if rawValue > 100 && rawValue <= 10_000 {
-            // Some drivers expose centi-percent values.
-            normalized = rawValue / 100
+        if rawValue > 100 && rawValue <= 10_000 {
+            // Some drivers expose centi-percent values (e.g. 2500 for 25%).
+            normalized = rawValue / 100.0
         } else {
             normalized = rawValue
         }
