@@ -89,6 +89,7 @@ final class NetworkViewModel: ObservableObject {
     private var sessionUploadBytes: UInt64 = 0
     private var sessionDiskReadBytes: UInt64 = 0
     private var sessionDiskWriteBytes: UInt64 = 0
+    private var presentationUpdateGate = PresentationUpdateGate()
     private var timer: AnyCancellable?
     private let diskSampleInterval: TimeInterval = 2.0
     private let capacitySampleInterval: TimeInterval = 15.0
@@ -174,6 +175,13 @@ final class NetworkViewModel: ObservableObject {
         }
     }
 
+    /// Pauses only observable UI publication. Sampling and cumulative byte accounting continue.
+    func setPresentationUpdatesPaused(_ paused: Bool) {
+        let shouldRefresh = presentationUpdateGate.setPaused(paused)
+        guard shouldRefresh else { return }
+        updateSpeed()
+    }
+
     private let samplingQueue = DispatchQueue(label: "AeroPulse.NetworkSampling", qos: .utility)
     private var isSampling = false
 
@@ -208,8 +216,6 @@ final class NetworkViewModel: ObservableObject {
 
         var newDownloadSpeed: String?
         var newUploadSpeed: String?
-        var newDownloadTotal: String?
-        var newUploadTotal: String?
         var newBytesInDelta: UInt64 = 0
         var newBytesOutDelta: UInt64 = 0
 
@@ -360,14 +366,30 @@ final class NetworkViewModel: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
 
-            if let newDownloadSpeed { setIfChanged(&self.downloadSpeed, newDownloadSpeed) }
-            if let newUploadSpeed { setIfChanged(&self.uploadSpeed, newUploadSpeed) }
             if newBytesInDelta > 0 {
                 accumulate(&self.sessionDownloadBytes, delta: newBytesInDelta)
-                setIfChanged(&self.downloadTotal, formatTransferTotal(self.sessionDownloadBytes))
             }
             if newBytesOutDelta > 0 {
                 accumulate(&self.sessionUploadBytes, delta: newBytesOutDelta)
+            }
+            if newDiskReadDelta > 0 {
+                accumulate(&self.sessionDiskReadBytes, delta: newDiskReadDelta)
+            }
+            if newDiskWriteDelta > 0 {
+                accumulate(&self.sessionDiskWriteBytes, delta: newDiskWriteDelta)
+            }
+
+            guard self.presentationUpdateGate.shouldPublishIncomingUpdate() else {
+                self.isSampling = false
+                return
+            }
+
+            if let newDownloadSpeed { setIfChanged(&self.downloadSpeed, newDownloadSpeed) }
+            if let newUploadSpeed { setIfChanged(&self.uploadSpeed, newUploadSpeed) }
+            if self.sessionDownloadBytes > 0 {
+                setIfChanged(&self.downloadTotal, formatTransferTotal(self.sessionDownloadBytes))
+            }
+            if self.sessionUploadBytes > 0 {
                 setIfChanged(&self.uploadTotal, formatTransferTotal(self.sessionUploadBytes))
             }
 
@@ -379,12 +401,10 @@ final class NetworkViewModel: ObservableObject {
 
             if let newDiskReadSpeed { setIfChanged(&self.diskReadSpeed, newDiskReadSpeed) }
             if let newDiskWriteSpeed { setIfChanged(&self.diskWriteSpeed, newDiskWriteSpeed) }
-            if newDiskReadDelta > 0 {
-                accumulate(&self.sessionDiskReadBytes, delta: newDiskReadDelta)
+            if self.sessionDiskReadBytes > 0 {
                 setIfChanged(&self.diskReadTotal, formatTransferTotal(self.sessionDiskReadBytes))
             }
-            if newDiskWriteDelta > 0 {
-                accumulate(&self.sessionDiskWriteBytes, delta: newDiskWriteDelta)
+            if self.sessionDiskWriteBytes > 0 {
                 setIfChanged(&self.diskWriteTotal, formatTransferTotal(self.sessionDiskWriteBytes))
             }
 
@@ -493,7 +513,11 @@ final class NetworkViewModel: ObservableObject {
 
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
-                if let snapshot, self.isDetailedSamplingEnabled {
+                if
+                    let snapshot,
+                    self.isDetailedSamplingEnabled,
+                    self.presentationUpdateGate.shouldPublishIncomingUpdate()
+                {
                     self.applyProcessUsageSnapshot(snapshot)
                 }
                 self.isSamplingProcessUsage = false

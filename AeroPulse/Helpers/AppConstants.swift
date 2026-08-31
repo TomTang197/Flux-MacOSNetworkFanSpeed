@@ -4,6 +4,11 @@ struct AppConfig {
     static let bugFeedbackEmail = "ct197waikato@icloud.com"
 }
 
+enum VisualEffectsPreferences {
+    static let storageKey = "ReduceVisualEffects"
+    static let defaultValue = false
+}
+
 struct AppStrings {
     static var appName: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
@@ -25,6 +30,8 @@ struct AppStrings {
     static let powerUsage = "System Power"
     static let chargingPower = "Battery Power"
     static let gpuUsage = "GPU Usage"
+    static let systemGPUUsage = "System GPU"
+    static let systemGPUDescription = "Includes WindowServer and all apps"
     static let memory = "Memory"
     static let fan = "Fan"
     static let systemTemp = "System Temp"
@@ -39,6 +46,9 @@ struct AppStrings {
     static let launchAtLoginRefresh = "Refresh"
     static let launchAtLoginErrorPrefix = "Error:"
     static let refreshRate = "Sampling Frequency"
+    static let reduceVisualEffects = "Reduce Visual Effects"
+    static let reduceVisualEffectsDescription =
+        "Uses flat backgrounds and removes window/card shadows. Window movement enables this automatically."
     static let privilegedHelper = "Privileged Helper"
     static let helperInstalled = "Helper installed and service registered."
     static let helperMissing = "Helper not installed."
@@ -102,6 +112,7 @@ struct AppImages {
     static let launchAtLogin = "person.badge.key.fill"
     static let helper = "lock.shield.fill"
     static let refresh = "arrow.clockwise"
+    static let visualEffects = "sparkles"
     static let cpu = "cpu"
     static let power = "power.circle.fill"
     static let window = "macwindow"

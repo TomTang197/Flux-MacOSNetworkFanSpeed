@@ -19,7 +19,7 @@ struct LiveTelemetrySettingsCard: View {
                 StatRow(icon: AppImages.cpuUsage, label: AppStrings.cpuUsage, value: networkViewModel.cpuUsage, color: .red)
                 StatRow(icon: AppImages.powerUsage, label: AppStrings.powerUsage, value: networkViewModel.powerUsage, color: .yellow)
                 StatRow(icon: AppImages.chargingPower, label: AppStrings.chargingPower, value: networkViewModel.chargingPowerUsage, color: .orange)
-                StatRow(icon: AppImages.gpuUsage, label: AppStrings.gpuUsage, value: networkViewModel.gpuUsage, color: .pink)
+                StatRow(icon: AppImages.gpuUsage, label: AppStrings.systemGPUUsage, value: networkViewModel.gpuUsage, color: .pink)
                 StatRow(icon: AppImages.memory, label: AppStrings.memory, value: "\(networkViewModel.memoryUsage) (\(networkViewModel.memoryUsed)/\(networkViewModel.memoryTotal))", color: .brown)
                 Divider().opacity(0.22)
                 StatRow(icon: AppImages.temperature, label: AppStrings.cpuTemp, value: fanViewModel.primaryTemp, color: .orange)
@@ -163,6 +163,31 @@ struct RefreshRateSettingsCard: View {
                 .pickerStyle(.menu)
                 .frame(width: 78)
             }
+        }
+    }
+}
+
+struct VisualEffectsSettingsCard: View {
+    @AppStorage(VisualEffectsPreferences.storageKey) private var reduceVisualEffects =
+        VisualEffectsPreferences.defaultValue
+
+    var body: some View {
+        SettingsCard(
+            title: AppStrings.reduceVisualEffects,
+            symbol: AppImages.visualEffects,
+            tint: .purple
+        ) {
+            Toggle(isOn: $reduceVisualEffects) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(AppStrings.reduceVisualEffects)
+                        .font(.system(size: 11, weight: .semibold))
+                    Text(AppStrings.reduceVisualEffectsDescription)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .toggleStyle(.switch)
         }
     }
 }

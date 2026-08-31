@@ -11,6 +11,8 @@ struct ContentView: View {
     let networkViewModel: NetworkViewModel
     let fanViewModel: FanViewModel
     let launchAtLoginManager: LaunchAtLoginManager
+    @StateObject private var windowInteraction = WindowInteractionCoordinator()
+    @Environment(\.visualEffectsReduced) private var reduceVisualEffects
     private let defaultWindowSize = CGSize(width: 1230, height: 650)
     private let minimumWindowSize = CGSize(width: 1040, height: 620)
     private let leftColumnMinWidth: CGFloat = 320
@@ -22,17 +24,23 @@ struct ContentView: View {
         leftColumnMinWidth + thermalColumnMinWidth + settingsColumnMinWidth + dividerWidth
     }
 
+    @ViewBuilder
     private var dashboardBackground: some View {
-        LinearGradient(
-            colors: [
-                Color(NSColor.windowBackgroundColor),
-                Color.blue.opacity(0.04),
-                Color(NSColor.controlBackgroundColor).opacity(0.96),
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .ignoresSafeArea()
+        if windowInteraction.isInteracting || reduceVisualEffects {
+            Color(NSColor.windowBackgroundColor)
+                .ignoresSafeArea()
+        } else {
+            LinearGradient(
+                colors: [
+                    Color(NSColor.windowBackgroundColor),
+                    Color.blue.opacity(0.04),
+                    Color(NSColor.controlBackgroundColor).opacity(0.96),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+        }
     }
 
     var body: some View {
@@ -80,9 +88,16 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: minimumWindowSize.width, minHeight: minimumWindowSize.height)
+        .environment(\.windowInteractionActive, windowInteraction.isInteracting)
         .background(dashboardBackground)
         .background(DashboardThermalSheetPresenter(fanViewModel: fanViewModel))
+        .transaction { transaction in
+            if windowInteraction.isInteracting {
+                transaction.animation = nil
+            }
+        }
         .onAppear {
+            networkViewModel.setPresentationUpdatesPaused(false)
             networkViewModel.setDetailedSampling(true, source: .dashboardWindow)
             fanViewModel.setDetailedSampling(true, source: .dashboardWindow)
             DispatchQueue.main.async {
@@ -101,9 +116,17 @@ struct ContentView: View {
                 }
             }
         }
+        .onChange(of: windowInteraction.isInteracting) { _, isInteracting in
+            networkViewModel.setPresentationUpdatesPaused(isInteracting)
+        }
+        .onChange(of: reduceVisualEffects) { _, reduced in
+            windowInteraction.setPermanentlyReducedEffects(reduced)
+        }
         .onDisappear {
+            networkViewModel.setPresentationUpdatesPaused(false)
             networkViewModel.setDetailedSampling(false, source: .dashboardWindow)
             fanViewModel.setDetailedSampling(false, source: .dashboardWindow)
+            windowInteraction.detach()
             DispatchQueue.main.async {
                 NSApplication.shared.setActivationPolicy(.accessory)
             }
@@ -147,6 +170,8 @@ struct ContentView: View {
         window.standardWindowButton(.zoomButton)?.isEnabled = true
         window.isOpaque = true
         window.backgroundColor = NSColor.windowBackgroundColor
+        windowInteraction.setPermanentlyReducedEffects(reduceVisualEffects)
+        windowInteraction.attach(to: window)
     }
 }
 
@@ -239,10 +264,11 @@ private struct DashboardMetricsColumn: View {
                     compact: true
                 ).equatable()
                 DashboardMetricCard(
-                    title: AppStrings.gpuUsage,
+                    title: AppStrings.systemGPUUsage,
                     value: networkViewModel.gpuUsage,
                     icon: AppImages.gpuUsage,
                     color: .pink,
+                    subtitle: AppStrings.systemGPUDescription,
                     compact: true
                 ).equatable()
                 DashboardMetricCard(

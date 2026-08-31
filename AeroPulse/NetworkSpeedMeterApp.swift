@@ -12,6 +12,8 @@ struct NetworkSpeedMeterApp: App {
     @StateObject private var networkViewModel = NetworkViewModel()
     @StateObject private var fanViewModel = FanViewModel()
     @StateObject private var launchAtLoginManager = LaunchAtLoginManager()
+    @AppStorage(VisualEffectsPreferences.storageKey) private var reduceVisualEffects =
+        VisualEffectsPreferences.defaultValue
 
     init() {
         // Set as accessory app (no dock icon, menu bar only)
@@ -25,6 +27,7 @@ struct NetworkSpeedMeterApp: App {
                 fanViewModel: fanViewModel,
                 launchAtLoginManager: launchAtLoginManager
             )
+            .environment(\.visualEffectsReduced, reduceVisualEffects)
         }
         .defaultLaunchBehavior(.suppressed)
 
@@ -34,6 +37,7 @@ struct NetworkSpeedMeterApp: App {
                 fanViewModel: fanViewModel,
                 launchAtLoginManager: launchAtLoginManager
             )
+            .environment(\.visualEffectsReduced, reduceVisualEffects)
         } label: {
             MenuBarView(networkViewModel: networkViewModel, fanViewModel: fanViewModel)
         }

@@ -35,23 +35,34 @@ private struct LiquidGlassCardModifier: ViewModifier {
     var tint: Color
     var style: NSGlassEffectView.Style
     var shadowOpacity: Double
+    @Environment(\.windowInteractionActive) private var windowInteractionActive
+    @Environment(\.visualEffectsReduced) private var reduceVisualEffects
+
+    private var shouldReduceEffects: Bool {
+        windowInteractionActive || reduceVisualEffects
+    }
 
     func body(content: Content) -> some View {
         content
             .background {
                 ZStack {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(Color(NSColor.controlBackgroundColor).opacity(0.72))
+                        .fill(
+                            Color(NSColor.controlBackgroundColor)
+                                .opacity(shouldReduceEffects ? 0.94 : 0.72)
+                        )
 
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.12),
-                            tint.opacity(0.08),
-                            Color.clear,
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+                    if !shouldReduceEffects {
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.12),
+                                tint.opacity(0.08),
+                                Color.clear,
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
                 .allowsHitTesting(false)
@@ -59,20 +70,29 @@ private struct LiquidGlassCardModifier: ViewModifier {
             .overlay {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .strokeBorder(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.25),
-                                tint.opacity(0.18),
-                                Color.clear,
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
+                        shouldReduceEffects
+                            ? AnyShapeStyle(Color.primary.opacity(0.10))
+                            : AnyShapeStyle(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.25),
+                                        tint.opacity(0.18),
+                                        Color.clear,
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            ),
                         lineWidth: 1
                     )
                     .allowsHitTesting(false)
             }
-            .shadow(color: Color.black.opacity(shadowOpacity * 0.4), radius: 3, x: 0, y: 1.5)
+            .shadow(
+                color: Color.black.opacity(shouldReduceEffects ? 0 : shadowOpacity * 0.4),
+                radius: shouldReduceEffects ? 0 : 3,
+                x: 0,
+                y: shouldReduceEffects ? 0 : 1.5
+            )
     }
 }
 

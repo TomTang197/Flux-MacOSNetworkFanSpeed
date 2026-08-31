@@ -52,6 +52,8 @@ struct SettingsView: View {
 
                 RefreshRateSettingsCard(networkViewModel: networkViewModel)
 
+                VisualEffectsSettingsCard()
+
                 SettingsCard(
                     title: AppStrings.hardwareConnection,
                     symbol: AppImages.cpu,
