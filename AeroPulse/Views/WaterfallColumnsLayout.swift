@@ -14,13 +14,28 @@ struct WaterfallColumnsLayout: Layout {
         self.spacing = max(0, spacing)
     }
 
+    struct Cache {
+        var width: CGFloat?
+        var result: LayoutResult?
+    }
+
+    func makeCache(subviews: Subviews) -> Cache {
+        Cache()
+    }
+
+    func updateCache(_ cache: inout Cache, subviews: Subviews) {
+        cache = Cache()
+    }
+
     func sizeThatFits(
         proposal: ProposedViewSize,
         subviews: Subviews,
-        cache: inout ()
+        cache: inout Cache
     ) -> CGSize {
         let measuredWidth = max(proposal.width ?? defaultWidth, 0)
         let result = computeLayout(width: measuredWidth, subviews: subviews)
+        cache.width = measuredWidth
+        cache.result = result
         return CGSize(width: measuredWidth, height: result.height)
     }
 
@@ -28,9 +43,16 @@ struct WaterfallColumnsLayout: Layout {
         in bounds: CGRect,
         proposal: ProposedViewSize,
         subviews: Subviews,
-        cache: inout ()
+        cache: inout Cache
     ) {
-        let result = computeLayout(width: bounds.width, subviews: subviews)
+        let result: LayoutResult
+        if cache.width == bounds.width, let cachedResult = cache.result {
+            result = cachedResult
+        } else {
+            result = computeLayout(width: bounds.width, subviews: subviews)
+            cache.width = bounds.width
+            cache.result = result
+        }
 
         for item in result.items {
             let frame = item.frame.offsetBy(dx: bounds.minX, dy: bounds.minY)
@@ -45,8 +67,8 @@ struct WaterfallColumnsLayout: Layout {
         columns == 1 ? 320 : 520
     }
 
-    private func computeLayout(width: CGFloat, subviews: Subviews) -> (items: [LayoutItem], height: CGFloat) {
-        guard !subviews.isEmpty else { return ([], 0) }
+    private func computeLayout(width: CGFloat, subviews: Subviews) -> LayoutResult {
+        guard !subviews.isEmpty else { return LayoutResult(items: [], height: 0) }
 
         let columnCount = max(1, columns)
         let totalSpacing = CGFloat(columnCount - 1) * spacing
@@ -69,7 +91,7 @@ struct WaterfallColumnsLayout: Layout {
 
         let rawHeight = columnHeights.max() ?? 0
         let finalHeight = max(rawHeight - spacing, 0)
-        return (items, finalHeight)
+        return LayoutResult(items: items, height: finalHeight)
     }
 
     private func shortestColumn(in heights: [CGFloat]) -> Int {
@@ -86,7 +108,12 @@ struct WaterfallColumnsLayout: Layout {
         return result
     }
 
-    private struct LayoutItem {
+    struct LayoutResult {
+        let items: [LayoutItem]
+        let height: CGFloat
+    }
+
+    struct LayoutItem {
         let index: Int
         let frame: CGRect
     }

@@ -485,6 +485,7 @@ private final class MenuBarImageCache {
     static let shared = MenuBarImageCache()
     private var lastKey: String = ""
     private var lastImage: NSImage?
+    private var renderPolicy = MenuBarRenderPolicy(minimumInterval: 2.0)
     private let lock = NSLock()
 
     func image(for key: String, generator: () -> NSImage) -> NSImage {
@@ -493,10 +494,13 @@ private final class MenuBarImageCache {
         if key == lastKey, let lastImage {
             return lastImage
         }
+        let shouldRender = renderPolicy.shouldRender(key: key)
+        if let previousImage = lastImage, !shouldRender {
+            return previousImage
+        }
         let image = generator()
         lastKey = key
         lastImage = image
         return image
     }
 }
-

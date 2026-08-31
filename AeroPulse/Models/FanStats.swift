@@ -62,10 +62,3 @@ struct FanThresholdRule: Identifiable, Codable, Equatable {
         FanThresholdRule(temperature: 82, speedPercentage: 100),
     ]
 }
-
-struct SensorInfo: Identifiable, Equatable {
-    let id: String
-    let name: String
-    var temperature: Double
-    var isEnabled: Bool
-}

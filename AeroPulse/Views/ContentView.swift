@@ -8,9 +8,9 @@
 import SwiftUI
 
 struct ContentView: View {
-    @ObservedObject var networkViewModel: NetworkViewModel
-    @ObservedObject var fanViewModel: FanViewModel
-    @ObservedObject var launchAtLoginManager: LaunchAtLoginManager
+    let networkViewModel: NetworkViewModel
+    let fanViewModel: FanViewModel
+    let launchAtLoginManager: LaunchAtLoginManager
     private let defaultWindowSize = CGSize(width: 1230, height: 650)
     private let minimumWindowSize = CGSize(width: 1040, height: 620)
     private let leftColumnMinWidth: CGFloat = 320
@@ -41,141 +41,10 @@ struct ContentView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 0) {
-                    // Left Column: Metrics Dashboard
-                    VStack(spacing: 24) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(AppStrings.appName)
-                                    .font(.title2)
-                                    .fontWeight(.black)
-                                HStack(spacing: 4) {
-                                    Circle()
-                                        .fill(SMCService.shared.isConnected ? Color.blue : Color.red)
-                                        .frame(width: 6, height: 6)
-                                    Text(
-                                        SMCService.shared.isConnected
-                                            ? AppStrings.hardwareConnected : AppStrings.hardwareDisconnected
-                                    )
-                                    .font(.caption2.weight(.bold))
-                                    .foregroundColor(.secondary)
-                                }
-                            }
-
-                            Spacer()
-                        }
-                        .padding(.horizontal, 24)
-
-                        LazyVGrid(
-                            columns: [
-                                GridItem(.flexible(), spacing: 14),
-                                GridItem(.flexible(), spacing: 14),
-                            ],
-                            spacing: 14
-                        ) {
-                            DashboardMetricCard(
-                                title: AppStrings.download,
-                                value: networkViewModel.downloadSpeed,
-                                icon: AppImages.download,
-                                color: .blue,
-                                subtitle: "\(AppStrings.total): \(networkViewModel.downloadTotal)",
-                                compact: true
-                            ).equatable()
-                            DashboardMetricCard(
-                                title: AppStrings.upload,
-                                value: networkViewModel.uploadSpeed,
-                                icon: AppImages.upload,
-                                color: .green,
-                                subtitle: "\(AppStrings.total): \(networkViewModel.uploadTotal)",
-                                compact: true
-                            ).equatable()
-                            DashboardMetricCard(
-                                title: AppStrings.diskRead,
-                                value: networkViewModel.diskReadSpeed,
-                                icon: AppImages.diskRead,
-                                color: .teal,
-                                subtitle: "\(AppStrings.total): \(networkViewModel.diskReadTotal)",
-                                compact: true
-                            ).equatable()
-                            DashboardMetricCard(
-                                title: AppStrings.diskWrite,
-                                value: networkViewModel.diskWriteSpeed,
-                                icon: AppImages.diskWrite,
-                                color: .mint,
-                                subtitle: "\(AppStrings.total): \(networkViewModel.diskWriteTotal)",
-                                compact: true
-                            ).equatable()
-                            DashboardMetricCard(
-                                title: AppStrings.cpuUsage,
-                                value: networkViewModel.cpuUsage,
-                                icon: AppImages.cpuUsage,
-                                color: .red,
-                                compact: true
-                            ).equatable()
-                            DashboardMetricCard(
-                                title: AppStrings.powerUsage,
-                                value: networkViewModel.powerUsage,
-                                icon: AppImages.powerUsage,
-                                color: .yellow,
-                                compact: true
-                            ).equatable()
-                            DashboardMetricCard(
-                                title: AppStrings.chargingPower,
-                                value: networkViewModel.chargingPowerUsage,
-                                icon: AppImages.chargingPower,
-                                color: .orange,
-                                subtitle: networkViewModel.chargingPowerSubtitle,
-                                compact: true
-                            ).equatable()
-                            DashboardMetricCard(
-                                title: AppStrings.gpuUsage,
-                                value: networkViewModel.gpuUsage,
-                                icon: AppImages.gpuUsage,
-                                color: .pink,
-                                compact: true
-                            ).equatable()
-                            DashboardMetricCard(
-                                title: AppStrings.memory,
-                                value: networkViewModel.memoryUsage,
-                                icon: AppImages.memory,
-                                color: .brown,
-                                subtitle: "\(networkViewModel.memoryUsed) / \(networkViewModel.memoryTotal)",
-                                compact: true
-                            ).equatable()
-                            DashboardMetricCard(
-                                title: AppStrings.fan,
-                                value: fanViewModel.primaryFanRPM,
-                                icon: AppImages.fan,
-                                color: .indigo,
-                                compact: true
-                            ).equatable()
-                            DashboardMetricCard(
-                                title: AppStrings.systemTemp,
-                                value: fanViewModel.primaryTemp,
-                                icon: AppImages.temperature,
-                                color: .orange,
-                                compact: true,
-                                showInfoButton: false,
-                                action: {
-                                    DispatchQueue.main.async {
-                                        fanViewModel.isShowingThermalDetails = true
-                                    }
-                                }
-                            ).equatable()
-                            DashboardMetricCard(
-                                title: AppStrings.diskCapacity,
-                                value: "\(networkViewModel.diskFreeCapacity) / \(networkViewModel.diskTotalCapacity)",
-                                icon: AppImages.diskCapacity,
-                                color: .cyan,
-                                subtitle: "\(AppStrings.diskFree): \(networkViewModel.diskFreeCapacity) • \(AppStrings.diskUsed): \(networkViewModel.diskUsedPercent)",
-                                compact: true
-                            ).equatable()
-                            .gridCellColumns(2)
-                        }
-                        .padding(.horizontal, 24)
-
-                        Spacer()
-                    }
-                    .padding(.vertical, 24)
+                    DashboardMetricsColumn(
+                        networkViewModel: networkViewModel,
+                        fanViewModel: fanViewModel
+                    )
                     .frame(width: columns.leftWidth)
 
                     Divider()
@@ -212,6 +81,7 @@ struct ContentView: View {
         }
         .frame(minWidth: minimumWindowSize.width, minHeight: minimumWindowSize.height)
         .background(dashboardBackground)
+        .background(DashboardThermalSheetPresenter(fanViewModel: fanViewModel))
         .onAppear {
             networkViewModel.setDetailedSampling(true, source: .dashboardWindow)
             fanViewModel.setDetailedSampling(true, source: .dashboardWindow)
@@ -237,9 +107,6 @@ struct ContentView: View {
             DispatchQueue.main.async {
                 NSApplication.shared.setActivationPolicy(.accessory)
             }
-        }
-        .sheet(isPresented: $fanViewModel.isShowingThermalDetails) {
-            ThermalDetailView(fanViewModel: fanViewModel)
         }
     }
 
@@ -280,6 +147,159 @@ struct ContentView: View {
         window.standardWindowButton(.zoomButton)?.isEnabled = true
         window.isOpaque = true
         window.backgroundColor = NSColor.windowBackgroundColor
+    }
+}
+
+private struct DashboardMetricsColumn: View {
+    @ObservedObject var networkViewModel: NetworkViewModel
+    @ObservedObject var fanViewModel: FanViewModel
+
+    var body: some View {
+        VStack(spacing: 24) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(AppStrings.appName)
+                        .font(.title2)
+                        .fontWeight(.black)
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(SMCService.shared.isConnected ? Color.blue : Color.red)
+                            .frame(width: 6, height: 6)
+                        Text(
+                            SMCService.shared.isConnected
+                                ? AppStrings.hardwareConnected : AppStrings.hardwareDisconnected
+                        )
+                        .font(.caption2.weight(.bold))
+                        .foregroundColor(.secondary)
+                    }
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 14),
+                    GridItem(.flexible(), spacing: 14),
+                ],
+                spacing: 14
+            ) {
+                DashboardMetricCard(
+                    title: AppStrings.download,
+                    value: networkViewModel.downloadSpeed,
+                    icon: AppImages.download,
+                    color: .blue,
+                    subtitle: "\(AppStrings.total): \(networkViewModel.downloadTotal)",
+                    compact: true
+                ).equatable()
+                DashboardMetricCard(
+                    title: AppStrings.upload,
+                    value: networkViewModel.uploadSpeed,
+                    icon: AppImages.upload,
+                    color: .green,
+                    subtitle: "\(AppStrings.total): \(networkViewModel.uploadTotal)",
+                    compact: true
+                ).equatable()
+                DashboardMetricCard(
+                    title: AppStrings.diskRead,
+                    value: networkViewModel.diskReadSpeed,
+                    icon: AppImages.diskRead,
+                    color: .teal,
+                    subtitle: "\(AppStrings.total): \(networkViewModel.diskReadTotal)",
+                    compact: true
+                ).equatable()
+                DashboardMetricCard(
+                    title: AppStrings.diskWrite,
+                    value: networkViewModel.diskWriteSpeed,
+                    icon: AppImages.diskWrite,
+                    color: .mint,
+                    subtitle: "\(AppStrings.total): \(networkViewModel.diskWriteTotal)",
+                    compact: true
+                ).equatable()
+                DashboardMetricCard(
+                    title: AppStrings.cpuUsage,
+                    value: networkViewModel.cpuUsage,
+                    icon: AppImages.cpuUsage,
+                    color: .red,
+                    compact: true
+                ).equatable()
+                DashboardMetricCard(
+                    title: AppStrings.powerUsage,
+                    value: networkViewModel.powerUsage,
+                    icon: AppImages.powerUsage,
+                    color: .yellow,
+                    compact: true
+                ).equatable()
+                DashboardMetricCard(
+                    title: AppStrings.chargingPower,
+                    value: networkViewModel.chargingPowerUsage,
+                    icon: AppImages.chargingPower,
+                    color: .orange,
+                    subtitle: networkViewModel.chargingPowerSubtitle,
+                    compact: true
+                ).equatable()
+                DashboardMetricCard(
+                    title: AppStrings.gpuUsage,
+                    value: networkViewModel.gpuUsage,
+                    icon: AppImages.gpuUsage,
+                    color: .pink,
+                    compact: true
+                ).equatable()
+                DashboardMetricCard(
+                    title: AppStrings.memory,
+                    value: networkViewModel.memoryUsage,
+                    icon: AppImages.memory,
+                    color: .brown,
+                    subtitle: "\(networkViewModel.memoryUsed) / \(networkViewModel.memoryTotal)",
+                    compact: true
+                ).equatable()
+                DashboardMetricCard(
+                    title: AppStrings.fan,
+                    value: fanViewModel.primaryFanRPM,
+                    icon: AppImages.fan,
+                    color: .indigo,
+                    compact: true
+                ).equatable()
+                DashboardMetricCard(
+                    title: AppStrings.systemTemp,
+                    value: fanViewModel.primaryTemp,
+                    icon: AppImages.temperature,
+                    color: .orange,
+                    compact: true,
+                    showInfoButton: false,
+                    action: {
+                        DispatchQueue.main.async {
+                            fanViewModel.isShowingThermalDetails = true
+                        }
+                    }
+                ).equatable()
+                DashboardMetricCard(
+                    title: AppStrings.diskCapacity,
+                    value: "\(networkViewModel.diskFreeCapacity) / \(networkViewModel.diskTotalCapacity)",
+                    icon: AppImages.diskCapacity,
+                    color: .cyan,
+                    subtitle: "\(AppStrings.diskFree): \(networkViewModel.diskFreeCapacity) • \(AppStrings.diskUsed): \(networkViewModel.diskUsedPercent)",
+                    compact: true
+                ).equatable()
+                .gridCellColumns(2)
+            }
+            .padding(.horizontal, 24)
+
+            Spacer()
+        }
+        .padding(.vertical, 24)
+    }
+}
+
+private struct DashboardThermalSheetPresenter: View {
+    @ObservedObject var fanViewModel: FanViewModel
+
+    var body: some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .sheet(isPresented: $fanViewModel.isShowingThermalDetails) {
+                ThermalDetailView(fanViewModel: fanViewModel)
+            }
     }
 }
 

@@ -126,6 +126,18 @@ struct FanControlCard: View {
                     .foregroundColor(.orange)
             }
 
+            if fanViewModel.isRulesStandby {
+                HStack(spacing: 5) {
+                    Circle()
+                        .fill(Color.secondary)
+                        .frame(width: 5, height: 5)
+                    Text("Rules Standby · Below minimum threshold")
+                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+            }
+
             VStack(spacing: 6) {
                 ForEach(fanViewModel.rules) { rule in
                     RuleRowView(

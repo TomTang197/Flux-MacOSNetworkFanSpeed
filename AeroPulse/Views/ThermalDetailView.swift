@@ -13,33 +13,6 @@ struct ThermalDetailView: View {
     var isEmbedded: Bool = false
     var layoutWidth: CGFloat? = nil
 
-    private var cpuSensors: [SensorInfo] {
-        fanViewModel.sensors.filter { isCPUSensor($0) }
-    }
-
-    private var gpuSensors: [SensorInfo] {
-        let sensors = fanViewModel.sensors.filter { isGPUSensor($0) }
-        return sortGPUSensors(sensors)
-    }
-
-    private var otherSensors: [SensorInfo] {
-        fanViewModel.sensors.filter {
-            !isCPUSensor($0) && !isGPUSensor($0)
-        }
-    }
-
-    private var hasNormalizedCPUCores: Bool {
-        fanViewModel.sensors.contains {
-            $0.name.hasPrefix("P-Core Sensor ") || $0.name.hasPrefix("E-Core Sensor ")
-        }
-    }
-
-    private var hasNormalizedGPUCores: Bool {
-        fanViewModel.sensors.contains {
-            $0.name.hasPrefix("GPU Core Sensor ")
-        }
-    }
-
     private var thermalColumnCount: Int {
         let widthBaseline = layoutWidth ?? (isEmbedded ? 0 : 700)
         let available = max(widthBaseline - 20, 0)
@@ -47,6 +20,8 @@ struct ThermalDetailView: View {
     }
 
     var body: some View {
+        let sensorGroups = ThermalSensorGroups(sensors: fanViewModel.sensors)
+
         VStack(spacing: 0) {
             if !isEmbedded {
                 HStack {
@@ -85,22 +60,22 @@ struct ThermalDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
                     sensorCategoryCard(
-                        title: "\(AppStrings.cpu) (\(cpuSensors.count))",
-                        sensors: cpuSensors,
+                        title: "\(AppStrings.cpu) (\(sensorGroups.cpu.count))",
+                        sensors: sensorGroups.cpu,
                         color: .orange,
                         useTwoColumns: true
                     )
 
                     sensorCategoryCard(
-                        title: "\(AppStrings.gpu) (\(gpuSensors.count))",
-                        sensors: gpuSensors,
+                        title: "\(AppStrings.gpu) (\(sensorGroups.gpu.count))",
+                        sensors: sensorGroups.gpu,
                         color: .blue,
                         useTwoColumns: true
                     )
 
                     sensorCategoryCard(
-                        title: "\(AppStrings.system) (\(otherSensors.count))",
-                        sensors: otherSensors,
+                        title: "\(AppStrings.system) (\(sensorGroups.system.count))",
+                        sensors: sensorGroups.system,
                         color: .green,
                         useTwoColumns: true
                     )
@@ -110,52 +85,6 @@ struct ThermalDetailView: View {
             }
         }
         .frame(width: isEmbedded ? nil : 700, height: isEmbedded ? nil : 500)
-    }
-
-    private func isCPUSensor(_ sensor: SensorInfo) -> Bool {
-        if hasNormalizedCPUCores {
-            return sensor.name.hasPrefix("P-Core Sensor ")
-                || sensor.name.hasPrefix("E-Core Sensor ")
-        }
-
-        return sensor.name.contains(AppStrings.pCoreFilter)
-            || sensor.name.contains(AppStrings.eCoreFilter)
-            || sensor.name.contains("CPU")
-    }
-
-    private func isGPUSensor(_ sensor: SensorInfo) -> Bool {
-        if hasNormalizedGPUCores {
-            return sensor.name.hasPrefix("GPU Core Sensor ")
-        }
-
-        return sensor.id.hasPrefix("Tg")
-            || sensor.id.hasPrefix("TG")
-            || sensor.id == "vACC"
-            || sensor.name.contains("GPU")
-    }
-
-    private func sortGPUSensors(_ sensors: [SensorInfo]) -> [SensorInfo] {
-        sensors.sorted { lhs, rhs in
-            let leftIndex = gpuCoreIndex(from: lhs.name)
-            let rightIndex = gpuCoreIndex(from: rhs.name)
-
-            switch (leftIndex, rightIndex) {
-            case let (left?, right?) where left != right:
-                return left < right
-            case (.some, nil):
-                return true
-            case (nil, .some):
-                return false
-            default:
-                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
-            }
-        }
-    }
-
-    private func gpuCoreIndex(from name: String) -> Int? {
-        let prefix = "GPU Core Sensor "
-        guard name.hasPrefix(prefix) else { return nil }
-        return Int(name.dropFirst(prefix.count))
     }
 
     @ViewBuilder
@@ -259,6 +188,9 @@ private struct SensorRowView: View, Equatable {
     private var displayName: String {
         if sensor.name.hasPrefix("GPU Core Sensor ") {
             return "GPU \(sensor.name.dropFirst(16))"
+        }
+        if sensor.name.hasPrefix("S-Core Sensor ") {
+            return "S-Core \(sensor.name.dropFirst(14))"
         }
         if sensor.name.hasPrefix("P-Core Sensor ") {
             return "P-Core \(sensor.name.dropFirst(14))"

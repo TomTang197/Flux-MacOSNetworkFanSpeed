@@ -243,6 +243,15 @@ struct MenuBarDashboardView: View {
                     Spacer()
                 }
                 .padding(.top, 1)
+            } else if fanViewModel.currentMode == .custom, fanViewModel.isRulesStandby {
+                HStack(spacing: 4) {
+                    Circle().fill(Color.secondary).frame(width: 5, height: 5)
+                    Text("Rules Standby · Below minimum threshold")
+                        .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+                .padding(.top, 1)
             }
         }
         .padding(9)

@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Darwin
 import IOKit
 import os.log
 import Security
@@ -15,8 +16,10 @@ import Security
 
 @objc protocol FanHelperProtocol {
     func ping(withReply reply: @escaping (Bool) -> Void)
+    func heartbeat(withReply reply: @escaping (Bool) -> Void)
     func setFanMode(index: Int, manual: Bool, withReply reply: @escaping (Int32) -> Void)
     func setFanTargetRPM(index: Int, rpm: Int, withReply reply: @escaping (Int32) -> Void)
+    func setFanTargets(indices: [NSNumber], rpms: [NSNumber], withReply reply: @escaping (Int32) -> Void)
     func resetToAutomatic(withReply reply: @escaping (Int32) -> Void)
 }
 
@@ -30,6 +33,7 @@ final class SMCWriter {
     )
     private var openedConnectionType: UInt32?
     private var isFanModeKeyLower: Bool? = nil
+    private var cachedFanCount: Int?
 
     init?() {
         guard open() else { return nil }
@@ -160,6 +164,78 @@ final class SMCWriter {
         return (inputStruct.dataSize, inputStruct.dataType)
     }
 
+    private func readNumericKey(_ name: String) -> Int? {
+        guard let info = getInfo(name) else { return nil }
+
+        var inputStruct = SMCParamStruct()
+        inputStruct.key = stringToKey(name)
+        inputStruct.dataSize = info.size
+        guard callSMC(.readValue, inputStruct: &inputStruct) == kIOReturnSuccess,
+              inputStruct.result == 0 else {
+            return nil
+        }
+
+        let bytes = withUnsafeBytes(of: inputStruct.bytes) { Array($0) }
+        let type = info.type
+
+        if type == stringToKey("flt "), bytes.count >= 4 {
+            var value: Float = 0
+            withUnsafeMutableBytes(of: &value) { destination in
+                destination.copyBytes(from: bytes.prefix(4))
+            }
+            guard value.isFinite else { return nil }
+            return Int(value.rounded())
+        }
+
+        if type == stringToKey("fpe2"), bytes.count >= 2 {
+            let raw = UInt16(bytes[0]) << 8 | UInt16(bytes[1])
+            return Int(raw) / 4
+        }
+
+        if type == stringToKey("ui8 "), !bytes.isEmpty {
+            return Int(bytes[0])
+        }
+
+        if type == stringToKey("ui16"), bytes.count >= 2 {
+            return Int(UInt16(bytes[0]) << 8 | UInt16(bytes[1]))
+        }
+
+        if type == stringToKey("ui32"), bytes.count >= 4 {
+            let raw = UInt32(bytes[0]) << 24
+                | UInt32(bytes[1]) << 16
+                | UInt32(bytes[2]) << 8
+                | UInt32(bytes[3])
+            return Int(raw)
+        }
+
+        if info.size == 1, !bytes.isEmpty {
+            return Int(bytes[0])
+        }
+        if info.size == 2, bytes.count >= 2 {
+            return Int(UInt16(bytes[0]) << 8 | UInt16(bytes[1])) / 4
+        }
+        return nil
+    }
+
+    private func detectedFanCount() -> Int? {
+        if let cachedFanCount { return cachedFanCount }
+
+        for key in ["FNum", "Num ", "#pn "] {
+            if let count = readNumericKey(key), count > 0, count <= 16 {
+                cachedFanCount = count
+                return count
+            }
+        }
+        return nil
+    }
+
+    private func fanRPMBounds(index: Int) -> (minimum: Int?, maximum: Int?) {
+        (
+            minimum: readNumericKey("F\(index)Mn"),
+            maximum: readNumericKey("F\(index)Mx")
+        )
+    }
+
     private func writeKeyRaw(_ name: String, dataType: UInt32, bytes: [UInt8]) -> kern_return_t {
         var inputStruct = SMCParamStruct()
         inputStruct.key = stringToKey(name)
@@ -183,7 +259,7 @@ final class SMCWriter {
             usleep(50000)
         }
 
-        logger.debug(
+        logger.error(
             "SMC write failed key=\(name, privacy: .public) smcResult=\(inputStruct.result) status=\(inputStruct.status) dataType=\(inputStruct.dataType) dataSize=\(inputStruct.dataSize)"
         )
         return lastRes == kIOReturnSuccess ? (inputStruct.result == 0 ? kIOReturnSuccess : kIOReturnError) : lastRes
@@ -219,10 +295,20 @@ final class SMCWriter {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executablePath)
         process.arguments = args
+        let completion = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in completion.signal() }
 
         do {
             try process.run()
-            process.waitUntilExit()
+            guard completion.wait(timeout: .now() + 3) == .success else {
+                logger.error("SMC tool timed out; terminating it")
+                process.terminate()
+                if completion.wait(timeout: .now() + 1) == .timedOut, process.isRunning {
+                    kill(process.processIdentifier, SIGKILL)
+                    _ = completion.wait(timeout: .now() + 1)
+                }
+                return false
+            }
             return process.terminationStatus == 0
         } catch {
             return false
@@ -232,26 +318,89 @@ final class SMCWriter {
     // MARK: - Public fan control methods
 
     func setFanMode(index: Int, manual: Bool) -> kern_return_t {
-        if runSMCTool(args: ["fan", "\(index)", "-m", manual ? "1" : "0"]) {
-            return kIOReturnSuccess
+        guard FanCommandValidator.isValidFanIndex(index, fanCount: detectedFanCount()) else {
+            logger.error("Rejected invalid fan index \(index)")
+            return kIOReturnBadArgument
         }
 
+        return PrimaryFallbackExecutor.run(
+            primary: { self.setFanModeDirect(index: index, manual: manual) },
+            isSuccess: { $0 == kIOReturnSuccess },
+            fallback: {
+                self.runSMCTool(args: ["fan", "\(index)", "-m", manual ? "1" : "0"])
+                    ? kIOReturnSuccess : kIOReturnError
+            }
+        )
+    }
+
+    private func setFanModeDirect(
+        index: Int,
+        manual: Bool,
+        enableFtst: Bool = true
+    ) -> kern_return_t {
         let modeKey = resolveFanModeKey(index: index)
-        let modeVal: UInt8 = manual ? 1 : 0
         let ui8Type = stringToKey("ui8 ")
-        let modeRes = writeKeyRaw(modeKey, dataType: ui8Type, bytes: [modeVal])
+        let ftstInfo = getInfo("Ftst")
+        let modeInfo = getInfo(modeKey)
+        var modeRes: kern_return_t = kIOReturnError
+
+        for operation in FanModeWritePlanner.plan(
+            manual: manual,
+            hasFtst: enableFtst && ftstInfo != nil
+        ) {
+            var result: kern_return_t = kIOReturnSuccess
+            switch operation {
+            case .writeFtst(let value):
+                guard let ftstInfo else { return kIOReturnNotFound }
+                result = writeKeyRaw(
+                    "Ftst",
+                    dataType: ftstInfo.type != 0 ? ftstInfo.type : ui8Type,
+                    bytes: [value]
+                )
+            case .wait(let seconds):
+                if seconds > 0 {
+                    Thread.sleep(forTimeInterval: min(seconds, 30))
+                }
+            case .writeMode(let value):
+                result = writeKeyRaw(
+                    modeKey,
+                    dataType: modeInfo?.type ?? ui8Type,
+                    bytes: [value]
+                )
+                if manual, ftstInfo != nil, result != kIOReturnSuccess {
+                    var attempt = 1
+                    logger.notice("Fan \(index) mode write rejected; retrying after Ftst unlock")
+                    while result != kIOReturnSuccess,
+                          FanModeUnlockRetryPolicy.shouldRetry(afterAttempt: attempt) {
+                        Thread.sleep(forTimeInterval: FanModeUnlockRetryPolicy.retryInterval)
+                        result = writeKeyRaw(
+                            modeKey,
+                            dataType: modeInfo?.type ?? ui8Type,
+                            bytes: [value]
+                        )
+                        attempt += 1
+                    }
+                    logger.notice("Fan \(index) mode write retry finished attempts=\(attempt) result=\(result)")
+                }
+                modeRes = result
+            }
+            guard result == kIOReturnSuccess else { return result }
+        }
+        var forceMaskRes: kern_return_t = kIOReturnSuccess
 
         // On Intel Macs, also update the FS! bitmask
         let forceKey = "FS! "
         if let info = getInfo(forceKey) {
             let mask = UInt16(1 << index)
-            var currentMask: UInt16 = 0
             var readParam = SMCParamStruct()
             readParam.key = stringToKey(forceKey)
             readParam.dataSize = 2
-            if callSMC(.readValue, inputStruct: &readParam) == kIOReturnSuccess && readParam.result == 0 {
-                currentMask = UInt16(readParam.bytes.0) << 8 | UInt16(readParam.bytes.1)
+            guard callSMC(.readValue, inputStruct: &readParam) == kIOReturnSuccess,
+                  readParam.result == 0 else {
+                logger.error("Refused to update FS! without reading its current mask")
+                return modeRes == kIOReturnSuccess ? kIOReturnError : modeRes
             }
+            var currentMask = UInt16(readParam.bytes.0) << 8 | UInt16(readParam.bytes.1)
             if manual {
                 currentMask |= mask
             } else {
@@ -259,19 +408,40 @@ final class SMCWriter {
             }
             let ui16Type = info.type != 0 ? info.type : stringToKey("ui16")
             let fsBytes: [UInt8] = [UInt8((currentMask >> 8) & 0xFF), UInt8(currentMask & 0xFF)]
-            _ = writeKeyRaw(forceKey, dataType: ui16Type, bytes: fsBytes)
+            forceMaskRes = writeKeyRaw(forceKey, dataType: ui16Type, bytes: fsBytes)
         }
 
-        return modeRes
+        guard modeRes == kIOReturnSuccess else { return modeRes }
+        return forceMaskRes
     }
 
     func setFanTargetRPM(index: Int, rpm: Int) -> kern_return_t {
-        if runSMCTool(args: ["fan", "\(index)", "-v", "\(rpm)"]) {
-            return kIOReturnSuccess
-        }
+        let validationResult = validateFanTarget(index: index, rpm: rpm)
+        guard validationResult == kIOReturnSuccess else { return validationResult }
 
+        return PrimaryFallbackExecutor.run(
+            primary: { self.setFanTargetRPMDirect(index: index, rpm: rpm) },
+            isSuccess: { $0 == kIOReturnSuccess },
+            fallback: {
+                self.runSMCTool(args: ["fan", "\(index)", "-v", "\(rpm)"])
+                    ? kIOReturnSuccess : kIOReturnError
+            }
+        )
+    }
+
+    private func setFanTargetRPMDirect(
+        index: Int,
+        rpm: Int,
+        enableFtst: Bool = true
+    ) -> kern_return_t {
         // First ensure fan is switched to manual mode
-        _ = setFanMode(index: index, manual: true)
+        let modeResult = setFanModeDirect(index: index, manual: true, enableFtst: enableFtst)
+        guard modeResult == kIOReturnSuccess else { return modeResult }
+
+        return writeFanTargetRPMDirect(index: index, rpm: rpm)
+    }
+
+    private func writeFanTargetRPMDirect(index: Int, rpm: Int) -> kern_return_t {
 
         let tgKey = "F\(index)Tg"
         guard let info = getInfo(tgKey) else {
@@ -297,6 +467,89 @@ final class SMCWriter {
         return writeKeyRaw(tgKey, dataType: info.type, bytes: dataBytes)
     }
 
+    func setFanTargets(targets: [(index: Int, rpm: Int)]) -> kern_return_t {
+        guard !targets.isEmpty, targets.count <= 16 else {
+            return kIOReturnBadArgument
+        }
+        for target in targets {
+            let validationResult = validateFanTarget(index: target.index, rpm: target.rpm)
+            guard validationResult == kIOReturnSuccess else { return validationResult }
+        }
+
+        return PrimaryFallbackExecutor.run(
+            primary: { self.setFanTargetsDirect(targets: targets) },
+            isSuccess: { $0 == kIOReturnSuccess },
+            fallback: {
+                for target in targets {
+                    guard self.runSMCTool(args: ["fan", "\(target.index)", "-v", "\(target.rpm)"]) else {
+                        return kIOReturnError
+                    }
+                }
+                return kIOReturnSuccess
+            }
+        )
+    }
+
+    private func setFanTargetsDirect(targets: [(index: Int, rpm: Int)]) -> kern_return_t {
+        let hasFtst = getInfo("Ftst") != nil
+        logger.notice("Starting direct fan-target batch count=\(targets.count) hasFtst=\(hasFtst)")
+        for operation in FanTargetBatchWritePlanner.plan(targets: targets, hasFtst: hasFtst) {
+            switch operation {
+            case .writeFtst(let value):
+                guard let ftstInfo = getInfo("Ftst") else { return kIOReturnNotFound }
+                let result = writeKeyRaw(
+                    "Ftst",
+                    dataType: ftstInfo.type != 0 ? ftstInfo.type : stringToKey("ui8 "),
+                    bytes: [value]
+                )
+                logger.notice("Direct batch Ftst write value=\(value) result=\(result)")
+                guard result == kIOReturnSuccess else { return result }
+
+            case .wait(let seconds):
+                if seconds > 0 {
+                    logger.notice("Waiting \(seconds, privacy: .public)s after Ftst unlock")
+                    Thread.sleep(forTimeInterval: min(seconds, 30))
+                }
+
+            case .writeMode(let index, let value):
+                let result = setFanModeDirect(
+                    index: index,
+                    manual: value != 0,
+                    enableFtst: false
+                )
+                logger.notice("Direct batch mode write fan=\(index) value=\(value) result=\(result)")
+                guard result == kIOReturnSuccess else { return result }
+
+            case .writeTarget(let index, let rpm):
+                let result = writeFanTargetRPMDirect(index: index, rpm: rpm)
+                logger.notice("Direct batch target write fan=\(index) rpm=\(rpm) result=\(result)")
+                guard result == kIOReturnSuccess else { return result }
+            }
+        }
+        logger.notice("Direct fan-target batch completed successfully")
+        return kIOReturnSuccess
+    }
+
+    func validateFanTarget(index: Int, rpm: Int) -> kern_return_t {
+        guard FanCommandValidator.isValidFanIndex(index, fanCount: detectedFanCount()) else {
+            logger.error("Rejected invalid fan index \(index)")
+            return kIOReturnBadArgument
+        }
+
+        let bounds = fanRPMBounds(index: index)
+        guard FanCommandValidator.isValidTargetRPM(
+            rpm,
+            minimum: bounds.minimum,
+            maximum: bounds.maximum
+        ) else {
+            logger.error(
+                "Rejected invalid target RPM \(rpm) for fan \(index), min=\(bounds.minimum ?? -1), max=\(bounds.maximum ?? -1)"
+            )
+            return kIOReturnBadArgument
+        }
+        return kIOReturnSuccess
+    }
+
     func resetToAutomatic() -> kern_return_t {
         if runSMCTool(args: ["reset"]) {
             return kIOReturnSuccess
@@ -311,68 +564,261 @@ final class SMCWriter {
         }
 
         // Fallback: iterate over all fans and restore automatic mode
-        var fanCount = 2
-        var fnumParam = SMCParamStruct()
-        fnumParam.key = stringToKey("FNum")
-        fnumParam.dataSize = 1
-        if callSMC(.readValue, inputStruct: &fnumParam) == kIOReturnSuccess && fnumParam.result == 0 {
-            fanCount = max(Int(fnumParam.bytes.0), 1)
+        let fanCount = detectedFanCount() ?? 2
+
+        var firstFailure: kern_return_t?
+        for i in 0..<fanCount {
+            let result = setFanMode(index: i, manual: false)
+            if result != kIOReturnSuccess, firstFailure == nil {
+                firstFailure = result
+            }
+        }
+        return firstFailure ?? kIOReturnSuccess
+    }
+}
+
+// MARK: - Fan control lease service
+
+final class FanControlService {
+    private let smcWriter = SMCWriter()
+    private let logger = Logger(subsystem: "com.bandan.me.AeroPulse.FanService", category: "FanControlService")
+    private let controlQueue = DispatchQueue(label: "com.bandan.me.AeroPulse.FanService.control")
+    private var lease = FanControlLease(timeout: 12)
+    private var watchdog: DispatchSourceTimer?
+
+    init() {
+        startWatchdog()
+    }
+
+    deinit {
+        watchdog?.cancel()
+    }
+
+    private func startWatchdog() {
+        let timer = DispatchSource.makeTimerSource(queue: controlQueue)
+        timer.schedule(deadline: .now() + 2, repeating: 2, leeway: .milliseconds(250))
+        timer.setEventHandler { [weak self] in
+            self?.restoreIfLeaseExpired()
+        }
+        watchdog = timer
+        timer.resume()
+    }
+
+    private func restoreIfLeaseExpired() {
+        guard lease.shouldRestore(at: Date()) else { return }
+        _ = restoreAutomatic(reason: "heartbeat timeout", force: false)
+    }
+
+    @discardableResult
+    private func restoreAutomatic(reason: String, force: Bool) -> kern_return_t {
+        guard force || lease.isActive else { return kIOReturnSuccess }
+        guard let writer = smcWriter else {
+            logger.error("Automatic restore failed (\(reason, privacy: .public)): smcWriter is nil")
+            return kIOReturnNotOpen
         }
 
-        for i in 0..<fanCount {
-            _ = setFanMode(index: i, manual: false)
+        let result = writer.resetToAutomatic()
+        if result == kIOReturnSuccess {
+            lease.noteRestoredAll()
+            logger.notice("Restored automatic fan control: \(reason, privacy: .public)")
+        } else {
+            lease.noteRecoveryRequired()
+            logger.error("Automatic restore failed (\(reason, privacy: .public)): \(result)")
         }
-        return kIOReturnSuccess
+        return result
+    }
+
+    private func recoverAfterFailedWrite(reason: String) {
+        lease.noteRecoveryRequired()
+        let result = restoreAutomatic(reason: reason, force: false)
+        if result != kIOReturnSuccess {
+            logger.fault("Failed write could not be rolled back; watchdog will retry: \(result)")
+        }
+    }
+
+    func clientDisconnected(_ clientID: UUID) {
+        controlQueue.async { [weak self] in
+            guard let self, self.lease.shouldRestoreAfterDisconnect(of: clientID) else { return }
+            _ = self.restoreAutomatic(reason: "owning XPC client disconnected", force: false)
+        }
+    }
+
+    func ping(withReply reply: @escaping (Bool) -> Void) {
+        controlQueue.async { [weak self] in
+            guard let self else {
+                reply(false)
+                return
+            }
+            self.logger.notice("Received ping")
+            reply(self.smcWriter != nil)
+        }
+    }
+
+    func heartbeat(clientID: UUID, withReply reply: @escaping (Bool) -> Void) {
+        controlQueue.async { [weak self] in
+            guard let self else {
+                reply(false)
+                return
+            }
+            reply(self.lease.noteHeartbeat(owner: clientID, at: Date()))
+        }
+    }
+
+    func setFanMode(clientID: UUID, index: Int, manual: Bool, withReply reply: @escaping (Int32) -> Void) {
+        controlQueue.async { [weak self] in
+            guard let self, let writer = self.smcWriter else {
+                reply(kIOReturnNotOpen)
+                return
+            }
+            guard self.lease.allowsControl(from: clientID) else {
+                self.logger.error("Rejected fan mode request from non-owning XPC client")
+                reply(kIOReturnExclusiveAccess)
+                return
+            }
+
+            if manual {
+                // Track recovery responsibility before writing because an external tool may
+                // partially apply a command even when it eventually reports failure.
+                _ = self.lease.noteControl(ofFan: index, owner: clientID, at: Date())
+            }
+            let result = writer.setFanMode(index: index, manual: manual)
+            if result == kIOReturnSuccess {
+                if !manual { self.lease.noteRestored(fan: index, owner: clientID) }
+            } else if manual {
+                self.recoverAfterFailedWrite(reason: "failed manual-mode write")
+            }
+            self.logger.notice("setFanMode(index: \(index), manual: \(manual)) -> \(result)")
+            reply(result)
+        }
+    }
+
+    func setFanTargetRPM(clientID: UUID, index: Int, rpm: Int, withReply reply: @escaping (Int32) -> Void) {
+        controlQueue.async { [weak self] in
+            guard let self, let writer = self.smcWriter else {
+                reply(kIOReturnNotOpen)
+                return
+            }
+            guard self.lease.allowsControl(from: clientID) else {
+                self.logger.error("Rejected target RPM request from non-owning XPC client")
+                reply(kIOReturnExclusiveAccess)
+                return
+            }
+
+            _ = self.lease.noteControl(ofFan: index, owner: clientID, at: Date())
+            let result = writer.setFanTargetRPM(index: index, rpm: rpm)
+            if result != kIOReturnSuccess {
+                self.recoverAfterFailedWrite(reason: "failed target-RPM write")
+            }
+            self.logger.notice("setFanTargetRPM(index: \(index), rpm: \(rpm)) -> \(result)")
+            reply(result)
+        }
+    }
+
+    func setFanTargets(
+        clientID: UUID,
+        indices: [NSNumber],
+        rpms: [NSNumber],
+        withReply reply: @escaping (Int32) -> Void
+    ) {
+        controlQueue.async { [weak self] in
+            guard let self, let writer = self.smcWriter else {
+                reply(kIOReturnNotOpen)
+                return
+            }
+            guard !indices.isEmpty, indices.count == rpms.count, indices.count <= 16 else {
+                reply(kIOReturnBadArgument)
+                return
+            }
+            guard self.lease.allowsControl(from: clientID) else {
+                reply(kIOReturnExclusiveAccess)
+                return
+            }
+
+            let targets = zip(indices, rpms).map {
+                (index: $0.0.intValue, rpm: $0.1.intValue)
+            }
+            for target in targets {
+                let result = writer.validateFanTarget(index: target.index, rpm: target.rpm)
+                guard result == kIOReturnSuccess else {
+                    reply(result)
+                    return
+                }
+            }
+
+            let now = Date()
+            for target in targets {
+                _ = self.lease.noteControl(ofFan: target.index, owner: clientID, at: now)
+            }
+            let result = writer.setFanTargets(targets: targets)
+            if result != kIOReturnSuccess {
+                self.recoverAfterFailedWrite(reason: "failed atomic fan-target batch")
+                reply(result)
+                return
+            }
+            _ = self.lease.noteProgress(owner: clientID, at: Date())
+            reply(kIOReturnSuccess)
+        }
+    }
+
+    func resetToAutomatic(clientID: UUID, withReply reply: @escaping (Int32) -> Void) {
+        controlQueue.async { [weak self] in
+            guard let self else {
+                reply(kIOReturnNotOpen)
+                return
+            }
+            guard self.lease.allowsRecovery(from: clientID) else {
+                self.logger.error("Rejected reset request from non-owning XPC client")
+                reply(kIOReturnExclusiveAccess)
+                return
+            }
+            let result = self.restoreAutomatic(reason: "client request", force: true)
+            reply(result)
+        }
+    }
+}
+
+final class FanHelperConnection: NSObject, FanHelperProtocol {
+    private let clientID = UUID()
+    private let service: FanControlService
+
+    init(service: FanControlService) {
+        self.service = service
+        super.init()
+    }
+
+    func clientDisconnected() {
+        service.clientDisconnected(clientID)
+    }
+
+    func ping(withReply reply: @escaping (Bool) -> Void) {
+        service.ping(withReply: reply)
+    }
+
+    func heartbeat(withReply reply: @escaping (Bool) -> Void) {
+        service.heartbeat(clientID: clientID, withReply: reply)
+    }
+
+    func setFanMode(index: Int, manual: Bool, withReply reply: @escaping (Int32) -> Void) {
+        service.setFanMode(clientID: clientID, index: index, manual: manual, withReply: reply)
+    }
+
+    func setFanTargetRPM(index: Int, rpm: Int, withReply reply: @escaping (Int32) -> Void) {
+        service.setFanTargetRPM(clientID: clientID, index: index, rpm: rpm, withReply: reply)
+    }
+
+    func setFanTargets(indices: [NSNumber], rpms: [NSNumber], withReply reply: @escaping (Int32) -> Void) {
+        service.setFanTargets(clientID: clientID, indices: indices, rpms: rpms, withReply: reply)
+    }
+
+    func resetToAutomatic(withReply reply: @escaping (Int32) -> Void) {
+        service.resetToAutomatic(clientID: clientID, withReply: reply)
     }
 }
 
 // MARK: - XPC Service Delegate
 
-final class FanHelper: NSObject, FanHelperProtocol {
-    private let smcWriter = SMCWriter()
-    private let logger = Logger(subsystem: "com.bandan.me.AeroPulse.FanService", category: "FanHelper")
-
-    func ping(withReply reply: @escaping (Bool) -> Void) {
-        logger.notice("Received ping")
-        reply(smcWriter != nil)
-    }
-
-    func setFanMode(index: Int, manual: Bool, withReply reply: @escaping (Int32) -> Void) {
-        guard let writer = smcWriter else {
-            logger.error("setFanMode failed: smcWriter is nil")
-            reply(kIOReturnNotOpen)
-            return
-        }
-        let result = writer.setFanMode(index: index, manual: manual)
-        logger.notice("setFanMode(index: \(index), manual: \(manual)) -> \(result)")
-        reply(result)
-    }
-
-    func setFanTargetRPM(index: Int, rpm: Int, withReply reply: @escaping (Int32) -> Void) {
-        guard let writer = smcWriter else {
-            logger.error("setFanTargetRPM failed: smcWriter is nil")
-            reply(kIOReturnNotOpen)
-            return
-        }
-        let result = writer.setFanTargetRPM(index: index, rpm: rpm)
-        logger.notice("setFanTargetRPM(index: \(index), rpm: \(rpm)) -> \(result)")
-        reply(result)
-    }
-
-    func resetToAutomatic(withReply reply: @escaping (Int32) -> Void) {
-        guard let writer = smcWriter else {
-            logger.error("resetToAutomatic failed: smcWriter is nil")
-            reply(kIOReturnNotOpen)
-            return
-        }
-        let result = writer.resetToAutomatic()
-        logger.notice("resetToAutomatic() -> \(result)")
-        reply(result)
-    }
-}
-
 final class ServiceDelegate: NSObject, NSXPCListenerDelegate {
-    private let exportedObject = FanHelper()
+    private let service = FanControlService()
     private let logger = Logger(
         subsystem: "com.bandan.me.AeroPulse.FanService",
         category: "XPC"
@@ -389,8 +835,15 @@ final class ServiceDelegate: NSObject, NSXPCListenerDelegate {
             return false
         }
 
+        let helper = FanHelperConnection(service: service)
         connection.exportedInterface = exportedInterface
-        connection.exportedObject = exportedObject
+        connection.exportedObject = helper
+        connection.interruptionHandler = { [weak helper] in
+            helper?.clientDisconnected()
+        }
+        connection.invalidationHandler = { [weak helper] in
+            helper?.clientDisconnected()
+        }
         connection.resume()
         logger.notice("Accepted XPC client pid=\(connection.processIdentifier, privacy: .public)")
         return true
@@ -408,5 +861,3 @@ let listener = NSXPCListener(machServiceName: "com.bandan.me.AeroPulse.FanServic
 listener.delegate = delegate
 listener.resume()
 RunLoop.main.run()
-
-

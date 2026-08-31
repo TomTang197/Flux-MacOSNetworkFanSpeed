@@ -6,6 +6,7 @@
 //  Updated with threshold-based fan speed rules on 30/08/26.
 //
 
+import AppKit
 import Combine
 import Foundation
 
@@ -28,6 +29,7 @@ final class FanViewModel: ObservableObject {
     @Published var syncAllFans: Bool = true
     @Published var rules: [FanThresholdRule] = []
     @Published var activeRule: FanThresholdRule? = nil
+    @Published private(set) var isRulesStandby: Bool = false
 
     private let monitor = FanMonitor()
     private let controlClient = FanControlClient.shared
@@ -36,13 +38,18 @@ final class FanViewModel: ObservableObject {
     private var timer: AnyCancellable?
     private let detailedRefreshInterval: TimeInterval = 2.0
     private let backgroundRefreshInterval: TimeInterval = 4.0
+    private let maximumControlTemperatureAge: TimeInterval = 6.0
     private var helperPollCounter = 0
     private var emptySampleCounter = 0
     private var isSamplingData = false
     private var detailedSamplingSources: Set<DetailedSamplingSource> = []
+    private var controlTemperatureSample: (value: Double, sampledAt: Date)?
+    private var defaultNotificationObservers: [NSObjectProtocol] = []
+    private var workspaceNotificationObservers: [NSObjectProtocol] = []
 
     init() {
         loadRules()
+        observeSafetyLifecycleEvents()
         DispatchQueue.main.async { [weak self] in
             self?.startMonitoring()
             self?.refreshHelperStatus()
@@ -51,6 +58,58 @@ final class FanViewModel: ObservableObject {
 
     deinit {
         timer?.cancel()
+        for observer in defaultNotificationObservers {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        for observer in workspaceNotificationObservers {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+        }
+    }
+
+    private func observeSafetyLifecycleEvents() {
+        let terminationObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.restoreSystemControlForSafety(waitForReply: true)
+        }
+        defaultNotificationObservers.append(terminationObserver)
+
+        let leaseObserver = NotificationCenter.default.addObserver(
+            forName: .fanControlLeaseLost,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.currentMode = .auto
+            self?.activeRule = nil
+            self?.isRulesStandby = false
+        }
+        defaultNotificationObservers.append(leaseObserver)
+
+        let sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.willSleepNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.restoreSystemControlForSafety(waitForReply: true)
+        }
+        workspaceNotificationObservers.append(sleepObserver)
+    }
+
+    private func restoreSystemControlForSafety(waitForReply: Bool) {
+        currentMode = .auto
+        activeRule = nil
+        isRulesStandby = false
+
+        guard waitForReply else {
+            controlClient.resetToAutomatic()
+            return
+        }
+
+        let reply = DispatchSemaphore(value: 0)
+        controlClient.resetToAutomatic { _ in reply.signal() }
+        _ = reply.wait(timeout: .now() + 1.5)
     }
 
     private var refreshInterval: TimeInterval {
@@ -202,31 +261,31 @@ final class FanViewModel: ObservableObject {
         }
 
         currentMode = mode
+        isRulesStandby = false
 
         switch mode {
         case .auto:
             activeRule = nil
+            controlClient.setControlTemperatureDeadline(nil)
             controlClient.resetToAutomatic { [weak self] _ in
                 self?.refreshData()
             }
 
         case .fullBlast:
             activeRule = nil
-            for fan in fans {
-                controlClient.setFanTargetRPM(index: fan.id, rpm: fan.maxRPM) { [weak self] _ in
-                    self?.refreshData()
-                }
-            }
+            controlClient.setControlTemperatureDeadline(nil)
+            applyFanTargets(fans.map { (index: $0.id, rpm: $0.maxRPM) })
 
         case .manual:
             activeRule = nil
+            controlClient.setControlTemperatureDeadline(nil)
+            var targets: [(index: Int, rpm: Int)] = []
             for fan in fans {
                 let rpm = manualTargetRPM[fan.id] ?? (fan.minRPM + fan.maxRPM) / 2
                 manualTargetRPM[fan.id] = rpm
-                controlClient.setFanTargetRPM(index: fan.id, rpm: rpm) { [weak self] _ in
-                    self?.refreshData()
-                }
+                targets.append((index: fan.id, rpm: rpm))
             }
+            applyFanTargets(targets)
 
         case .custom:
             applyThresholdRules()
@@ -248,48 +307,105 @@ final class FanViewModel: ObservableObject {
         manualTargetRPM[fanIndex] = clamped
 
         if syncAllFans {
+            var targets: [(index: Int, rpm: Int)] = []
             for f in fans {
-                manualTargetRPM[f.id] = clamped
-                controlClient.setFanTargetRPM(index: f.id, rpm: clamped) { [weak self] _ in
-                    self?.refreshData()
-                }
+                let fanClamped = max(f.minRPM, min(clamped, f.maxRPM))
+                manualTargetRPM[f.id] = fanClamped
+                targets.append((index: f.id, rpm: fanClamped))
             }
+            applyFanTargets(targets)
         } else {
-            controlClient.setFanTargetRPM(index: fanIndex, rpm: clamped) { [weak self] _ in
+            applyFanTargets([(index: fanIndex, rpm: clamped)])
+        }
+    }
+
+    private func applyFanTargets(
+        _ targets: [(index: Int, rpm: Int)],
+        refreshAfterCompletion: Bool = true
+    ) {
+        controlClient.setFanTargets(targets) { [weak self] _ in
+            guard refreshAfterCompletion else { return }
+            DispatchQueue.main.async {
                 self?.refreshData()
             }
         }
     }
 
     func applyThresholdRules() {
-        guard let cpuTemp = currentCPUTemperature() else { return }
+        let now = Date()
+        guard let sample = controlTemperatureSample,
+              TemperatureFreshnessPolicy.isFresh(
+                  sampledAt: sample.sampledAt,
+                  now: now,
+                  maximumAge: maximumControlTemperatureAge
+              ) else {
+            restoreSystemControlForSafety(waitForReply: false)
+            return
+        }
+        let cpuTemp = sample.value
+        let decision = FanRuleMatchPolicy.decision(
+            temperature: cpuTemp,
+            thresholds: rules.map(\.temperature)
+        )
+        guard case .matched(let matchedIndex) = decision,
+              rules.indices.contains(matchedIndex) else {
+            enterRulesStandby()
+            return
+        }
 
-        // Find the highest threshold satisfied: T >= rule.temperature
-        let sortedDesc = rules.sorted { $0.temperature > $1.temperature }
-        let matched = sortedDesc.first { cpuTemp >= $0.temperature }
-        self.activeRule = matched
+        let matched = rules[matchedIndex]
+        activeRule = matched
+        isRulesStandby = false
+        controlClient.setControlTemperatureDeadline(
+            sample.sampledAt.addingTimeInterval(maximumControlTemperatureAge)
+        )
 
-        let speedPercentage = matched?.speedPercentage ?? (rules.first?.speedPercentage ?? 30)
+        let speedPercentage = matched.speedPercentage
 
-        for fan in fans {
+        let targets = fans.map { fan in
             let range = Double(fan.maxRPM - fan.minRPM)
             let target = fan.minRPM + Int(range * Double(speedPercentage) / 100.0)
             let clamped = max(fan.minRPM, min(target, fan.maxRPM))
-            controlClient.setFanTargetRPM(index: fan.id, rpm: clamped)
+            return (index: fan.id, rpm: clamped)
         }
+        applyFanTargets(targets, refreshAfterCompletion: false)
     }
 
-    private func currentCPUTemperature() -> Double? {
-        let cpuSensors = cpuTemperatureSensors
-        if !cpuSensors.isEmpty {
-            return cpuSensors.reduce(0.0) { $0 + $1.temperature } / Double(cpuSensors.count)
+    private func enterRulesStandby() {
+        activeRule = nil
+        controlClient.setControlTemperatureDeadline(nil)
+
+        guard !isRulesStandby else { return }
+        isRulesStandby = true
+        controlClient.resetToAutomatic()
+    }
+
+    private func sampleControlTemperature(
+        from sampledSensors: [SensorInfo]
+    ) -> (value: Double, sampledAt: Date)? {
+        var candidateKeys = Set(["TC0P", "Tp0P", "Tp01", "mACC"])
+        for sensor in sampledSensors where isCPUControlSensor(sensor) {
+            candidateKeys.insert(sensor.id)
         }
-        for key in ["TC0P", "Tp0P", "Tp01", "mACC"] {
-            if let value = SMCService.shared.getTemperature(key) {
-                return value
-            }
+
+        let temperatures = candidateKeys.compactMap {
+            SMCService.shared.getTemperature($0)
         }
-        return nil
+        guard !temperatures.isEmpty else { return nil }
+        let average = temperatures.reduce(0.0, +) / Double(temperatures.count)
+        return (average, Date())
+    }
+
+    private func isCPUControlSensor(_ sensor: SensorInfo) -> Bool {
+        sensor.id.hasPrefix("Tp")
+            || sensor.id.hasPrefix("Te")
+            || sensor.id.hasPrefix("TC")
+            || sensor.name.hasPrefix("P-Core Sensor ")
+            || sensor.name.hasPrefix("E-Core Sensor ")
+            || sensor.name.contains(AppStrings.pCoreFilter)
+            || sensor.name.contains(AppStrings.eCoreFilter)
+            || sensor.name.localizedCaseInsensitiveContains("CPU")
+            || sensor.name.localizedCaseInsensitiveContains("Core")
     }
 
     var primaryFanRPM: String {
@@ -335,6 +451,7 @@ final class FanViewModel: ObservableObject {
             guard let self else { return }
             let sampledFans = self.monitor.getFans().sorted { $0.id < $1.id }
             let sampledSensors = self.monitor.getSensors()
+            let sampledControlTemperature = self.sampleControlTemperature(from: sampledSensors)
 
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
@@ -343,6 +460,9 @@ final class FanViewModel: ObservableObject {
                 }
                 if self.sensors != sampledSensors {
                     self.sensors = sampledSensors
+                }
+                if let sampledControlTemperature {
+                    self.controlTemperatureSample = sampledControlTemperature
                 }
 
                 if self.currentMode == .custom {
@@ -389,5 +509,3 @@ final class FanViewModel: ObservableObject {
         }
     }
 }
-
-

@@ -16,8 +16,6 @@ final class FanMonitor: ObservableObject {
     private static let smcHexChars = Array("0123456789abcdef")
     private let expectedPerformanceCoreCount = FanMonitor.readCoreCount("hw.perflevel0.physicalcpu")
     private let expectedEfficiencyCoreCount = FanMonitor.readCoreCount("hw.perflevel1.physicalcpu")
-    private let expectedGPUCoreCountLock = NSLock()
-    private var cachedExpectedGPUCoreCount: Int?
     private let knownPerformanceCoreKeys = Set(SMCSensorKeys.CPU.PerformanceCores.all.map(\.key))
     private let knownEfficiencyCoreKeys = Set(SMCSensorKeys.CPU.EfficiencyCores.all.map(\.key))
 
@@ -314,9 +312,58 @@ final class FanMonitor: ObservableObject {
         return dynamicDefinitions
     }
 
+    struct CPUTier {
+        let name: String
+        let prefix: String
+        let count: Int
+    }
+
+    private static func readCPUTiers() -> [CPUTier] {
+        var size = MemoryLayout<Int32>.size
+        var nperflevels: Int32 = 0
+        var tiers: [CPUTier] = []
+
+        if sysctlbyname("hw.nperflevels", &nperflevels, &size, nil, 0) == 0 && nperflevels > 0 {
+            for i in 0..<nperflevels {
+                var count: Int32 = 0
+                var nameBuf = [CChar](repeating: 0, count: 64)
+                var nameSize = nameBuf.count
+                sysctlbyname("hw.perflevel\(i).physicalcpu", &count, &size, nil, 0)
+                sysctlbyname("hw.perflevel\(i).name", &nameBuf, &nameSize, nil, 0)
+                let rawName = String(cString: nameBuf).trimmingCharacters(in: .whitespacesAndNewlines)
+                guard count > 0 else { continue }
+
+                let prefix: String
+                let lowerName = rawName.lowercased()
+                if lowerName.contains("super") || lowerName.contains("ultra") {
+                    prefix = "S-Core"
+                } else if lowerName.contains("perf") {
+                    prefix = "P-Core"
+                } else if lowerName.contains("effic") {
+                    prefix = "E-Core"
+                } else if nperflevels >= 3 {
+                    prefix = i == 0 ? "S-Core" : (i == 1 ? "P-Core" : "E-Core")
+                } else if nperflevels == 2 {
+                    prefix = i == 0 ? "P-Core" : "E-Core"
+                } else {
+                    prefix = "Core"
+                }
+
+                tiers.append(CPUTier(name: rawName.isEmpty ? prefix : rawName, prefix: prefix, count: Int(count)))
+            }
+        }
+
+        if tiers.isEmpty {
+            let total = readCoreCount("hw.physicalcpu")
+            let fallbackCount = total > 0 ? total : 8
+            tiers.append(CPUTier(name: "Performance", prefix: "P-Core", count: fallbackCount))
+        }
+
+        return tiers
+    }
+
     private func normalizeCoreSensors(_ sensors: [SensorInfo]) -> [SensorInfo] {
-        let expectedP = expectedPerformanceCoreCount > 0 ? expectedPerformanceCoreCount : 12
-        let expectedE = expectedEfficiencyCoreCount > 0 ? expectedEfficiencyCoreCount : 4
+        let tiers = FanMonitor.readCPUTiers()
 
         var potentialCoreSensors: [SensorInfo] = []
         var otherSensors: [SensorInfo] = []
@@ -329,184 +376,52 @@ final class FanMonitor: ObservableObject {
             }
         }
 
-        var performanceSensors: [SensorInfo] = []
-        var efficiencySensors: [SensorInfo] = []
-        var unknownCoreSensors: [SensorInfo] = []
+        potentialCoreSensors.sort { $0.id < $1.id }
 
-        for sensor in potentialCoreSensors {
-            if isKnownPerformanceCore(sensor) {
-                performanceSensors.append(sensor)
-            } else if isKnownEfficiencyCore(sensor) {
-                efficiencySensors.append(sensor)
-            } else {
-                unknownCoreSensors.append(sensor)
+        var normalizedSensors: [SensorInfo] = []
+        var sensorPool = potentialCoreSensors
+
+        let fallbackTemp = sensors.map(\.temperature).first ?? 38.0
+
+        for tier in tiers {
+            var tierSensors: [SensorInfo] = []
+            for _ in 0..<tier.count {
+                if !sensorPool.isEmpty {
+                    tierSensors.append(sensorPool.removeFirst())
+                }
             }
-        }
 
-        unknownCoreSensors.sort { $0.id < $1.id }
-
-        while performanceSensors.count < expectedP, !unknownCoreSensors.isEmpty {
-            performanceSensors.append(unknownCoreSensors.removeFirst())
-        }
-
-        while efficiencySensors.count < expectedE, !unknownCoreSensors.isEmpty {
-            efficiencySensors.append(unknownCoreSensors.removeFirst())
-        }
-
-        if performanceSensors.count > expectedP {
-            performanceSensors = Array(performanceSensors.prefix(expectedP))
-        }
-
-        if efficiencySensors.count > expectedE {
-            efficiencySensors = Array(efficiencySensors.prefix(expectedE))
-        }
-
-        let fallbackPTemp = performanceSensors.map(\.temperature).first ?? 38.0
-        while performanceSensors.count < expectedP {
-            let index = performanceSensors.count + 1
-            performanceSensors.append(
-                SensorInfo(
-                    id: "TpSynthetic\(index)",
-                    name: "P-Core Sensor \(index)",
-                    temperature: fallbackPTemp,
-                    isEnabled: true
+            let tierFallbackTemp = tierSensors.map(\.temperature).first ?? fallbackTemp
+            while tierSensors.count < tier.count {
+                let index = tierSensors.count + 1
+                tierSensors.append(
+                    SensorInfo(
+                        id: "\(tier.prefix)Synthetic\(index)",
+                        name: "\(tier.prefix) Sensor \(index)",
+                        temperature: tierFallbackTemp,
+                        isEnabled: true
+                    )
                 )
-            )
-        }
+            }
 
-        let fallbackETemp = efficiencySensors.map(\.temperature).first ?? fallbackPTemp
-        while efficiencySensors.count < expectedE {
-            let index = efficiencySensors.count + 1
-            efficiencySensors.append(
-                SensorInfo(
-                    id: "TeSynthetic\(index)",
-                    name: "E-Core Sensor \(index)",
-                    temperature: fallbackETemp,
-                    isEnabled: true
-                )
-            )
-        }
-
-        let normalizedPerformance = performanceSensors
-            .sorted { $0.id < $1.id }
-            .enumerated()
-            .map { index, sensor in
+            let tierNormalized = tierSensors.enumerated().map { index, sensor in
                 SensorInfo(
                     id: sensor.id,
-                    name: "P-Core Sensor \(index + 1)",
+                    name: "\(tier.prefix) Sensor \(index + 1)",
                     temperature: max(min(sensor.temperature, 125.0), 15.0),
                     isEnabled: sensor.isEnabled
                 )
             }
+            normalizedSensors.append(contentsOf: tierNormalized)
+        }
 
-        let normalizedEfficiency = efficiencySensors
-            .sorted { $0.id < $1.id }
-            .enumerated()
-            .map { index, sensor in
-                SensorInfo(
-                    id: sensor.id,
-                    name: "E-Core Sensor \(index + 1)",
-                    temperature: max(min(sensor.temperature, 125.0), 15.0),
-                    isEnabled: sensor.isEnabled
-                )
-            }
-
-        var normalizedSensors = normalizedPerformance + normalizedEfficiency + otherSensors
+        normalizedSensors.append(contentsOf: otherSensors)
         normalizedSensors.sort { $0.name < $1.name }
         return normalizedSensors
     }
 
     private func normalizeGPUSensors(_ sensors: [SensorInfo]) -> [SensorInfo] {
-        let expectedGPUCoreCount = resolvedExpectedGPUCoreCount()
-        let targetCount = expectedGPUCoreCount > 0 ? expectedGPUCoreCount : 40
-
-        var potentialGPUSensors: [SensorInfo] = []
-        var otherSensors: [SensorInfo] = []
-
-        for sensor in sensors {
-            if isPotentialGPUSensor(sensor) {
-                potentialGPUSensors.append(sensor)
-            } else {
-                otherSensors.append(sensor)
-            }
-        }
-
-        let sortedPreferredCandidates = potentialGPUSensors
-            .filter { isPreferredGPUCoreCandidate($0) }
-            .sorted { $0.id.lowercased() < $1.id.lowercased() }
-
-        var selected: [SensorInfo] = []
-        var selectedKeys = Set<String>()
-
-        for sensor in sortedPreferredCandidates where selected.count < targetCount {
-            let canonicalKey = canonicalizedDynamicSensorKey(sensor.id)
-            if selectedKeys.insert(canonicalKey).inserted {
-                selected.append(sensor)
-            }
-        }
-
-        if selected.count < targetCount {
-            let fallbackCandidates = potentialGPUSensors
-                .sorted { $0.id.lowercased() < $1.id.lowercased() }
-            for sensor in fallbackCandidates where selected.count < targetCount {
-                let canonicalKey = canonicalizedDynamicSensorKey(sensor.id)
-                if selectedKeys.insert(canonicalKey).inserted {
-                    selected.append(sensor)
-                }
-            }
-        }
-
-        let baseTemp = selected.map(\.temperature).first ?? 36.0
-
-        var normalizedGPUCores: [SensorInfo] = []
-        for i in 0..<targetCount {
-            let temp: Double
-            let sensorId: String
-            if i < selected.count {
-                temp = selected[i].temperature
-                sensorId = selected[i].id
-            } else if !selected.isEmpty {
-                temp = selected[i % selected.count].temperature
-                sensorId = "TgCore\(i + 1)"
-            } else {
-                temp = baseTemp
-                sensorId = "TgCore\(i + 1)"
-            }
-
-            normalizedGPUCores.append(
-                SensorInfo(
-                    id: sensorId,
-                    name: "GPU Core Sensor \(i + 1)",
-                    temperature: max(min(temp, 125.0), 15.0),
-                    isEnabled: true
-                )
-            )
-        }
-
-        var normalizedSensors = normalizedGPUCores + otherSensors
-        normalizedSensors.sort { $0.name < $1.name }
-        return normalizedSensors
-    }
-
-    private func resolvedExpectedGPUCoreCount() -> Int {
-        expectedGPUCoreCountLock.lock()
-        if let cached = cachedExpectedGPUCoreCount {
-            expectedGPUCoreCountLock.unlock()
-            return cached
-        }
-        expectedGPUCoreCountLock.unlock()
-
-        // `system_profiler` blocks and internally spins the runloop while waiting.
-        // Avoid running it during `@StateObject` construction on the main thread.
-        let detected = FanMonitor.readGPUCoreCount()
-
-        expectedGPUCoreCountLock.lock()
-        if cachedExpectedGPUCoreCount == nil {
-            cachedExpectedGPUCoreCount = detected
-        }
-        let finalValue = cachedExpectedGPUCoreCount ?? detected
-        expectedGPUCoreCountLock.unlock()
-        return finalValue
+        ThermalSensorProcessing.normalizeGPUSensors(sensors)
     }
 
     private func isPotentialCoreSensor(_ sensor: SensorInfo) -> Bool {
@@ -531,20 +446,6 @@ final class FanMonitor: ObservableObject {
         sensors.filter { isPotentialCoreSensor($0) }.count
     }
 
-    private func isPotentialGPUSensor(_ sensor: SensorInfo) -> Bool {
-        sensor.id.hasPrefix("Tg")
-            || sensor.id.hasPrefix("TG")
-            || sensor.id == "vACC"
-            || sensor.name.contains("GPU")
-    }
-
-    private func isPreferredGPUCoreCandidate(_ sensor: SensorInfo) -> Bool {
-        sensor.id.hasPrefix("Tg")
-            && sensor.id != "vACC"
-            && !sensor.name.contains("Average")
-            && !sensor.name.contains("Proximity")
-    }
-
     private func canonicalizedDynamicSensorKey(_ key: String) -> String {
         if key.hasPrefix("Tg")
             || key.hasPrefix("TG")
@@ -564,42 +465,4 @@ final class FanMonitor: ObservableObject {
         return Int(value)
     }
 
-    private static func readGPUCoreCount() -> Int {
-        for serviceClass in ["IOAccelerator", "AGXAccelerator"] {
-            var iterator: io_iterator_t = 0
-            guard
-                IOServiceGetMatchingServices(
-                    kIOMainPortDefault,
-                    IOServiceMatching(serviceClass),
-                    &iterator
-                ) == KERN_SUCCESS
-            else { continue }
-            defer { IOObjectRelease(iterator) }
-
-            while true {
-                let service = IOIteratorNext(iterator)
-                if service == 0 { break }
-                defer { IOObjectRelease(service) }
-
-                if let coreProperty = IORegistryEntryCreateCFProperty(
-                    service,
-                    "gpu-core-count" as CFString,
-                    kCFAllocatorDefault,
-                    0
-                )?.takeRetainedValue() {
-                    if let number = coreProperty as? NSNumber, number.intValue > 0 {
-                        return number.intValue
-                    }
-                }
-            }
-        }
-
-        var gpuCores: Int32 = 0
-        var size = MemoryLayout<Int32>.size
-        if sysctlbyname("hw.perflevel2.physicalcpu", &gpuCores, &size, nil, 0) == 0 && gpuCores > 0 {
-            return Int(gpuCores)
-        }
-
-        return 0
-    }
 }
