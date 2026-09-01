@@ -13,7 +13,9 @@ final class FanMonitor: ObservableObject {
     private let smc = SMCService.shared
     private let fanTopologyRefreshEvery = 30
     private let sensorDiscoveryRefreshEvery = 30
+    private let maximumCachedTemperatureAge: TimeInterval = 6
     private static let smcHexChars = Array("0123456789abcdef")
+    private let cpuBrand = FanMonitor.readCPUBrand()
     private let expectedPerformanceCoreCount = FanMonitor.readCoreCount("hw.perflevel0.physicalcpu")
     private let expectedEfficiencyCoreCount = FanMonitor.readCoreCount("hw.perflevel1.physicalcpu")
     private let knownPerformanceCoreKeys = Set(SMCSensorKeys.CPU.PerformanceCores.all.map(\.key))
@@ -29,7 +31,11 @@ final class FanMonitor: ObservableObject {
     private var extendedGPUDefinitions: [SMCSensorKeys.SensorDefinition] = []
     private var hasScannedExtendedCoreKeys = false
     private var hasScannedExtendedGPUKeys = false
-    private var lastKnownTemperatures: [String: Double] = [:]
+    private var lastKnownTemperatures: [String: (value: Double, sampledAt: Date)] = [:]
+
+    private var usesM4MaxSensorCatalog: Bool {
+        cpuBrand.localizedCaseInsensitiveContains("Apple M4 Max")
+    }
 
     struct FanData {
         let rpm: Int
@@ -100,8 +106,10 @@ final class FanMonitor: ObservableObject {
     }
 
     func getSensors() -> [SensorInfo] {
-        if discoveredSensorDefinitions.isEmpty {
+        sensorPollCount += 1
+        if discoveredSensorDefinitions.isEmpty || sensorPollCount >= sensorDiscoveryRefreshEvery {
             discoveredSensorDefinitions = discoverSensorDefinitions()
+            sensorPollCount = 0
         }
 
         var sensors = readSensors(from: discoveredSensorDefinitions)
@@ -133,6 +141,12 @@ final class FanMonitor: ObservableObject {
 
     private func readEssentialFallbackSensors() -> [SensorInfo] {
         let fallbackKeys: [(id: String, name: String)] = [
+            ("TCMb", "CPU Die"),
+            ("TCMz", "CPU Hotspot"),
+            ("Te05", "E-Core Sensor 1"),
+            ("Te0S", "E-Core Sensor 2"),
+            ("Te06", "E-Core Sensor 3"),
+            ("Te0T", "E-Core Sensor 4"),
             ("TC0P", "CPU Package"),
             ("mACC", "CPU Core Average"),
             ("Tp0P", "CPU Proximity"),
@@ -140,6 +154,13 @@ final class FanMonitor: ObservableObject {
             ("Tp02", "CPU Core 2"),
             ("Tp03", "CPU Core 3"),
             ("Tp04", "CPU Core 4"),
+            ("Tg1U", "GPU Sensor 1"),
+            ("Tg1k", "GPU Sensor 2"),
+            ("Tg0K", "GPU Sensor 3"),
+            ("Tg0L", "GPU Sensor 4"),
+            ("Tg0e", "GPU Sensor 6"),
+            ("Tg0j", "GPU Sensor 7"),
+            ("Tg0k", "GPU Sensor 8"),
             ("TG0P", "GPU Proximity"),
             ("vACC", "GPU Average"),
             ("Tg05", "GPU Cluster 1"),
@@ -152,8 +173,11 @@ final class FanMonitor: ObservableObject {
         var sensors: [SensorInfo] = []
         var seen = Set<String>()
         for key in fallbackKeys {
+            guard ThermalSensorProcessing.isUsableCPUSensorKey(key.id, cpuBrand: cpuBrand) else {
+                continue
+            }
             guard let value = smc.getTemperature(key.id) else { continue }
-            guard seen.insert(key.id.lowercased()).inserted else { continue }
+            guard seen.insert(canonicalizedDynamicSensorKey(key.id)).inserted else { continue }
             sensors.append(
                 SensorInfo(id: key.id, name: key.name, temperature: value, isEnabled: true)
             )
@@ -192,55 +216,88 @@ final class FanMonitor: ObservableObject {
     }
 
     private func discoverSensorDefinitions() -> [SMCSensorKeys.SensorDefinition] {
-        var definitions = SMCSensorKeys.allSensors + extendedCoreDefinitions + extendedGPUDefinitions
+        var definitions = supportedDefinitions(
+            SMCSensorKeys.allSensors + extendedCoreDefinitions + extendedGPUDefinitions
+        )
         var discoveredSensors = readSensors(from: definitions)
 
         let expectedCoreTotal = expectedPerformanceCoreCount + expectedEfficiencyCoreCount
         if !hasScannedExtendedCoreKeys,
+            !usesM4MaxSensorCatalog,
             expectedCoreTotal > 0,
             countPotentialCoreSensors(in: discoveredSensors) < expectedCoreTotal
         {
             hasScannedExtendedCoreKeys = true
             extendedCoreDefinitions = discoverAdditionalCoreDefinitions(excluding: definitions)
             if !extendedCoreDefinitions.isEmpty {
-                definitions = SMCSensorKeys.allSensors + extendedCoreDefinitions + extendedGPUDefinitions
+                definitions = supportedDefinitions(
+                    SMCSensorKeys.allSensors + extendedCoreDefinitions + extendedGPUDefinitions
+                )
                 discoveredSensors = readSensors(from: definitions)
             }
         }
 
-        if !hasScannedExtendedGPUKeys {
+        if !hasScannedExtendedGPUKeys, !usesM4MaxSensorCatalog {
             hasScannedExtendedGPUKeys = true
             extendedGPUDefinitions = discoverAdditionalGPUDefinitions(excluding: definitions)
             if !extendedGPUDefinitions.isEmpty {
-                definitions = SMCSensorKeys.allSensors + extendedCoreDefinitions + extendedGPUDefinitions
+                definitions = supportedDefinitions(
+                    SMCSensorKeys.allSensors + extendedCoreDefinitions + extendedGPUDefinitions
+                )
                 discoveredSensors = readSensors(from: definitions)
             }
         }
 
         if discoveredSensors.isEmpty {
-            discoveredSensors = readSensors(from: SMCSensorKeys.IntelFallback.all)
+            definitions = supportedDefinitions(SMCSensorKeys.IntelFallback.all)
         }
 
-        return discoveredSensors.map {
-            SMCSensorKeys.SensorDefinition(name: $0.name, key: $0.id)
+        return definitions
+    }
+
+    private func supportedDefinitions(
+        _ definitions: [SMCSensorKeys.SensorDefinition]
+    ) -> [SMCSensorKeys.SensorDefinition] {
+        definitions.filter {
+            ThermalSensorProcessing.isUsableCPUSensorKey($0.key, cpuBrand: cpuBrand)
         }
     }
 
     private func readSensors(from definitions: [SMCSensorKeys.SensorDefinition]) -> [SensorInfo] {
         var sensors: [SensorInfo] = []
         sensors.reserveCapacity(definitions.count)
+        let now = Date()
 
         for sensor in definitions {
             let temp = smc.getTemperature(sensor.key)
             if let temp, temp > 0, temp < 150 {
-                lastKnownTemperatures[sensor.key] = temp
+                lastKnownTemperatures[sensor.key] = (temp, now)
                 sensors.append(
-                    SensorInfo(id: sensor.key, name: sensor.name, temperature: temp, isEnabled: true)
+                    SensorInfo(
+                        id: sensor.key,
+                        name: sensor.name,
+                        temperature: temp,
+                        isEnabled: true,
+                        sampledAt: now
+                    )
                 )
-            } else if let cached = lastKnownTemperatures[sensor.key] {
+            } else if let cached = lastKnownTemperatures[sensor.key],
+                      TemperatureFreshnessPolicy.isFresh(
+                          sampledAt: cached.sampledAt,
+                          now: now,
+                          maximumAge: maximumCachedTemperatureAge
+                      ) {
                 sensors.append(
-                    SensorInfo(id: sensor.key, name: sensor.name, temperature: cached, isEnabled: true)
+                    SensorInfo(
+                        id: sensor.key,
+                        name: sensor.name,
+                        temperature: cached.value,
+                        isEnabled: true,
+                        sampledAt: cached.sampledAt
+                    )
                 )
+            } else {
+                lastKnownTemperatures.removeValue(forKey: sensor.key)
             }
         }
 
@@ -363,65 +420,16 @@ final class FanMonitor: ObservableObject {
     }
 
     private func normalizeCoreSensors(_ sensors: [SensorInfo]) -> [SensorInfo] {
-        let tiers = FanMonitor.readCPUTiers()
-
-        var potentialCoreSensors: [SensorInfo] = []
-        var otherSensors: [SensorInfo] = []
-
-        for sensor in sensors {
-            if isPotentialCoreSensor(sensor) {
-                potentialCoreSensors.append(sensor)
-            } else {
-                otherSensors.append(sensor)
-            }
-        }
-
-        potentialCoreSensors.sort { $0.id < $1.id }
-
-        var normalizedSensors: [SensorInfo] = []
-        var sensorPool = potentialCoreSensors
-
-        let fallbackTemp = sensors.map(\.temperature).first ?? 38.0
-
-        for tier in tiers {
-            var tierSensors: [SensorInfo] = []
-            for _ in 0..<tier.count {
-                if !sensorPool.isEmpty {
-                    tierSensors.append(sensorPool.removeFirst())
-                }
-            }
-
-            let tierFallbackTemp = tierSensors.map(\.temperature).first ?? fallbackTemp
-            while tierSensors.count < tier.count {
-                let index = tierSensors.count + 1
-                tierSensors.append(
-                    SensorInfo(
-                        id: "\(tier.prefix)Synthetic\(index)",
-                        name: "\(tier.prefix) Sensor \(index)",
-                        temperature: tierFallbackTemp,
-                        isEnabled: true
-                    )
-                )
-            }
-
-            let tierNormalized = tierSensors.enumerated().map { index, sensor in
-                SensorInfo(
-                    id: sensor.id,
-                    name: "\(tier.prefix) Sensor \(index + 1)",
-                    temperature: max(min(sensor.temperature, 125.0), 15.0),
-                    isEnabled: sensor.isEnabled
-                )
-            }
-            normalizedSensors.append(contentsOf: tierNormalized)
-        }
-
-        normalizedSensors.append(contentsOf: otherSensors)
-        normalizedSensors.sort { $0.name < $1.name }
-        return normalizedSensors
+        sensors
+            .filter { !$0.id.localizedCaseInsensitiveContains("synthetic") }
+            .sorted { $0.name < $1.name }
     }
 
     private func normalizeGPUSensors(_ sensors: [SensorInfo]) -> [SensorInfo] {
-        ThermalSensorProcessing.normalizeGPUSensors(sensors)
+        ThermalSensorProcessing.normalizeGPUSensors(
+            sensors,
+            preferM4Channels: usesM4MaxSensorCatalog
+        )
     }
 
     private func isPotentialCoreSensor(_ sensor: SensorInfo) -> Bool {
@@ -447,12 +455,8 @@ final class FanMonitor: ObservableObject {
     }
 
     private func canonicalizedDynamicSensorKey(_ key: String) -> String {
-        if key.hasPrefix("Tg")
-            || key.hasPrefix("TG")
-            || key.hasPrefix("Tp")
-            || key.hasPrefix("Te")
-        {
-            return key.lowercased()
+        if key.hasPrefix("TG") {
+            return "Tg" + key.dropFirst(2)
         }
         return key
     }
@@ -463,6 +467,20 @@ final class FanMonitor: ObservableObject {
         let result = sysctlbyname(sysctlName, &value, &size, nil, 0)
         guard result == 0, value > 0 else { return 0 }
         return Int(value)
+    }
+
+    private static func readCPUBrand() -> String {
+        var size = 0
+        guard sysctlbyname("machdep.cpu.brand_string", nil, &size, nil, 0) == 0,
+              size > 1 else {
+            return ""
+        }
+
+        var value = [CChar](repeating: 0, count: size)
+        guard sysctlbyname("machdep.cpu.brand_string", &value, &size, nil, 0) == 0 else {
+            return ""
+        }
+        return String(cString: value)
     }
 
 }

@@ -23,6 +23,7 @@ struct LiveTelemetrySettingsCard: View {
                 StatRow(icon: AppImages.memory, label: AppStrings.memory, value: "\(networkViewModel.memoryUsage) (\(networkViewModel.memoryUsed)/\(networkViewModel.memoryTotal))", color: .brown)
                 Divider().opacity(0.22)
                 StatRow(icon: AppImages.temperature, label: AppStrings.cpuTemp, value: fanViewModel.primaryTemp, color: .orange)
+                StatRow(icon: AppImages.temperature, label: AppStrings.gpuTemp, value: fanViewModel.primaryGPUTemp, color: .blue)
             }
         }
     }

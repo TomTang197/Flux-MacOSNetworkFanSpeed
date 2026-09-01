@@ -253,6 +253,7 @@ private struct DashboardMetricsColumn: View {
                     value: networkViewModel.powerUsage,
                     icon: AppImages.powerUsage,
                     color: .yellow,
+                    subtitle: networkViewModel.powerSubtitle,
                     compact: true
                 ).equatable()
                 DashboardMetricCard(
@@ -260,7 +261,6 @@ private struct DashboardMetricsColumn: View {
                     value: networkViewModel.chargingPowerUsage,
                     icon: AppImages.chargingPower,
                     color: .orange,
-                    subtitle: networkViewModel.chargingPowerSubtitle,
                     compact: true
                 ).equatable()
                 DashboardMetricCard(
@@ -288,9 +288,10 @@ private struct DashboardMetricsColumn: View {
                 ).equatable()
                 DashboardMetricCard(
                     title: AppStrings.systemTemp,
-                    value: fanViewModel.primaryTemp,
+                    value: "CPU \(fanViewModel.primaryTemp)",
                     icon: AppImages.temperature,
                     color: .orange,
+                    subtitle: "GPU \(fanViewModel.primaryGPUTemp)",
                     compact: true,
                     showInfoButton: false,
                     action: {

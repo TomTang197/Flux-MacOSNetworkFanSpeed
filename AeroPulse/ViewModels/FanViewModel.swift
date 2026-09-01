@@ -44,6 +44,7 @@ final class FanViewModel: ObservableObject {
     private var isSamplingData = false
     private var detailedSamplingSources: Set<DetailedSamplingSource> = []
     private var controlTemperatureSample: (value: Double, sampledAt: Date)?
+    private var ruleTargetSubmissionGate = FanTargetSubmissionGate()
     private var defaultNotificationObservers: [NSObjectProtocol] = []
     private var workspaceNotificationObservers: [NSObjectProtocol] = []
 
@@ -84,6 +85,7 @@ final class FanViewModel: ObservableObject {
             self?.currentMode = .auto
             self?.activeRule = nil
             self?.isRulesStandby = false
+            self?.ruleTargetSubmissionGate.reset()
         }
         defaultNotificationObservers.append(leaseObserver)
 
@@ -101,6 +103,7 @@ final class FanViewModel: ObservableObject {
         currentMode = .auto
         activeRule = nil
         isRulesStandby = false
+        ruleTargetSubmissionGate.reset()
 
         guard waitForReply else {
             controlClient.resetToAutomatic()
@@ -262,6 +265,7 @@ final class FanViewModel: ObservableObject {
 
         currentMode = mode
         isRulesStandby = false
+        ruleTargetSubmissionGate.reset()
 
         switch mode {
         case .auto:
@@ -321,12 +325,15 @@ final class FanViewModel: ObservableObject {
 
     private func applyFanTargets(
         _ targets: [(index: Int, rpm: Int)],
-        refreshAfterCompletion: Bool = true
+        refreshAfterCompletion: Bool = true,
+        completion: ((Bool) -> Void)? = nil
     ) {
-        controlClient.setFanTargets(targets) { [weak self] _ in
-            guard refreshAfterCompletion else { return }
+        controlClient.setFanTargets(targets) { [weak self] success in
             DispatchQueue.main.async {
-                self?.refreshData()
+                if refreshAfterCompletion {
+                    self?.refreshData()
+                }
+                completion?(success)
             }
         }
     }
@@ -342,9 +349,9 @@ final class FanViewModel: ObservableObject {
             restoreSystemControlForSafety(waitForReply: false)
             return
         }
-        let cpuTemp = sample.value
+        let controlTemperature = sample.value
         let decision = FanRuleMatchPolicy.decision(
-            temperature: cpuTemp,
+            temperature: controlTemperature,
             thresholds: rules.map(\.temperature)
         )
         guard case .matched(let matchedIndex) = decision,
@@ -368,12 +375,33 @@ final class FanViewModel: ObservableObject {
             let clamped = max(fan.minRPM, min(target, fan.maxRPM))
             return (index: fan.id, rpm: clamped)
         }
-        applyFanTargets(targets, refreshAfterCompletion: false)
+        let targetMap = Dictionary(uniqueKeysWithValues: targets.map { ($0.index, $0.rpm) })
+        guard let submission = ruleTargetSubmissionGate.request(targetMap) else { return }
+        submitRuleTargets(submission)
+    }
+
+    private func submitRuleTargets(_ submission: FanTargetSubmissionGate.Submission) {
+        let targets = submission.targets.keys.sorted().compactMap { index in
+            submission.targets[index].map { (index: index, rpm: $0) }
+        }
+        applyFanTargets(
+            targets,
+            refreshAfterCompletion: false
+        ) { [weak self] success in
+            guard let self else { return }
+            let nextSubmission = self.ruleTargetSubmissionGate.complete(
+                submission,
+                succeeded: success
+            )
+            guard success, self.currentMode == .custom, let nextSubmission else { return }
+            self.submitRuleTargets(nextSubmission)
+        }
     }
 
     private func enterRulesStandby() {
         activeRule = nil
         controlClient.setControlTemperatureDeadline(nil)
+        ruleTargetSubmissionGate.reset()
 
         guard !isRulesStandby else { return }
         isRulesStandby = true
@@ -383,29 +411,12 @@ final class FanViewModel: ObservableObject {
     private func sampleControlTemperature(
         from sampledSensors: [SensorInfo]
     ) -> (value: Double, sampledAt: Date)? {
-        var candidateKeys = Set(["TC0P", "Tp0P", "Tp01", "mACC"])
-        for sensor in sampledSensors where isCPUControlSensor(sensor) {
-            candidateKeys.insert(sensor.id)
+        guard let sample = ThermalSensorProcessing.controlTemperatureSample(
+            from: sampledSensors
+        ) else {
+            return nil
         }
-
-        let temperatures = candidateKeys.compactMap {
-            SMCService.shared.getTemperature($0)
-        }
-        guard !temperatures.isEmpty else { return nil }
-        let average = temperatures.reduce(0.0, +) / Double(temperatures.count)
-        return (average, Date())
-    }
-
-    private func isCPUControlSensor(_ sensor: SensorInfo) -> Bool {
-        sensor.id.hasPrefix("Tp")
-            || sensor.id.hasPrefix("Te")
-            || sensor.id.hasPrefix("TC")
-            || sensor.name.hasPrefix("P-Core Sensor ")
-            || sensor.name.hasPrefix("E-Core Sensor ")
-            || sensor.name.contains(AppStrings.pCoreFilter)
-            || sensor.name.contains(AppStrings.eCoreFilter)
-            || sensor.name.localizedCaseInsensitiveContains("CPU")
-            || sensor.name.localizedCaseInsensitiveContains("Core")
+        return (sample.value, sample.sampledAt)
     }
 
     var primaryFanRPM: String {
@@ -414,33 +425,40 @@ final class FanViewModel: ObservableObject {
     }
 
     var primaryTemp: String {
-        let cpuSensors = cpuTemperatureSensors
-        if !cpuSensors.isEmpty {
-            let average = cpuSensors.reduce(0.0) { $0 + $1.temperature } / Double(cpuSensors.count)
-            return String(format: "%.0f\u{00B0}C", average)
+        guard let temperature = ThermalSensorProcessing.primaryCPUTemperature(from: sensors) else {
+            return "--\u{00B0}C"
         }
+        return String(format: "%.0f\u{00B0}C", temperature)
+    }
 
-        let cpuNamedSensors = sensors.filter {
-            $0.name.localizedCaseInsensitiveContains("CPU")
-                || $0.name.localizedCaseInsensitiveContains("Core")
+    var primaryGPUTemp: String {
+        guard let temperature = ThermalSensorProcessing.primaryGPUTemperature(from: sensors) else {
+            return "--\u{00B0}C"
         }
-        if !cpuNamedSensors.isEmpty {
-            let average = cpuNamedSensors.reduce(0.0) { $0 + $1.temperature }
-                / Double(cpuNamedSensors.count)
-            return String(format: "%.0f\u{00B0}C", average)
-        }
+        return String(format: "%.0f\u{00B0}C", temperature)
+    }
 
-        if let hottestSensor = sensors.max(by: { $0.temperature < $1.temperature }) {
-            return String(format: "%.0f\u{00B0}C", hottestSensor.temperature)
-        }
+    var compactAverageTemperatureSummary: String {
+        let cpuAverage = ThermalSensorProcessing.primaryCPUTemperature(from: sensors)
+        let gpuAverage = ThermalSensorProcessing.primaryGPUTemperature(from: sensors)
 
-        for key in ["TC0P", "Tp0P", "Tp01", "mACC"] {
-            if let value = SMCService.shared.getTemperature(key) {
-                return String(format: "%.0f\u{00B0}C", value)
-            }
+        switch (cpuAverage, gpuAverage) {
+        case let (.some(cpu), .some(gpu)):
+            return String(format: "C%.0f° G%.0f°", cpu, gpu)
+        case let (.some(cpu), .none):
+            return String(format: "C%.0f°", cpu)
+        case let (.none, .some(gpu)):
+            return String(format: "G%.0f°", gpu)
+        case (.none, .none):
+            return "C--° G--°"
         }
+    }
 
-        return "--\u{00B0}C"
+    var controlAverageTemp: String {
+        guard let temperature = ThermalSensorProcessing.controlTemperatureSample(from: sensors)?.value else {
+            return "--\u{00B0}C"
+        }
+        return String(format: "%.0f\u{00B0}C", temperature)
     }
 
     func refreshData() {
@@ -486,26 +504,6 @@ final class FanViewModel: ObservableObject {
                 }
                 self.isSamplingData = false
             }
-        }
-    }
-
-    private var cpuTemperatureSensors: [SensorInfo] {
-        let normalized = sensors.contains {
-            $0.name.hasPrefix("P-Core Sensor ") || $0.name.hasPrefix("E-Core Sensor ")
-        }
-
-        return sensors.filter { sensor in
-            if normalized {
-                return sensor.name.hasPrefix("P-Core Sensor ")
-                    || sensor.name.hasPrefix("E-Core Sensor ")
-            }
-
-            return sensor.id.hasPrefix("Tp")
-                || sensor.id.hasPrefix("Te")
-                || sensor.id.hasPrefix("TC")
-                || sensor.name.contains(AppStrings.pCoreFilter)
-                || sensor.name.contains(AppStrings.eCoreFilter)
-                || sensor.name.localizedCaseInsensitiveContains("CPU")
         }
     }
 }

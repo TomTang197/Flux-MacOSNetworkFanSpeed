@@ -15,8 +15,9 @@ struct ThermalDetailView: View {
 
     private var thermalColumnCount: Int {
         let widthBaseline = layoutWidth ?? (isEmbedded ? 0 : 700)
-        let available = max(widthBaseline - 20, 0)
-        return available >= 500 ? 2 : 1
+        return ThermalSensorProcessing.thermalDetailColumnCount(
+            availableWidth: Double(widthBaseline)
+        )
     }
 
     var body: some View {
@@ -60,24 +61,36 @@ struct ThermalDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
                     sensorCategoryCard(
-                        title: "\(AppStrings.cpu) (\(sensorGroups.cpu.count))",
+                        title: categoryTitle(
+                            name: AppStrings.cpu,
+                            sensors: sensorGroups.cpu,
+                            average: ThermalSensorProcessing.averageCPUTemperatureSample(
+                                from: fanViewModel.sensors
+                            )?.value
+                        ),
                         sensors: sensorGroups.cpu,
                         color: .orange,
-                        useTwoColumns: true
+                        columnCount: thermalColumnCount
                     )
 
                     sensorCategoryCard(
-                        title: "\(AppStrings.gpu) (\(sensorGroups.gpu.count))",
+                        title: categoryTitle(
+                            name: AppStrings.gpu,
+                            sensors: sensorGroups.gpu,
+                            average: ThermalSensorProcessing.averageGPUTemperatureSample(
+                                from: fanViewModel.sensors
+                            )?.value
+                        ),
                         sensors: sensorGroups.gpu,
                         color: .blue,
-                        useTwoColumns: true
+                        columnCount: thermalColumnCount
                     )
 
                     sensorCategoryCard(
                         title: "\(AppStrings.system) (\(sensorGroups.system.count))",
                         sensors: sensorGroups.system,
                         color: .green,
-                        useTwoColumns: true
+                        columnCount: thermalColumnCount
                     )
                 }
                 .padding(.horizontal, 10)
@@ -92,13 +105,13 @@ struct ThermalDetailView: View {
         title: String,
         sensors: [SensorInfo],
         color: Color,
-        useTwoColumns: Bool = false
+        columnCount: Int
     ) -> some View {
         SensorCategoryColumn(
             title: title,
             sensors: sensors,
             color: color,
-            useTwoColumns: useTwoColumns
+            columnCount: columnCount
         )
         .liquidGlassCard(
             cornerRadius: 12,
@@ -107,31 +120,32 @@ struct ThermalDetailView: View {
             shadowOpacity: 0.08
         )
     }
+
+    private func categoryTitle(
+        name: String,
+        sensors: [SensorInfo],
+        average: Double?
+    ) -> String {
+        guard let average else { return "\(name) (\(sensors.count))" }
+        return "\(name) (\(sensors.count)) • AVG \(String(format: "%.1f°C", average))"
+    }
 }
 
 struct SensorCategoryColumn: View, Equatable {
     let title: String
     let sensors: [SensorInfo]
     let color: Color
-    var useTwoColumns: Bool = false
+    let columnCount: Int
 
     static func == (lhs: SensorCategoryColumn, rhs: SensorCategoryColumn) -> Bool {
         lhs.title == rhs.title
             && lhs.color == rhs.color
             && lhs.sensors == rhs.sensors
-            && lhs.useTwoColumns == rhs.useTwoColumns
+            && lhs.columnCount == rhs.columnCount
     }
 
     private var gridColumns: [GridItem] {
-        if sensors.count >= 20 {
-            return [
-                GridItem(.flexible(), spacing: 5),
-                GridItem(.flexible(), spacing: 5),
-                GridItem(.flexible(), spacing: 5),
-                GridItem(.flexible(), spacing: 5)
-            ]
-        }
-        if useTwoColumns && sensors.count > 3 {
+        if columnCount >= 2 && sensors.count > 3 {
             return [
                 GridItem(.flexible(), spacing: 6),
                 GridItem(.flexible(), spacing: 6)

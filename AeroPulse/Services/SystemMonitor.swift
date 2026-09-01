@@ -126,16 +126,12 @@ final class SystemMonitor {
         }
 
         let systemPowerWatts: Double? = {
-            if let systemPowerInWatts, let batteryPowerWatts {
-                // Exclude energy flowing into the battery from the displayed system draw.
-                let watts = systemPowerInWatts - batteryPowerWatts
-                if watts.isFinite, watts > 0 {
-                    return watts
-                }
-            }
-
-            if let systemLoadWatts, systemLoadWatts.isFinite, systemLoadWatts > 0 {
-                return systemLoadWatts
+            if let telemetryWatts = PowerTelemetryProcessing.systemPowerWatts(
+                systemLoadWatts: systemLoadWatts,
+                systemPowerInWatts: systemPowerInWatts,
+                batteryPowerWatts: batteryPowerWatts
+            ) {
+                return telemetryWatts
             }
 
             // On battery power, pack current is the best available fallback.
@@ -200,26 +196,7 @@ final class SystemMonitor {
 
     private func telemetryPowerWatts(for key: String, in telemetry: [String: Any]) -> Double? {
         guard let raw = signedNumberValue(from: telemetry[key]) else { return nil }
-
-        let watts = normalizeTelemetryPowerValue(raw)
-        guard watts.isFinite else { return nil }
-        return watts
-    }
-
-    private func normalizeTelemetryPowerValue(_ raw: Double) -> Double {
-        guard raw.isFinite else { return 0 }
-
-        let magnitude = abs(raw)
-        guard magnitude > 0 else { return 0 }
-
-        // AppleSmartBattery power telemetry is typically reported in mW, but some systems
-        // already expose watts. Values beyond a laptop-typical wattage envelope are treated
-        // as mW and scaled down.
-        if magnitude > 200 {
-            return raw / 1000
-        }
-
-        return raw
+        return PowerTelemetryProcessing.watts(fromMilliwatts: raw)
     }
 
     func currentGPUUsagePercent() -> Double? {

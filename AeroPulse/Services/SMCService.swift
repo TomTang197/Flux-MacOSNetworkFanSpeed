@@ -14,7 +14,8 @@ final class SMCService {
 
     private var connection: io_connect_t = 0
     private var keyInfoCache: [String: (size: UInt32, type: UInt32)] = [:]
-    private var invalidKeys: Set<String> = []
+    private var invalidKeys: [String: Date] = [:]
+    private let invalidKeyRetryInterval: TimeInterval = 30
     private let keyInfoCacheLock = NSLock()
 
     var isConnected: Bool { connection != 0 }
@@ -166,7 +167,7 @@ final class SMCService {
 
     private func getInfo(_ name: String) -> (size: UInt32, type: UInt32)? {
         keyInfoCacheLock.lock()
-        if invalidKeys.contains(name) {
+        if shouldSkipInvalidKeyLocked(name, now: Date()) {
             keyInfoCacheLock.unlock()
             return nil
         }
@@ -209,7 +210,7 @@ final class SMCService {
 
     func readKey(_ name: String) -> SMCVal? {
         keyInfoCacheLock.lock()
-        if invalidKeys.contains(name) {
+        if shouldSkipInvalidKeyLocked(name, now: Date()) {
             keyInfoCacheLock.unlock()
             return nil
         }
@@ -229,10 +230,24 @@ final class SMCService {
         }
 
         keyInfoCacheLock.lock()
-        invalidKeys.insert(name)
+        invalidKeys[name] = Date()
         keyInfoCacheLock.unlock()
 
         return nil
+    }
+
+    /// Call only while `keyInfoCacheLock` is held.
+    private func shouldSkipInvalidKeyLocked(_ name: String, now: Date) -> Bool {
+        guard let invalidatedAt = invalidKeys[name] else { return false }
+        if InvalidSensorRetryPolicy.shouldSkipRetry(
+            invalidatedAt: invalidatedAt,
+            now: now,
+            retryInterval: invalidKeyRetryInterval
+        ) {
+            return true
+        }
+        invalidKeys.removeValue(forKey: name)
+        return false
     }
 
     func bytesToFloat(_ value: SMCVal) -> Float {

@@ -476,7 +476,7 @@ struct MenuBarView: View {
         case .gpu: return networkViewModel.gpuUsage
         case .memory: return networkViewModel.memoryUsage
         case .fan: return fanViewModel.primaryFanRPM
-        case .temperature: return fanViewModel.primaryTemp
+        case .temperature: return fanViewModel.compactAverageTemperatureSummary
         }
     }
 }

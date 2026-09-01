@@ -86,14 +86,14 @@ struct MenuBarDashboardView: View {
                     title: AppStrings.powerUsage,
                     value: networkViewModel.powerUsage,
                     icon: AppImages.powerUsage,
-                    color: .yellow
+                    color: .yellow,
+                    subtitle: networkViewModel.powerSubtitle
                 ).equatable()
                 MetricCard(
                     title: AppStrings.chargingPower,
                     value: networkViewModel.chargingPowerUsage,
                     icon: AppImages.chargingPower,
-                    color: .orange,
-                    subtitle: networkViewModel.chargingPowerSubtitle
+                    color: .orange
                 ).equatable()
             }
 
@@ -187,7 +187,7 @@ struct MenuBarDashboardView: View {
                             .font(.system(size: 8, weight: .black))
                             .foregroundColor(.secondary)
                             .tracking(0.6)
-                        Text("\(fanViewModel.primaryFanRPM) • \(fanViewModel.primaryTemp)")
+                        Text("\(fanViewModel.primaryFanRPM) • \(fanViewModel.compactAverageTemperatureSummary)")
                             .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                             .foregroundColor(.primary)
                             .lineLimit(1)

@@ -19,6 +19,21 @@ struct SMCSensorKeys {
     struct CPU {
         static let coreAverage = SensorDefinition(name: "CPU Core Average", key: "mACC")
         static let packageAverage = SensorDefinition(name: "CPU Package Average", key: "TC0P")
+        static let die = SensorDefinition(name: "CPU Die", key: "TCMb")
+        static let hotspot = SensorDefinition(name: "CPU Hotspot", key: "TCMz")
+
+        // M4-family SMC channels. On the observed M4 Max, legacy Tp* keys are a
+        // frozen 40°C placeholder, while these die/E-core channels remain live.
+        struct M4 {
+            static let efficiencyCore1 = SensorDefinition(name: "E-Core Sensor 1", key: "Te05")
+            static let efficiencyCore2 = SensorDefinition(name: "E-Core Sensor 2", key: "Te0S")
+            static let efficiencyCore3 = SensorDefinition(name: "E-Core Sensor 3", key: "Te06")
+            static let efficiencyCore4 = SensorDefinition(name: "E-Core Sensor 4", key: "Te0T")
+
+            static let all: [SensorDefinition] = [
+                efficiencyCore1, efficiencyCore2, efficiencyCore3, efficiencyCore4,
+            ]
+        }
 
         // Performance Cores (P-cores) - Extended for M2/M3 Ultra
         struct PerformanceCores {
@@ -79,7 +94,8 @@ struct SMCSensorKeys {
         }
 
         static let all: [SensorDefinition] =
-            [coreAverage, packageAverage] + PerformanceCores.all + EfficiencyCores.all
+            [coreAverage, packageAverage, die, hotspot]
+                + M4.all + PerformanceCores.all + EfficiencyCores.all
     }
 
     // MARK: - GPU Sensors
@@ -91,9 +107,24 @@ struct SMCSensorKeys {
         static let cluster4 = SensorDefinition(name: "GPU Cluster 4", key: "Tg0f")
         static let proximity = SensorDefinition(name: "GPU Proximity", key: "TG0P")
 
+        struct M4 {
+            static let sensor1 = SensorDefinition(name: "GPU Sensor 1", key: "Tg1U")
+            static let sensor2 = SensorDefinition(name: "GPU Sensor 2", key: "Tg1k")
+            static let sensor3 = SensorDefinition(name: "GPU Sensor 3", key: "Tg0K")
+            static let sensor4 = SensorDefinition(name: "GPU Sensor 4", key: "Tg0L")
+            static let sensor5 = SensorDefinition(name: "GPU Sensor 5", key: "Tg0d")
+            static let sensor6 = SensorDefinition(name: "GPU Sensor 6", key: "Tg0e")
+            static let sensor7 = SensorDefinition(name: "GPU Sensor 7", key: "Tg0j")
+            static let sensor8 = SensorDefinition(name: "GPU Sensor 8", key: "Tg0k")
+
+            static let all: [SensorDefinition] = [
+                sensor1, sensor2, sensor3, sensor4, sensor5, sensor6, sensor7, sensor8,
+            ]
+        }
+
         static let all: [SensorDefinition] = [
             average, cluster1, cluster2, cluster3, cluster4, proximity,
-        ]
+        ] + M4.all
     }
 
     // MARK: - Storage Sensors

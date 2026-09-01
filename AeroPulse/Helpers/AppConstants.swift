@@ -28,6 +28,7 @@ struct AppStrings {
     static let total = "Total"
     static let cpuUsage = "CPU Usage"
     static let powerUsage = "System Power"
+    static let systemPowerIn = "System Power In"
     static let chargingPower = "Battery Power"
     static let gpuUsage = "GPU Usage"
     static let systemGPUUsage = "System GPU"
@@ -36,6 +37,7 @@ struct AppStrings {
     static let fan = "Fan"
     static let systemTemp = "System Temp"
     static let cpuTemp = "CPU Temp"
+    static let gpuTemp = "GPU Temp"
 
     static let rpmUnit = "RPM"
     static let temperatureFormat = "%.1f\u{00B0}C"

@@ -40,8 +40,8 @@ final class NetworkViewModel: ObservableObject {
     @Published var diskUsedPercent: String = "--"
     @Published var cpuUsage: String = "0%"
     @Published var powerUsage: String = "-- W"
+    @Published var powerSubtitle: String = ""
     @Published var chargingPowerUsage: String = "-- W"
-    @Published var chargingPowerSubtitle: String = ""
     @Published var gpuUsage: String = "--"
     @Published var memoryUsage: String = "0%"
     @Published var memoryUsed: String = "--"
@@ -254,8 +254,8 @@ final class NetworkViewModel: ObservableObject {
         }
 
         var newPowerUsage: String?
+        var newPowerSubtitle: String?
         var newChargingPowerUsage: String?
-        var newChargingPowerSubtitle: String?
 
         if shouldSamplePower(at: currentTimestamp) {
             if let powerSnapshot = systemMonitor.currentPowerSnapshot() {
@@ -274,14 +274,14 @@ final class NetworkViewModel: ObservableObject {
                 }
 
                 if let inputWatts = powerSnapshot.systemPowerInWatts {
-                    newChargingPowerSubtitle = "SystemPowerIn: \(formatTelemetryPower(inputWatts))"
+                    newPowerSubtitle = "\(AppStrings.systemPowerIn): \(formatTelemetryPower(inputWatts))"
                 } else {
-                    newChargingPowerSubtitle = ""
+                    newPowerSubtitle = ""
                 }
             } else {
                 newPowerUsage = "-- W"
+                newPowerSubtitle = ""
                 newChargingPowerUsage = "-- W"
-                newChargingPowerSubtitle = ""
             }
             self.lastPowerSampleTimestamp = currentTimestamp
         }
@@ -395,8 +395,8 @@ final class NetworkViewModel: ObservableObject {
 
             if let newCPUUsage { setIfChanged(&self.cpuUsage, newCPUUsage) }
             if let newPowerUsage { setIfChanged(&self.powerUsage, newPowerUsage) }
+            if let newPowerSubtitle { setIfChanged(&self.powerSubtitle, newPowerSubtitle) }
             if let newChargingPowerUsage { setIfChanged(&self.chargingPowerUsage, newChargingPowerUsage) }
-            if let newChargingPowerSubtitle { setIfChanged(&self.chargingPowerSubtitle, newChargingPowerSubtitle) }
             if let newGPUUsage { setIfChanged(&self.gpuUsage, newGPUUsage) }
 
             if let newDiskReadSpeed { setIfChanged(&self.diskReadSpeed, newDiskReadSpeed) }
@@ -451,16 +451,7 @@ final class NetworkViewModel: ObservableObject {
     }
 
     private func formatPower(_ watts: Double) -> String {
-        guard watts.isFinite, watts >= 0 else { return "-- W" }
-        if watts < 0.05 { return "0 W" }
-
-        if watts >= 100 {
-            return String(format: "%.0f W", watts)
-        } else if watts >= 10 {
-            return String(format: "%.1f W", watts)
-        } else {
-            return String(format: "%.2f W", watts)
-        }
+        PowerTelemetryProcessing.formatSystemPowerWatts(watts)
     }
 
     private func formatTelemetryPower(_ watts: Double) -> String {

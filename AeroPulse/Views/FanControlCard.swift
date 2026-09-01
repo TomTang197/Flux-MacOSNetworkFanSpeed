@@ -121,7 +121,7 @@ struct FanControlCard: View {
                     .foregroundColor(.secondary)
                     .tracking(0.6)
                 Spacer()
-                Text("Temp: \(fanViewModel.primaryTemp)")
+                Text("Control Avg: \(fanViewModel.controlAverageTemp)")
                     .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                     .foregroundColor(.orange)
             }
