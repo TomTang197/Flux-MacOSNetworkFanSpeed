@@ -188,12 +188,13 @@ struct SettingsView: View {
 
     private func openOrFocusDashboard() {
         NSApp.setActivationPolicy(.regular)
+        NSApp.unhide(nil)
         NSApp.activate(ignoringOtherApps: true)
 
         NSApp.keyWindow?.close()
 
         if let window = NSApp.windows.first(where: {
-            $0.title == AppStrings.appName
+            $0.isVisible && ($0.title == AppStrings.appName || $0.identifier?.rawValue == "dashboard")
         }) {
             window.makeKeyAndOrderFront(nil)
             window.orderFrontRegardless()

@@ -91,6 +91,9 @@ struct ContentView: View {
         .environment(\.windowInteractionActive, windowInteraction.isInteracting)
         .background(dashboardBackground)
         .background(DashboardThermalSheetPresenter(fanViewModel: fanViewModel))
+        .background(WindowAccessor { window in
+            setupWindow(window)
+        })
         .transaction { transaction in
             if windowInteraction.isInteracting {
                 transaction.animation = nil
@@ -105,16 +108,6 @@ struct ContentView: View {
                 NSApp.unhide(nil)
                 NSApp.activate(ignoringOtherApps: true)
             }
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                if let window = NSApp.windows.first(where: { $0.canBecomeKey }) {
-                    window.title = AppStrings.appName
-                    window.makeKeyAndOrderFront(nil)
-                    window.orderFrontRegardless()
-                    NSApp.activate(ignoringOtherApps: true)
-                    setupWindow(window)
-                }
-            }
         }
         .onChange(of: windowInteraction.isInteracting) { _, isInteracting in
             networkViewModel.setPresentationUpdatesPaused(isInteracting)
@@ -128,7 +121,12 @@ struct ContentView: View {
             fanViewModel.setDetailedSampling(false, source: .dashboardWindow)
             windowInteraction.detach()
             DispatchQueue.main.async {
-                NSApplication.shared.setActivationPolicy(.accessory)
+                let hasVisibleWindows = NSApp.windows.contains {
+                    $0.isVisible && !($0 is NSPanel) && $0.level == .normal
+                }
+                if !hasVisibleWindows {
+                    NSApplication.shared.setActivationPolicy(.accessory)
+                }
             }
         }
     }
@@ -157,9 +155,12 @@ struct ContentView: View {
     }
 
     private func setupWindow(_ window: NSWindow) {
+        window.title = AppStrings.appName
         var frame = window.frame
-        frame.size = defaultWindowSize
-        window.setFrame(frame, display: true, animate: false)
+        if frame.size.width < minimumWindowSize.width || frame.size.height < minimumWindowSize.height {
+            frame.size = defaultWindowSize
+            window.setFrame(frame, display: true, animate: false)
+        }
 
         window.minSize = minimumWindowSize
         window.maxSize = NSSize(
@@ -172,6 +173,32 @@ struct ContentView: View {
         window.backgroundColor = NSColor.windowBackgroundColor
         windowInteraction.setPermanentlyReducedEffects(reduceVisualEffects)
         windowInteraction.attach(to: window)
+
+        window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
+        NSApp.activate(ignoringOtherApps: true)
+    }
+}
+
+private struct WindowAccessor: NSViewRepresentable {
+    let onWindow: (NSWindow) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            if let window = view.window {
+                onWindow(window)
+            }
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            if let window = nsView.window {
+                onWindow(window)
+            }
+        }
     }
 }
 

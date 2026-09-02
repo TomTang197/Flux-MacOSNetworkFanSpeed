@@ -299,45 +299,28 @@ struct MenuBarDashboardView: View {
         let menuWindow = NSApp.keyWindow
 
         NSApp.setActivationPolicy(.regular)
+        NSApp.unhide(nil)
         NSApp.activate(ignoringOtherApps: true)
 
-        if let dashboardWindow = dashboardWindow() {
-            dashboardWindow.makeKeyAndOrderFront(nil)
-            dashboardWindow.orderFrontRegardless()
+        if let existingWindow = activeDashboardWindow() {
+            existingWindow.makeKeyAndOrderFront(nil)
+            existingWindow.orderFrontRegardless()
         } else {
             openWindow(id: "dashboard")
-
-            DispatchQueue.main.async {
-                if let createdWindow = dashboardWindow() {
-                    createdWindow.makeKeyAndOrderFront(nil)
-                    createdWindow.orderFrontRegardless()
-                }
-            }
         }
 
         DispatchQueue.main.async {
-            let keepWindow = dashboardWindow()
-
             menuWindow?.orderOut(nil)
             menuWindow?.close()
-
-            for window in NSApp.windows where window !== keepWindow && window.isVisible {
-                let className = String(describing: type(of: window))
-                if className.contains("Panel")
-                    || className.contains("Popover")
-                    || className.contains("Status")
-                    || window.level != .normal
-                {
-                    window.orderOut(nil)
-                }
-            }
         }
     }
 
-    private func dashboardWindow() -> NSWindow? {
+    private func activeDashboardWindow() -> NSWindow? {
         NSApp.windows.first { window in
-            window.title == AppStrings.appName
-                || window.identifier?.rawValue == "dashboard"
+            window.isVisible && (
+                window.title == AppStrings.appName
+                    || window.identifier?.rawValue == "dashboard"
+            )
         }
     }
 }
