@@ -46,7 +46,7 @@ struct FanControlCard: View {
                     get: { fanViewModel.currentMode },
                     set: { newMode in
                         DispatchQueue.main.async {
-                            fanViewModel.setFanMode(newMode)
+                            fanViewModel.setFanMode(newMode, isUserInitiated: true)
                         }
                     }
                 )) {
@@ -83,6 +83,10 @@ struct FanControlCard: View {
                     Divider().opacity(0.3)
                     rulesSection
                 }
+
+                // Game Mode Auto Linkage Section
+                Divider().opacity(0.3)
+                gameModeSection
 
                 if !fanViewModel.helperInstalled {
                     HStack(spacing: 6) {
@@ -126,14 +130,58 @@ struct FanControlCard: View {
                     .foregroundColor(.orange)
             }
 
-            if fanViewModel.isRulesStandby {
+            HStack(spacing: 8) {
+                Toggle(
+                    "Delay Downshift",
+                    isOn: Binding(
+                        get: { fanViewModel.isRuleDownshiftDelayEnabled },
+                        set: { fanViewModel.setRuleDownshiftDelayEnabled($0) }
+                    )
+                )
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .font(.system(size: 9.5, weight: .semibold))
+
+                Spacer()
+
+                if fanViewModel.isRuleDownshiftDelayEnabled {
+                    Stepper(
+                        value: Binding(
+                            get: { fanViewModel.ruleDownshiftDelaySeconds },
+                            set: { fanViewModel.setRuleDownshiftDelaySeconds($0) }
+                        ),
+                        in: 1...60,
+                        step: 1
+                    ) {
+                        Text("\(fanViewModel.ruleDownshiftDelaySeconds)s")
+                            .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                            .frame(minWidth: 28, alignment: .trailing)
+                    }
+                    .controlSize(.mini)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.035)))
+
+            if let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
                 HStack(spacing: 5) {
                     Circle()
-                        .fill(Color.secondary)
+                        .fill(Color.orange)
                         .frame(width: 5, height: 5)
-                    Text("Rules Standby · Below minimum threshold")
+                    Text("Holding current speed · Downshift in \(remaining)s")
                         .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.orange)
+                    Spacer()
+                }
+            } else if fanViewModel.isRulesAtMinimum {
+                HStack(spacing: 5) {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 5, height: 5)
+                    Text("Rules Active · Hardware minimum speed")
+                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.green)
                     Spacer()
                 }
             }
@@ -213,6 +261,97 @@ struct FanControlCard: View {
                     .foregroundColor(.secondary)
                 }
                 .padding(.top, 2)
+            }
+        }
+    }
+
+    private var gameModeSection: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                Image(systemName: AppImages.gameController)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.purple)
+                Text(AppStrings.gameModeLinkage.uppercased())
+                    .font(.system(size: 8.5, weight: .bold))
+                    .foregroundColor(.secondary)
+                    .tracking(0.6)
+                Spacer()
+
+                if fanViewModel.isGameModeActive {
+                    HStack(spacing: 4) {
+                        Circle().fill(Color.purple).frame(width: 5, height: 5)
+                        Text("Active · Rules")
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .foregroundColor(.purple)
+                    }
+                } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
+                    HStack(spacing: 4) {
+                        Circle().fill(Color.orange).frame(width: 5, height: 5)
+                        Text("Cooldown \(remaining)s")
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .foregroundColor(.orange)
+                    }
+                }
+            }
+
+            HStack(spacing: 8) {
+                Toggle(
+                    "Auto Rules in Game Mode",
+                    isOn: Binding(
+                        get: { fanViewModel.isGameModeLinkageEnabled },
+                        set: { fanViewModel.setGameModeLinkageEnabled($0) }
+                    )
+                )
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .font(.system(size: 9.5, weight: .semibold))
+
+                Spacer()
+            }
+
+            if fanViewModel.isGameModeLinkageEnabled {
+                HStack(spacing: 8) {
+                    Text(AppStrings.gameModeExitDelay)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    Stepper(
+                        value: Binding(
+                            get: { fanViewModel.gameModeExitDelaySeconds },
+                            set: { fanViewModel.setGameModeExitDelaySeconds($0) }
+                        ),
+                        in: 5...600,
+                        step: 5
+                    ) {
+                        Text("\(fanViewModel.gameModeExitDelaySeconds)s")
+                            .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                            .frame(minWidth: 32, alignment: .trailing)
+                    }
+                    .controlSize(.mini)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.035)))
+
+                if fanViewModel.isGameModeActive {
+                    HStack(spacing: 5) {
+                        Circle().fill(Color.purple).frame(width: 5, height: 5)
+                        Text(AppStrings.gameModeActiveStatus)
+                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                            .foregroundColor(.purple)
+                        Spacer()
+                    }
+                } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
+                    HStack(spacing: 5) {
+                        Circle().fill(Color.orange).frame(width: 5, height: 5)
+                        Text("\(AppStrings.gameModeCooldownStatusPrefix) \(remaining)s")
+                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                            .foregroundColor(.orange)
+                        Spacer()
+                    }
+                }
             }
         }
     }

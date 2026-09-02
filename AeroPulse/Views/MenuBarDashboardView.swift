@@ -200,7 +200,7 @@ struct MenuBarDashboardView: View {
                     get: { fanViewModel.currentMode },
                     set: { newMode in
                         DispatchQueue.main.async {
-                            fanViewModel.setFanMode(newMode)
+                            fanViewModel.setFanMode(newMode, isUserInitiated: true)
                         }
                     }
                 )) {
@@ -211,6 +211,26 @@ struct MenuBarDashboardView: View {
                 .pickerStyle(.segmented)
                 .controlSize(.mini)
                 .frame(maxWidth: 190)
+            }
+
+            if fanViewModel.isGameModeActive {
+                HStack(spacing: 4) {
+                    Circle().fill(Color.purple).frame(width: 5, height: 5)
+                    Text("🎮 Game Mode · Rules Active")
+                        .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.purple)
+                    Spacer()
+                }
+                .padding(.top, 1)
+            } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
+                HStack(spacing: 4) {
+                    Circle().fill(Color.orange).frame(width: 5, height: 5)
+                    Text("⏳ Game Exited · Auto in \(remaining)s")
+                        .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.orange)
+                    Spacer()
+                }
+                .padding(.top, 1)
             }
 
             if fanViewModel.currentMode == .manual, let firstFan = fanViewModel.fans.first {
@@ -236,19 +256,23 @@ struct MenuBarDashboardView: View {
                 .padding(.top, 1)
             } else if fanViewModel.currentMode == .custom, let activeRule = fanViewModel.activeRule {
                 HStack(spacing: 4) {
-                    Circle().fill(Color.green).frame(width: 5, height: 5)
-                    Text("Triggered: ≥ \(Int(activeRule.temperature))°C → \(activeRule.speedPercentage)%")
+                    Circle()
+                        .fill(fanViewModel.ruleDownshiftRemainingSeconds == nil ? Color.green : Color.orange)
+                        .frame(width: 5, height: 5)
+                    Text(fanRuleStatusText(activeRule: activeRule))
                         .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                        .foregroundColor(.green)
+                        .foregroundColor(
+                            fanViewModel.ruleDownshiftRemainingSeconds == nil ? .green : .orange
+                        )
                     Spacer()
                 }
                 .padding(.top, 1)
-            } else if fanViewModel.currentMode == .custom, fanViewModel.isRulesStandby {
+            } else if fanViewModel.currentMode == .custom, fanViewModel.isRulesAtMinimum {
                 HStack(spacing: 4) {
-                    Circle().fill(Color.secondary).frame(width: 5, height: 5)
-                    Text("Rules Standby · Below minimum threshold")
+                    Circle().fill(Color.green).frame(width: 5, height: 5)
+                    Text("Rules Active · Hardware minimum speed")
                         .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.green)
                     Spacer()
                 }
                 .padding(.top, 1)
@@ -256,6 +280,13 @@ struct MenuBarDashboardView: View {
         }
         .padding(9)
         .liquidGlassCard(cornerRadius: 10, tint: .indigo, style: .regular, shadowOpacity: 0.08)
+    }
+
+    private func fanRuleStatusText(activeRule: FanThresholdRule) -> String {
+        if let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
+            return "Holding \(activeRule.speedPercentage)% · Downshift in \(remaining)s"
+        }
+        return "Triggered: ≥ \(Int(activeRule.temperature))°C → \(activeRule.speedPercentage)%"
     }
 
     private func refreshSnapshot() {

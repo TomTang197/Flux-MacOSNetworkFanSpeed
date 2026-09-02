@@ -17,6 +17,14 @@ final class FanViewModel: ObservableObject {
     }
 
     private let fanRulesStorageKey = "com.bandan.me.AeroPulse.FanThresholdRules"
+    private let ruleDownshiftDelayEnabledStorageKey =
+        "com.bandan.me.AeroPulse.RuleDownshiftDelayEnabled"
+    private let ruleDownshiftDelaySecondsStorageKey =
+        "com.bandan.me.AeroPulse.RuleDownshiftDelaySeconds"
+    private let gameModeLinkageEnabledStorageKey =
+        "com.bandan.me.AeroPulse.GameModeLinkageEnabled"
+    private let gameModeExitDelaySecondsStorageKey =
+        "com.bandan.me.AeroPulse.GameModeExitDelaySeconds"
 
     @Published var fans: [FanInfo] = []
     @Published var sensors: [SensorInfo] = []
@@ -29,11 +37,21 @@ final class FanViewModel: ObservableObject {
     @Published var syncAllFans: Bool = true
     @Published var rules: [FanThresholdRule] = []
     @Published var activeRule: FanThresholdRule? = nil
-    @Published private(set) var isRulesStandby: Bool = false
+    @Published private(set) var isRulesAtMinimum: Bool = false
+    @Published private(set) var isRuleDownshiftDelayEnabled: Bool = true
+    @Published private(set) var ruleDownshiftDelaySeconds: Int = 10
+    @Published private(set) var ruleDownshiftRemainingSeconds: Int? = nil
+    @Published private(set) var isGameModeLinkageEnabled: Bool = false
+    @Published private(set) var gameModeExitDelaySeconds: Int = 60
+    @Published private(set) var isGameModeActive: Bool = false
+    @Published private(set) var gameModeCooldownRemainingSeconds: Int? = nil
 
     private let monitor = FanMonitor()
     private let controlClient = FanControlClient.shared
     private let helperInstaller = PrivilegedHelperInstaller.shared
+    private let gameModeMonitor = GameModeMonitor()
+    private var gameModePolicy = GameModeFanLinkagePolicy()
+    private var gameModeCooldownTimer: AnyCancellable?
     private let samplingQueue = DispatchQueue(label: "AeroPulse.FanMonitorSampling", qos: .utility)
     private var timer: AnyCancellable?
     private let detailedRefreshInterval: TimeInterval = 2.0
@@ -45,11 +63,17 @@ final class FanViewModel: ObservableObject {
     private var detailedSamplingSources: Set<DetailedSamplingSource> = []
     private var controlTemperatureSample: (value: Double, sampledAt: Date)?
     private var ruleTargetSubmissionGate = FanTargetSubmissionGate()
+    private var ruleDownshiftPolicy = FanRuleDownshiftPolicy(
+        initialTarget: FanRuleControlTarget(ruleIndex: nil, speedPercentage: 0)
+    )
     private var defaultNotificationObservers: [NSObjectProtocol] = []
     private var workspaceNotificationObservers: [NSObjectProtocol] = []
 
     init() {
         loadRules()
+        loadRuleDownshiftSettings()
+        loadGameModeLinkageSettings()
+        setupGameModeObservation()
         observeSafetyLifecycleEvents()
         DispatchQueue.main.async { [weak self] in
             self?.startMonitoring()
@@ -59,6 +83,8 @@ final class FanViewModel: ObservableObject {
 
     deinit {
         timer?.cancel()
+        gameModeCooldownTimer?.cancel()
+        gameModeMonitor.stopMonitoring()
         for observer in defaultNotificationObservers {
             NotificationCenter.default.removeObserver(observer)
         }
@@ -84,8 +110,10 @@ final class FanViewModel: ObservableObject {
         ) { [weak self] _ in
             self?.currentMode = .auto
             self?.activeRule = nil
-            self?.isRulesStandby = false
-            self?.ruleTargetSubmissionGate.reset()
+            self?.isRulesAtMinimum = false
+            self?.resetRuleControlState()
+            self?.gameModeCooldownRemainingSeconds = nil
+            self?.gameModeCooldownTimer?.cancel()
         }
         defaultNotificationObservers.append(leaseObserver)
 
@@ -102,8 +130,10 @@ final class FanViewModel: ObservableObject {
     private func restoreSystemControlForSafety(waitForReply: Bool) {
         currentMode = .auto
         activeRule = nil
-        isRulesStandby = false
-        ruleTargetSubmissionGate.reset()
+        isRulesAtMinimum = false
+        resetRuleControlState()
+        gameModeCooldownRemainingSeconds = nil
+        gameModeCooldownTimer?.cancel()
 
         guard waitForReply else {
             controlClient.resetToAutomatic()
@@ -211,13 +241,161 @@ final class FanViewModel: ObservableObject {
         }
     }
 
+    private func loadRuleDownshiftSettings() {
+        let defaults = UserDefaults.standard
+        if defaults.object(forKey: ruleDownshiftDelayEnabledStorageKey) != nil {
+            isRuleDownshiftDelayEnabled = defaults.bool(
+                forKey: ruleDownshiftDelayEnabledStorageKey
+            )
+        }
+
+        if defaults.object(forKey: ruleDownshiftDelaySecondsStorageKey) != nil {
+            ruleDownshiftDelaySeconds = max(
+                1,
+                min(60, defaults.integer(forKey: ruleDownshiftDelaySecondsStorageKey))
+            )
+        }
+    }
+
+    private func loadGameModeLinkageSettings() {
+        let defaults = UserDefaults.standard
+        if defaults.object(forKey: gameModeLinkageEnabledStorageKey) != nil {
+            isGameModeLinkageEnabled = defaults.bool(
+                forKey: gameModeLinkageEnabledStorageKey
+            )
+        }
+
+        if defaults.object(forKey: gameModeExitDelaySecondsStorageKey) != nil {
+            gameModeExitDelaySeconds = max(
+                5,
+                min(600, defaults.integer(forKey: gameModeExitDelaySecondsStorageKey))
+            )
+        }
+    }
+
+    func setGameModeLinkageEnabled(_ enabled: Bool) {
+        guard isGameModeLinkageEnabled != enabled else { return }
+        isGameModeLinkageEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: gameModeLinkageEnabledStorageKey)
+        let decision = gameModePolicy.handleSettingsChanged(
+            enabled: enabled,
+            exitDelay: TimeInterval(gameModeExitDelaySeconds),
+            now: Date()
+        )
+        applyGameModeDecision(decision)
+    }
+
+    func setGameModeExitDelaySeconds(_ seconds: Int) {
+        let clamped = max(5, min(600, seconds))
+        guard gameModeExitDelaySeconds != clamped else { return }
+        gameModeExitDelaySeconds = clamped
+        UserDefaults.standard.set(clamped, forKey: gameModeExitDelaySecondsStorageKey)
+        let decision = gameModePolicy.handleSettingsChanged(
+            enabled: isGameModeLinkageEnabled,
+            exitDelay: TimeInterval(clamped),
+            now: Date()
+        )
+        applyGameModeDecision(decision)
+    }
+
+    private func setupGameModeObservation() {
+        gameModeMonitor.onGameModeChanged = { [weak self] isActive in
+            DispatchQueue.main.async {
+                self?.handleGameModeChanged(isActive: isActive)
+            }
+        }
+        if gameModeMonitor.isGameModeActive {
+            handleGameModeChanged(isActive: true)
+        }
+    }
+
+    private func handleGameModeChanged(isActive: Bool) {
+        let decision = gameModePolicy.handleGameModeChange(
+            isActive: isActive,
+            now: Date(),
+            enabled: isGameModeLinkageEnabled,
+            exitDelay: TimeInterval(gameModeExitDelaySeconds)
+        )
+        applyGameModeDecision(decision)
+    }
+
+    private func applyGameModeDecision(_ decision: GameModeLinkageDecision) {
+        isGameModeActive = decision.isGamingActive
+        gameModeCooldownRemainingSeconds = decision.remainingCooldown.map { max(1, Int(ceil($0))) }
+
+        if decision.isCooldownActive {
+            startCooldownTimer()
+        } else {
+            stopCooldownTimer()
+        }
+
+        switch decision.action {
+        case .none:
+            break
+        case .switchMode(.rules):
+            if currentMode != .custom {
+                setFanMode(.custom, isUserInitiated: false)
+            }
+        case .switchMode(.auto):
+            if currentMode != .auto {
+                setFanMode(.auto, isUserInitiated: false)
+            }
+        }
+    }
+
+    private func startCooldownTimer() {
+        gameModeCooldownTimer?.cancel()
+        gameModeCooldownTimer = Timer.publish(every: 1.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] now in
+                self?.tickGameModeCooldown(now: now)
+            }
+    }
+
+    private func stopCooldownTimer() {
+        gameModeCooldownTimer?.cancel()
+        gameModeCooldownTimer = nil
+    }
+
+    private func tickGameModeCooldown(now: Date) {
+        let decision = gameModePolicy.handleTimerTick(
+            now: now,
+            enabled: isGameModeLinkageEnabled,
+            exitDelay: TimeInterval(gameModeExitDelaySeconds)
+        )
+        applyGameModeDecision(decision)
+    }
+
+    func setRuleDownshiftDelayEnabled(_ enabled: Bool) {
+        guard isRuleDownshiftDelayEnabled != enabled else { return }
+        isRuleDownshiftDelayEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: ruleDownshiftDelayEnabledStorageKey)
+        restartRuleDownshiftObservation()
+    }
+
+    func setRuleDownshiftDelaySeconds(_ seconds: Int) {
+        let clamped = max(1, min(60, seconds))
+        guard ruleDownshiftDelaySeconds != clamped else { return }
+        ruleDownshiftDelaySeconds = clamped
+        UserDefaults.standard.set(clamped, forKey: ruleDownshiftDelaySecondsStorageKey)
+        restartRuleDownshiftObservation()
+    }
+
+    private func restartRuleDownshiftObservation() {
+        ruleDownshiftPolicy.cancelPendingDownshift()
+        ruleDownshiftRemainingSeconds = nil
+        if currentMode == .custom {
+            applyThresholdRules()
+        }
+    }
+
     func addRule(temperature: Double, speedPercentage: Int) {
         let newRule = FanThresholdRule(temperature: temperature, speedPercentage: speedPercentage)
         rules.append(newRule)
         rules.sort { $0.temperature < $1.temperature }
         saveRules()
         if currentMode == .custom {
-            applyThresholdRules()
+            restartRuleDownshiftObservation()
         }
     }
 
@@ -227,7 +405,7 @@ final class FanViewModel: ObservableObject {
             rules.sort { $0.temperature < $1.temperature }
             saveRules()
             if currentMode == .custom {
-                applyThresholdRules()
+                restartRuleDownshiftObservation()
             }
         }
     }
@@ -239,7 +417,7 @@ final class FanViewModel: ObservableObject {
         }
         saveRules()
         if currentMode == .custom {
-            applyThresholdRules()
+            restartRuleDownshiftObservation()
         }
     }
 
@@ -247,25 +425,33 @@ final class FanViewModel: ObservableObject {
         rules = FanThresholdRule.defaultRules.sorted { $0.temperature < $1.temperature }
         saveRules()
         if currentMode == .custom {
-            applyThresholdRules()
+            restartRuleDownshiftObservation()
         }
     }
 
     // MARK: - Fan Control Actions
 
-    func setFanMode(_ mode: FanMode) {
+    func setFanMode(_ mode: FanMode, isUserInitiated: Bool = false) {
+        if isUserInitiated {
+            gameModePolicy.handleUserManualOverride()
+            if gameModeCooldownRemainingSeconds != nil {
+                gameModeCooldownRemainingSeconds = nil
+                stopCooldownTimer()
+            }
+        }
+
         guard helperInstalled else {
             installHelper { [weak self] success in
                 if success {
-                    self?.setFanMode(mode)
+                    self?.setFanMode(mode, isUserInitiated: isUserInitiated)
                 }
             }
             return
         }
 
         currentMode = mode
-        isRulesStandby = false
-        ruleTargetSubmissionGate.reset()
+        isRulesAtMinimum = false
+        resetRuleControlState()
 
         switch mode {
         case .auto:
@@ -292,11 +478,19 @@ final class FanViewModel: ObservableObject {
             applyFanTargets(targets)
 
         case .custom:
+            isRulesAtMinimum = true
+            submitRuleSpeedPercentage(0)
             applyThresholdRules()
         }
     }
 
     func setTargetRPM(fanIndex: Int, rpm: Int) {
+        gameModePolicy.handleUserManualOverride()
+        if gameModeCooldownRemainingSeconds != nil {
+            gameModeCooldownRemainingSeconds = nil
+            stopCooldownTimer()
+        }
+
         guard helperInstalled else {
             installHelper { [weak self] success in
                 if success {
@@ -354,21 +548,39 @@ final class FanViewModel: ObservableObject {
             temperature: controlTemperature,
             thresholds: rules.map(\.temperature)
         )
-        guard case .matched(let matchedIndex) = decision,
-              rules.indices.contains(matchedIndex) else {
-            enterRulesStandby()
-            return
+
+        let requestedTarget: FanRuleControlTarget
+        switch decision {
+        case .standby:
+            requestedTarget = FanRuleControlTarget(ruleIndex: nil, speedPercentage: 0)
+        case .matched(let matchedIndex):
+            guard rules.indices.contains(matchedIndex) else { return }
+            requestedTarget = FanRuleControlTarget(
+                ruleIndex: matchedIndex,
+                speedPercentage: rules[matchedIndex].speedPercentage
+            )
         }
 
-        let matched = rules[matchedIndex]
-        activeRule = matched
-        isRulesStandby = false
+        let controlDecision = ruleDownshiftPolicy.decision(
+            requestedTarget: requestedTarget,
+            now: now,
+            delayEnabled: isRuleDownshiftDelayEnabled,
+            delay: TimeInterval(ruleDownshiftDelaySeconds)
+        )
+        activeRule = controlDecision.target.ruleIndex.flatMap { index in
+            rules.indices.contains(index) ? rules[index] : nil
+        }
+        isRulesAtMinimum = activeRule == nil
+        ruleDownshiftRemainingSeconds = controlDecision.remainingDelay.map {
+            max(1, Int(ceil($0)))
+        }
         controlClient.setControlTemperatureDeadline(
             sample.sampledAt.addingTimeInterval(maximumControlTemperatureAge)
         )
+        submitRuleSpeedPercentage(controlDecision.target.speedPercentage)
+    }
 
-        let speedPercentage = matched.speedPercentage
-
+    private func submitRuleSpeedPercentage(_ speedPercentage: Int) {
         let targets = fans.map { fan in
             let range = Double(fan.maxRPM - fan.minRPM)
             let target = fan.minRPM + Int(range * Double(speedPercentage) / 100.0)
@@ -398,14 +610,12 @@ final class FanViewModel: ObservableObject {
         }
     }
 
-    private func enterRulesStandby() {
-        activeRule = nil
-        controlClient.setControlTemperatureDeadline(nil)
+    private func resetRuleControlState() {
         ruleTargetSubmissionGate.reset()
-
-        guard !isRulesStandby else { return }
-        isRulesStandby = true
-        controlClient.resetToAutomatic()
+        ruleDownshiftPolicy = FanRuleDownshiftPolicy(
+            initialTarget: FanRuleControlTarget(ruleIndex: nil, speedPercentage: 0)
+        )
+        ruleDownshiftRemainingSeconds = nil
     }
 
     private func sampleControlTemperature(

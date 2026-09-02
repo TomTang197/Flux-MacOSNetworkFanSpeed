@@ -93,6 +93,14 @@ struct AppStrings {
     static let bugFeedbackCancel = "Cancel"
     static let bugFeedbackSend = "Send by Mail"
     static let bugFeedbackOpenMailFailed = "Unable to open Mail app."
+
+    static let gameModeLinkage = "Game Mode Linkage"
+    static let gameModeLinkageDescription =
+        "Auto-switch to Rules mode in Game Mode; revert to Auto after exit delay"
+    static let gameModeExitDelay = "Exit Delay"
+    static let gameModeActiveStatus = "Game Mode Active · Rules mode"
+    static let gameModeCooldownStatusPrefix = "Game Mode Exited · Reverting to Auto in"
+    static let gameModeIdleStatus = "No active game detected"
 }
 
 struct AppImages {
@@ -121,4 +129,5 @@ struct AppImages {
     static let info = "info.circle.fill"
     static let close = "xmark.circle.fill"
     static let bug = "exclamationmark.bubble.fill"
+    static let gameController = "gamecontroller.fill"
 }

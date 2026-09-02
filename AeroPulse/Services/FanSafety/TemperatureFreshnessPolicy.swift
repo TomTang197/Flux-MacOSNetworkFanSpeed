@@ -31,3 +31,61 @@ enum FanRuleMatchPolicy {
         return .matched(index: matched.offset)
     }
 }
+
+struct FanRuleControlTarget: Equatable {
+    let ruleIndex: Int?
+    let speedPercentage: Int
+
+    init(ruleIndex: Int?, speedPercentage: Int) {
+        self.ruleIndex = ruleIndex
+        self.speedPercentage = max(0, min(100, speedPercentage))
+    }
+}
+
+struct FanRuleControlDecision: Equatable {
+    let target: FanRuleControlTarget
+    let remainingDelay: TimeInterval?
+}
+
+struct FanRuleDownshiftPolicy {
+    private var currentTarget: FanRuleControlTarget
+    private var pendingDownshiftStartedAt: Date?
+
+    init(initialTarget: FanRuleControlTarget) {
+        currentTarget = initialTarget
+    }
+
+    mutating func decision(
+        requestedTarget: FanRuleControlTarget,
+        now: Date,
+        delayEnabled: Bool,
+        delay: TimeInterval
+    ) -> FanRuleControlDecision {
+        guard requestedTarget.speedPercentage < currentTarget.speedPercentage,
+              delayEnabled,
+              delay > 0 else {
+            currentTarget = requestedTarget
+            pendingDownshiftStartedAt = nil
+            return FanRuleControlDecision(target: currentTarget, remainingDelay: nil)
+        }
+
+        let startedAt = pendingDownshiftStartedAt ?? now
+        pendingDownshiftStartedAt = startedAt
+        let elapsed = max(0, now.timeIntervalSince(startedAt))
+
+        guard elapsed >= delay else {
+            return FanRuleControlDecision(
+                target: currentTarget,
+                remainingDelay: max(0, delay - elapsed)
+            )
+        }
+
+        currentTarget = requestedTarget
+        pendingDownshiftStartedAt = nil
+        return FanRuleControlDecision(target: currentTarget, remainingDelay: nil)
+    }
+
+    mutating func cancelPendingDownshift() {
+        pendingDownshiftStartedAt = nil
+    }
+}
