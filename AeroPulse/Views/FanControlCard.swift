@@ -9,6 +9,7 @@ import SwiftUI
 
 struct FanControlCard: View {
     @ObservedObject var fanViewModel: FanViewModel
+    var isDashboard: Bool = false
     @State private var isAddingRule = false
     @State private var newRuleTemp: Double = 65
     @State private var newRulePercentage: Int = 60
@@ -23,20 +24,21 @@ struct FanControlCard: View {
                 Image(systemName: AppImages.fan)
                     .foregroundColor(.indigo)
                     .font(.system(size: 12, weight: .semibold))
-                Text("FAN CONTROL")
-                    .font(.system(size: 9, weight: .black))
-                    .tracking(0.95)
-                    .foregroundColor(.secondary)
+                Text(isDashboard ? "Fan control" : "FAN CONTROL")
+                    .font(.system(size: isDashboard ? 14 : 9, weight: .semibold))
+                    .tracking(isDashboard ? 0 : 0.95)
+                    .foregroundColor(isDashboard ? .primary : .secondary)
                 Spacer()
 
-                Circle()
-                    .fill(fanViewModel.helperInstalled ? Color.green : Color.orange)
-                    .frame(width: 7, height: 7)
+                if !fanViewModel.helperInstalled {
+                    Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
+                        .help(fanViewModel.helperStatusMessage)
+                }
             }
 
             if sortedFans.isEmpty {
                 Text(AppStrings.noData)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: isDashboard ? 12 : 11, weight: .medium))
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 8)
@@ -55,13 +57,16 @@ struct FanControlCard: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .controlSize(.small)
+                .controlSize(isDashboard ? .regular : .small)
+
+                if isDashboard { controlStatus }
 
                 // Fan list with RPM gauges
                 VStack(spacing: 8) {
                     ForEach(sortedFans) { fan in
                         FanSpeedRowView(
                             fan: fan,
+                            isDashboard: isDashboard,
                             isManual: fanViewModel.currentMode == .manual,
                             targetRPM: fanViewModel.manualTargetRPM[fan.id] ?? fan.currentRPM,
                             onTargetRPMChanged: { newRPM in
@@ -73,7 +78,7 @@ struct FanControlCard: View {
 
                 if sortedFans.count > 1 && fanViewModel.currentMode == .manual {
                     Toggle("Sync All Fans", isOn: $fanViewModel.syncAllFans)
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.system(size: isDashboard ? 11 : 10, weight: .medium))
                         .toggleStyle(.switch)
                         .controlSize(.mini)
                 }
@@ -94,7 +99,7 @@ struct FanControlCard: View {
                             .foregroundColor(.orange)
                             .font(.system(size: 10))
                         Text(fanViewModel.helperStatusMessage)
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.system(size: isDashboard ? 11 : 10, weight: .medium))
                             .foregroundColor(.orange)
                         Spacer()
                         Button(AppStrings.helperInstall) {
@@ -107,26 +112,58 @@ struct FanControlCard: View {
                 }
             }
         }
-        .padding(13)
+        .padding(isDashboard ? 4 : 13)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .liquidGlassCard(
-            cornerRadius: 12,
-            tint: .indigo,
-            style: .regular,
-            shadowOpacity: 0.08
-        )
+        .background {
+            if !isDashboard {
+                Color.clear.liquidGlassCard(
+                    cornerRadius: 12, tint: .indigo, style: .regular, shadowOpacity: 0.08
+                )
+            }
+        }
+    }
+
+    private var controlStatus: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(statusTitle).font(.system(size: 13, weight: .semibold))
+            Text(statusDetail)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var statusTitle: String {
+        switch fanViewModel.currentMode {
+        case .auto: return "System automatic control"
+        case .fullBlast: return "Maximum speed selected"
+        case .manual: return "Manual targets selected"
+        case .custom: return "Temperature rules selected"
+        }
+    }
+
+    private var statusDetail: String {
+        switch fanViewModel.currentMode {
+        case .auto: return "macOS manages fan speed. Live readings are shown below."
+        case .fullBlast: return "Requests each fan’s maximum speed. Compare the live RPM below."
+        case .manual: return "Adjust the target for each fan below. Live RPM may take time to reach the target."
+        case .custom: return "Rule input: \(fanViewModel.controlAverageTemp), the higher CPU / GPU average. Live RPM is shown below."
+        }
     }
 
     private var rulesSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("TEMPERATURE THRESHOLD RULES")
-                    .font(.system(size: 8.5, weight: .bold))
+                Text(isDashboard ? "Temperature rules" : "TEMPERATURE THRESHOLD RULES")
+                    .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold))
                     .foregroundColor(.secondary)
                     .tracking(0.6)
                 Spacer()
                 Text("Control Avg: \(fanViewModel.controlAverageTemp)")
-                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                    .font(.system(size: isDashboard ? 11 : 9.5, weight: .bold, design: .monospaced))
                     .foregroundColor(.orange)
             }
 
@@ -140,7 +177,7 @@ struct FanControlCard: View {
                 )
                 .toggleStyle(.switch)
                 .controlSize(.mini)
-                .font(.system(size: 9.5, weight: .semibold))
+                .font(.system(size: isDashboard ? 11 : 9.5, weight: .semibold))
 
                 Spacer()
 
@@ -154,7 +191,7 @@ struct FanControlCard: View {
                         step: 1
                     ) {
                         Text("\(fanViewModel.ruleDownshiftDelaySeconds)s")
-                            .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: isDashboard ? 11 : 9.5, weight: .bold, design: .monospaced))
                             .frame(minWidth: 28, alignment: .trailing)
                     }
                     .controlSize(.mini)
@@ -170,7 +207,7 @@ struct FanControlCard: View {
                         .fill(Color.orange)
                         .frame(width: 5, height: 5)
                     Text("Holding current speed · Downshift in \(remaining)s")
-                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .font(.system(size: isDashboard ? 11 : 9, weight: .semibold, design: .monospaced))
                         .foregroundColor(.orange)
                     Spacer()
                 }
@@ -180,7 +217,7 @@ struct FanControlCard: View {
                         .fill(Color.green)
                         .frame(width: 5, height: 5)
                     Text("Rules Active · Hardware minimum speed")
-                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .font(.system(size: isDashboard ? 11 : 9, weight: .semibold, design: .monospaced))
                         .foregroundColor(.green)
                     Spacer()
                 }
@@ -190,6 +227,7 @@ struct FanControlCard: View {
                 ForEach(fanViewModel.rules) { rule in
                     RuleRowView(
                         rule: rule,
+                        isDashboard: isDashboard,
                         isActive: fanViewModel.activeRule?.id == rule.id,
                         fans: sortedFans,
                         onUpdate: { updated in
@@ -206,14 +244,14 @@ struct FanControlCard: View {
                 VStack(spacing: 8) {
                     HStack(spacing: 10) {
                         Text("Trigger: ≥ \(Int(newRuleTemp))°C")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: isDashboard ? 11 : 10, weight: .semibold))
                             .frame(width: 90, alignment: .leading)
                         Slider(value: $newRuleTemp, in: 35...95, step: 1)
                             .controlSize(.mini)
                     }
                     HStack(spacing: 10) {
                         Text("Speed: \(newRulePercentage)%")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: isDashboard ? 11 : 10, weight: .semibold))
                             .frame(width: 90, alignment: .leading)
                         Slider(value: Binding(
                             get: { Double(newRulePercentage) },
@@ -246,7 +284,7 @@ struct FanControlCard: View {
                         isAddingRule = true
                     } label: {
                         Label("Add Threshold", systemImage: "plus.circle.fill")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: isDashboard ? 11 : 10, weight: .semibold))
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.mini)
@@ -257,7 +295,7 @@ struct FanControlCard: View {
                         fanViewModel.resetDefaultRules()
                     }
                     .buttonStyle(.plain)
-                    .font(.system(size: 9, weight: .medium))
+                    .font(.system(size: isDashboard ? 11 : 9, weight: .medium))
                     .foregroundColor(.secondary)
                 }
                 .padding(.top, 2)
@@ -269,10 +307,10 @@ struct FanControlCard: View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(spacing: 6) {
                 Image(systemName: AppImages.gameController)
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: isDashboard ? 11 : 10, weight: .bold))
                     .foregroundColor(.purple)
-                Text(AppStrings.gameModeLinkage.uppercased())
-                    .font(.system(size: 8.5, weight: .bold))
+                Text(isDashboard ? AppStrings.gameModeLinkage : AppStrings.gameModeLinkage.uppercased())
+                    .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold))
                     .foregroundColor(.secondary)
                     .tracking(0.6)
                 Spacer()
@@ -281,14 +319,14 @@ struct FanControlCard: View {
                     HStack(spacing: 4) {
                         Circle().fill(Color.purple).frame(width: 5, height: 5)
                         Text("Active · Rules")
-                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold, design: .monospaced))
                             .foregroundColor(.purple)
                     }
                 } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
                     HStack(spacing: 4) {
                         Circle().fill(Color.orange).frame(width: 5, height: 5)
                         Text("Cooldown \(remaining)s")
-                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold, design: .monospaced))
                             .foregroundColor(.orange)
                     }
                 }
@@ -304,7 +342,7 @@ struct FanControlCard: View {
                 )
                 .toggleStyle(.switch)
                 .controlSize(.mini)
-                .font(.system(size: 9.5, weight: .semibold))
+                .font(.system(size: isDashboard ? 11 : 9.5, weight: .semibold))
 
                 Spacer()
             }
@@ -312,7 +350,7 @@ struct FanControlCard: View {
             if fanViewModel.isGameModeLinkageEnabled {
                 HStack(spacing: 8) {
                     Text(AppStrings.gameModeExitDelay)
-                        .font(.system(size: 9, weight: .medium))
+                        .font(.system(size: isDashboard ? 11 : 9, weight: .medium))
                         .foregroundColor(.secondary)
 
                     Spacer()
@@ -326,7 +364,7 @@ struct FanControlCard: View {
                         step: 5
                     ) {
                         Text("\(fanViewModel.gameModeExitDelaySeconds)s")
-                            .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: isDashboard ? 11 : 9.5, weight: .bold, design: .monospaced))
                             .frame(minWidth: 32, alignment: .trailing)
                     }
                     .controlSize(.mini)
@@ -339,7 +377,7 @@ struct FanControlCard: View {
                     HStack(spacing: 5) {
                         Circle().fill(Color.purple).frame(width: 5, height: 5)
                         Text(AppStrings.gameModeActiveStatus)
-                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                            .font(.system(size: isDashboard ? 11 : 8.5, weight: .semibold, design: .monospaced))
                             .foregroundColor(.purple)
                         Spacer()
                     }
@@ -347,7 +385,7 @@ struct FanControlCard: View {
                     HStack(spacing: 5) {
                         Circle().fill(Color.orange).frame(width: 5, height: 5)
                         Text("\(AppStrings.gameModeCooldownStatusPrefix) \(remaining)s")
-                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                            .font(.system(size: isDashboard ? 11 : 8.5, weight: .semibold, design: .monospaced))
                             .foregroundColor(.orange)
                         Spacer()
                     }
@@ -359,6 +397,7 @@ struct FanControlCard: View {
 
 private struct RuleRowView: View {
     let rule: FanThresholdRule
+    var isDashboard: Bool = false
     let isActive: Bool
     let fans: [FanInfo]
     let onUpdate: (FanThresholdRule) -> Void
@@ -390,11 +429,11 @@ private struct RuleRowView: View {
                     .frame(minWidth: 50, alignment: .leading)
 
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 8, weight: .bold))
+                    .font(.system(size: isDashboard ? 11 : 8, weight: .bold))
                     .foregroundColor(.secondary)
 
                 Text(estimatedRPMText)
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .font(.system(size: isDashboard ? 11 : 10, weight: .semibold, design: .monospaced))
                     .foregroundColor(isActive ? .green : .secondary)
 
                 Spacer()
@@ -433,7 +472,7 @@ private struct RuleRowView: View {
                 VStack(spacing: 6) {
                     HStack(spacing: 6) {
                         Text("Temp: \(Int(temp))°C")
-                            .font(.system(size: 9, weight: .semibold))
+                            .font(.system(size: isDashboard ? 11 : 9, weight: .semibold))
                             .frame(width: 65, alignment: .leading)
                         Slider(value: $temp, in: 35...95, step: 1) { editing in
                             if !editing {
@@ -444,7 +483,7 @@ private struct RuleRowView: View {
                     }
                     HStack(spacing: 6) {
                         Text("Speed: \(percentage)%")
-                            .font(.system(size: 9, weight: .semibold))
+                            .font(.system(size: isDashboard ? 11 : 9, weight: .semibold))
                             .frame(width: 65, alignment: .leading)
                         Slider(value: Binding(
                             get: { Double(percentage) },
@@ -479,6 +518,7 @@ private struct RuleRowView: View {
 
 private struct FanSpeedRowView: View {
     let fan: FanInfo
+    var isDashboard: Bool = false
     let isManual: Bool
     let targetRPM: Int
     let onTargetRPMChanged: (Int) -> Void
@@ -497,12 +537,12 @@ private struct FanSpeedRowView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Text(fan.name)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: isDashboard ? 12 : 11, weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 Spacer()
                 Text("\(fan.currentRPM) \(AppStrings.rpmUnit)")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .font(.system(size: isDashboard ? 12 : 11, weight: .bold, design: .monospaced))
                     .frame(minWidth: 96, alignment: .trailing)
             }
 
@@ -520,7 +560,7 @@ private struct FanSpeedRowView: View {
                 Spacer()
                 Text("\(fan.maxRPM) MAX")
             }
-            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+            .font(.system(size: isDashboard ? 11 : 9, weight: .semibold, design: .monospaced))
             .foregroundColor(.secondary)
 
             if isManual {

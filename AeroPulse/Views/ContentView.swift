@@ -11,19 +11,11 @@ struct ContentView: View {
     let networkViewModel: NetworkViewModel
     let fanViewModel: FanViewModel
     let launchAtLoginManager: LaunchAtLoginManager
+    @State private var showsSettings = false
     @StateObject private var windowInteraction = WindowInteractionCoordinator()
     @Environment(\.visualEffectsReduced) private var reduceVisualEffects
     private let defaultWindowSize = CGSize(width: 1230, height: 650)
     private let minimumWindowSize = CGSize(width: 1040, height: 620)
-    private let leftColumnMinWidth: CGFloat = 320
-    private let thermalColumnMinWidth: CGFloat = 400
-    private let settingsColumnMinWidth: CGFloat = 460
-    private let dividerWidth: CGFloat = 2
-
-    private var minimumContentWidth: CGFloat {
-        leftColumnMinWidth + thermalColumnMinWidth + settingsColumnMinWidth + dividerWidth
-    }
-
     @ViewBuilder
     private var dashboardBackground: some View {
         if windowInteraction.isInteracting || reduceVisualEffects {
@@ -44,48 +36,69 @@ struct ContentView: View {
     }
 
     var body: some View {
-        GeometryReader { proxy in
-            let columns = columnWidths(for: proxy.size.width)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: 0) {
-                    DashboardMetricsColumn(
-                        networkViewModel: networkViewModel,
-                        fanViewModel: fanViewModel
-                    )
-                    .frame(width: columns.leftWidth)
-
-                    Divider()
-
-                    VStack(spacing: 0) {
-                        ThermalDetailView(
-                            fanViewModel: fanViewModel,
-                            isEmbedded: true,
-                            layoutWidth: columns.thermalWidth
-                        )
-                    }
-                    .padding(.horizontal, 10)
-                    .frame(width: columns.thermalWidth)
-
-                    Divider()
-
-                    VStack(spacing: 0) {
-                        ScrollView {
-                            SettingsView(
-                                networkViewModel: networkViewModel,
-                                fanViewModel: fanViewModel,
-                                launchAtLoginManager: launchAtLoginManager,
-                                showWindowButton: false,
-                                preferredWidth: nil,
-                                layoutWidth: columns.settingsWidth
-                            )
-                        }
-                    }
-                    .frame(width: columns.settingsWidth)
+        VStack(spacing: 0) {
+            HStack {
+                Text(AppStrings.appName).font(.system(size: 18, weight: .semibold))
+                Spacer()
+                DashboardConnectionStatus(fanViewModel: fanViewModel)
+                Button { showsSettings = true } label: {
+                    Label("Settings", systemImage: "gearshape")
                 }
-                .frame(width: columns.totalWidth, alignment: .topLeading)
-                .frame(minHeight: proxy.size.height, alignment: .topLeading)
+                .buttonStyle(.bordered)
+                .help("App preferences and hardware setup")
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            Divider()
+
+            GeometryReader { proxy in
+                let usableWidth = max(0, proxy.size.width - 2)
+                HStack(alignment: .top, spacing: 0) {
+                    ScrollView(.vertical) {
+                        DashboardOverviewView(networkViewModel: networkViewModel)
+                            .padding(20)
+                    }
+                    .frame(width: usableWidth * 0.28)
+                    Divider()
+                    ThermalDetailView(
+                        fanViewModel: fanViewModel,
+                        isEmbedded: true,
+                        layoutWidth: usableWidth * 0.35
+                    )
+                    .frame(width: usableWidth * 0.35, height: proxy.size.height)
+                    Divider()
+                    ScrollView(.vertical) {
+                        FanControlCard(fanViewModel: fanViewModel, isDashboard: true)
+                            .padding(16)
+                    }
+                    .frame(width: usableWidth * 0.37)
+                }
+                .frame(height: proxy.size.height, alignment: .top)
+            }
+        }
+        .sheet(isPresented: $showsSettings) {
+            VStack(spacing: 0) {
+                HStack {
+                    Text("Settings").font(.system(size: 17, weight: .semibold))
+                    Spacer()
+                    Button("Done") { showsSettings = false }
+                        .keyboardShortcut(.defaultAction)
+                }
+                .padding(20)
+                Divider()
+                ScrollView {
+                    SettingsView(
+                        networkViewModel: networkViewModel,
+                        fanViewModel: fanViewModel,
+                        launchAtLoginManager: launchAtLoginManager,
+                        showWindowButton: false,
+                        preferredWidth: nil,
+                        layoutWidth: 600,
+                        preferencesOnly: true
+                    )
+                }
+            }
+            .frame(width: 600, height: 580)
         }
         .frame(minWidth: minimumWindowSize.width, minHeight: minimumWindowSize.height)
         .environment(\.windowInteractionActive, windowInteraction.isInteracting)
@@ -129,29 +142,6 @@ struct ContentView: View {
                 }
             }
         }
-    }
-
-    private func columnWidths(for availableWidth: CGFloat) -> (
-        leftWidth: CGFloat,
-        thermalWidth: CGFloat,
-        settingsWidth: CGFloat,
-        totalWidth: CGFloat
-    ) {
-        let clampedWidth = max(availableWidth, minimumContentWidth)
-
-        let leftWidth = max(leftColumnMinWidth, min(410, clampedWidth * 0.29))
-        let settingsWidth = max(settingsColumnMinWidth, min(760, clampedWidth * 0.42))
-        let thermalWidth = max(
-            thermalColumnMinWidth,
-            clampedWidth - leftWidth - settingsWidth - dividerWidth
-        )
-
-        return (
-            leftWidth: leftWidth,
-            thermalWidth: thermalWidth,
-            settingsWidth: settingsWidth,
-            totalWidth: leftWidth + thermalWidth + settingsWidth + dividerWidth
-        )
     }
 
     private func setupWindow(_ window: NSWindow) {
@@ -202,157 +192,27 @@ private struct WindowAccessor: NSViewRepresentable {
     }
 }
 
-private struct DashboardMetricsColumn: View {
-    @ObservedObject var networkViewModel: NetworkViewModel
+private struct DashboardConnectionStatus: View {
     @ObservedObject var fanViewModel: FanViewModel
+    private let service = SMCService.shared
+    @State private var connected = SMCService.shared.isConnected
 
     var body: some View {
-        VStack(spacing: 24) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(AppStrings.appName)
-                        .font(.title2)
-                        .fontWeight(.black)
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(SMCService.shared.isConnected ? Color.blue : Color.red)
-                            .frame(width: 6, height: 6)
-                        Text(
-                            SMCService.shared.isConnected
-                                ? AppStrings.hardwareConnected : AppStrings.hardwareDisconnected
-                        )
-                        .font(.caption2.weight(.bold))
-                        .foregroundColor(.secondary)
-                    }
+        HStack(spacing: 6) {
+            Circle().fill(connected ? Color.secondary : .orange)
+                .frame(width: 6, height: 6)
+            Text(connected ? AppStrings.hardwareConnected : AppStrings.hardwareDisconnected)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+            if !connected {
+                Button(AppStrings.retryConnection) {
+                    service.reconnect()
+                    connected = service.isConnected
                 }
-                Spacer()
+                    .controlSize(.small)
             }
-            .padding(.horizontal, 24)
-
-            LazyVGrid(
-                columns: [
-                    GridItem(.flexible(), spacing: 14),
-                    GridItem(.flexible(), spacing: 14),
-                ],
-                spacing: 14
-            ) {
-                DashboardMetricCard(
-                    title: AppStrings.download,
-                    value: networkViewModel.downloadSpeed,
-                    icon: AppImages.download,
-                    color: .blue,
-                    subtitle: "\(AppStrings.total): \(networkViewModel.downloadTotal)",
-                    compact: true
-                ).equatable()
-                DashboardMetricCard(
-                    title: AppStrings.upload,
-                    value: networkViewModel.uploadSpeed,
-                    icon: AppImages.upload,
-                    color: .green,
-                    subtitle: "\(AppStrings.total): \(networkViewModel.uploadTotal)",
-                    compact: true
-                ).equatable()
-                DashboardMetricCard(
-                    title: AppStrings.diskRead,
-                    value: networkViewModel.diskReadSpeed,
-                    icon: AppImages.diskRead,
-                    color: .teal,
-                    subtitle: "\(AppStrings.total): \(networkViewModel.diskReadTotal)",
-                    compact: true
-                ).equatable()
-                DashboardMetricCard(
-                    title: AppStrings.diskWrite,
-                    value: networkViewModel.diskWriteSpeed,
-                    icon: AppImages.diskWrite,
-                    color: .mint,
-                    subtitle: "\(AppStrings.total): \(networkViewModel.diskWriteTotal)",
-                    compact: true
-                ).equatable()
-                DashboardMetricCard(
-                    title: AppStrings.cpuUsage,
-                    value: networkViewModel.cpuUsage,
-                    icon: AppImages.cpuUsage,
-                    color: .red,
-                    compact: true
-                ).equatable()
-                DashboardMetricCard(
-                    title: AppStrings.powerUsage,
-                    value: networkViewModel.powerUsage,
-                    icon: AppImages.powerUsage,
-                    color: .yellow,
-                    subtitle: networkViewModel.powerSubtitle,
-                    compact: true
-                ).equatable()
-                DashboardMetricCard(
-                    title: AppStrings.chargingPower,
-                    value: networkViewModel.chargingPowerUsage,
-                    icon: AppImages.chargingPower,
-                    color: .orange,
-                    compact: true
-                ).equatable()
-                DashboardMetricCard(
-                    title: AppStrings.systemGPUUsage,
-                    value: networkViewModel.gpuUsage,
-                    icon: AppImages.gpuUsage,
-                    color: .pink,
-                    subtitle: AppStrings.systemGPUDescription,
-                    compact: true
-                ).equatable()
-                DashboardMetricCard(
-                    title: AppStrings.memory,
-                    value: networkViewModel.memoryUsage,
-                    icon: AppImages.memory,
-                    color: .brown,
-                    subtitle: "\(networkViewModel.memoryUsed) / \(networkViewModel.memoryTotal)",
-                    compact: true
-                ).equatable()
-                DashboardMetricCard(
-                    title: AppStrings.fan,
-                    value: fanViewModel.primaryFanRPM,
-                    icon: AppImages.fan,
-                    color: .indigo,
-                    compact: true
-                ).equatable()
-                Button {
-                    fanViewModel.isShowingThermalDetails = true
-                } label: {
-                    VStack(alignment: .leading, spacing: 9) {
-                        Label("AVERAGE TEMP", systemImage: AppImages.temperature)
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.secondary)
-                        ForEach([AppStrings.cpu, AppStrings.gpu], id: \.self) { component in
-                            HStack {
-                                Text(component).font(.system(size: 11, weight: .medium))
-                                Spacer(minLength: 2)
-                                Text(component == AppStrings.cpu ? fanViewModel.primaryTemp : fanViewModel.primaryGPUTemp)
-                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                                    .monospacedDigit()
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.7)
-                            }
-                        }
-                    }
-                    .padding(13)
-                    .frame(maxWidth: .infinity, minHeight: 118, alignment: .topLeading)
-                    .liquidGlassCard(cornerRadius: 16, tint: .orange, style: .regular, shadowOpacity: 0.1)
-                }
-                .buttonStyle(.plain)
-                .help(AppStrings.viewThermalDetails)
-                DashboardMetricCard(
-                    title: AppStrings.diskCapacity,
-                    value: "\(networkViewModel.diskFreeCapacity) / \(networkViewModel.diskTotalCapacity)",
-                    icon: AppImages.diskCapacity,
-                    color: .cyan,
-                    subtitle: "\(AppStrings.diskFree): \(networkViewModel.diskFreeCapacity) • \(AppStrings.diskUsed): \(networkViewModel.diskUsedPercent)",
-                    compact: true
-                ).equatable()
-                .gridCellColumns(2)
-            }
-            .padding(.horizontal, 24)
-
-            Spacer()
         }
-        .padding(.vertical, 24)
+        .onReceive(fanViewModel.$fans) { _ in connected = service.isConnected }
     }
 }
 

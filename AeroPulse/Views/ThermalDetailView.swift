@@ -5,7 +5,7 @@ struct ThermalDetailView: View {
     @Environment(\.dismiss) private var dismiss
     var isEmbedded: Bool = false
     var layoutWidth: CGFloat? = nil
-    @State private var showsSystem = false
+    @State private var showsSystem = true
     @State private var showsDetails = false
 
     var body: some View {
@@ -60,9 +60,11 @@ struct ThermalDetailView: View {
                     ThermalMatrixSection(title: "CPU sensors", sensors: groups.cpu, groupsCPU: true)
                     ThermalMatrixSection(title: "GPU sensors", sensors: groups.gpu)
 
-                    DisclosureGroup("System sensors (\(groups.system.count))", isExpanded: $showsSystem) {
-                        ThermalMatrixSection(title: "", sensors: groups.system)
-                            .padding(.top, 10)
+                    if !groups.system.isEmpty {
+                        DisclosureGroup("System sensors (\(groups.system.count))", isExpanded: $showsSystem) {
+                            ThermalMatrixSection(title: "", sensors: groups.system)
+                                .padding(.top, 10)
+                        }
                     }
                     Divider()
                     DisclosureGroup("Full sensor details", isExpanded: $showsDetails) {
@@ -125,7 +127,7 @@ private enum ThermalPresentation {
 
     static func shortName(_ sensor: SensorInfo) -> String {
         for (prefix, label) in [
-            ("GPU Core Sensor ", "G"), ("GPU Sensor ", "G"),
+            ("GPU Core Sensor ", "G"), ("GPU Sensor ", "G"), ("GPU Cluster ", "Cl"),
             ("CPU Core ", "C"), ("P-Core Sensor ", "P"),
             ("E-Core Sensor ", "E"), ("S-Core Sensor ", "S")
         ] where sensor.name.hasPrefix(prefix) {

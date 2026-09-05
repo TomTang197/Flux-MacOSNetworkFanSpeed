@@ -16,6 +16,7 @@ struct SettingsView: View {
     var showWindowButton: Bool = true
     var preferredWidth: CGFloat? = 280
     var layoutWidth: CGFloat? = nil
+    var preferencesOnly: Bool = false
     @Environment(\.openWindow) private var openWindow
     @State private var isShowingBugFeedback = false
 
@@ -24,7 +25,7 @@ struct SettingsView: View {
     }
 
     private var cardColumnCount: Int {
-        guard usesTwoColumnCards else { return 1 }
+        guard !preferencesOnly, usesTwoColumnCards else { return 1 }
         let available = max((layoutWidth ?? 0) - 32, 0)
         if available >= 760 { return 3 }
         if available >= 460 { return 2 }
@@ -36,15 +37,17 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            headerSection
+            if !preferencesOnly { headerSection }
 
             WaterfallColumnsLayout(columns: cardColumnCount, spacing: 12) {
-                LiveTelemetrySettingsCard(
-                    networkViewModel: networkViewModel,
-                    fanViewModel: fanViewModel
-                )
+                if !preferencesOnly {
+                    LiveTelemetrySettingsCard(
+                        networkViewModel: networkViewModel,
+                        fanViewModel: fanViewModel
+                    )
 
-                FanControlCard(fanViewModel: fanViewModel)
+                    FanControlCard(fanViewModel: fanViewModel)
+                }
 
                 MenuBarMetricsSettingsCard(networkViewModel: networkViewModel)
 
@@ -128,23 +131,25 @@ struct SettingsView: View {
                 }
             }
 
-            Button(
-                role: .destructive,
-                action: {
-                    NSApplication.shared.terminate(nil)
+            if !preferencesOnly {
+                Button(
+                    role: .destructive,
+                    action: {
+                        NSApplication.shared.terminate(nil)
+                    }
+                ) {
+                    HStack {
+                        Image(systemName: AppImages.power)
+                        Text(AppStrings.quitApplication)
+                    }
+                    .font(.system(size: 13, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 5)
                 }
-            ) {
-                HStack {
-                    Image(systemName: AppImages.power)
-                    Text(AppStrings.quitApplication)
-                }
-                .font(.system(size: 13, weight: .semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 5)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
+                .tint(.red.opacity(0.82))
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.regular)
-            .tint(.red.opacity(0.82))
         }
         .padding(16)
         .frame(width: preferredWidth, alignment: .leading)
