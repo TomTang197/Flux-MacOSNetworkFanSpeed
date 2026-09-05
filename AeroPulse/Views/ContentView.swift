@@ -313,20 +313,31 @@ private struct DashboardMetricsColumn: View {
                     color: .indigo,
                     compact: true
                 ).equatable()
-                DashboardMetricCard(
-                    title: AppStrings.systemTemp,
-                    value: "CPU \(fanViewModel.primaryTemp)",
-                    icon: AppImages.temperature,
-                    color: .orange,
-                    subtitle: "GPU \(fanViewModel.primaryGPUTemp)",
-                    compact: true,
-                    showInfoButton: false,
-                    action: {
-                        DispatchQueue.main.async {
-                            fanViewModel.isShowingThermalDetails = true
+                Button {
+                    fanViewModel.isShowingThermalDetails = true
+                } label: {
+                    VStack(alignment: .leading, spacing: 9) {
+                        Label("AVERAGE TEMP", systemImage: AppImages.temperature)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.secondary)
+                        ForEach([AppStrings.cpu, AppStrings.gpu], id: \.self) { component in
+                            HStack {
+                                Text(component).font(.system(size: 11, weight: .medium))
+                                Spacer(minLength: 2)
+                                Text(component == AppStrings.cpu ? fanViewModel.primaryTemp : fanViewModel.primaryGPUTemp)
+                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                    .monospacedDigit()
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.7)
+                            }
                         }
                     }
-                ).equatable()
+                    .padding(13)
+                    .frame(maxWidth: .infinity, minHeight: 118, alignment: .topLeading)
+                    .liquidGlassCard(cornerRadius: 16, tint: .orange, style: .regular, shadowOpacity: 0.1)
+                }
+                .buttonStyle(.plain)
+                .help(AppStrings.viewThermalDetails)
                 DashboardMetricCard(
                     title: AppStrings.diskCapacity,
                     value: "\(networkViewModel.diskFreeCapacity) / \(networkViewModel.diskTotalCapacity)",
