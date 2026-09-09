@@ -7,6 +7,10 @@ let package = Package(
     platforms: [.macOS(.v13)],
     targets: [
         .target(
+            name: "AeroPulseLocalization",
+            path: "AeroPulse/Localization"
+        ),
+        .target(
             name: "AeroPulsePerformanceCore",
             path: "AeroPulse/Performance"
         ),
@@ -20,7 +24,7 @@ let package = Package(
         ),
         .testTarget(
             name: "AeroPulseSafetyTests",
-            dependencies: ["FanHelperSafety", "AeroPulseFanSafety", "AeroPulsePerformanceCore"],
+            dependencies: ["FanHelperSafety", "AeroPulseFanSafety", "AeroPulsePerformanceCore", "AeroPulseLocalization"],
             path: "Tests/AeroPulseSafetyTests"
         ),
     ]
