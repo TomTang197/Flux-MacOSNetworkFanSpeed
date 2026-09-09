@@ -5,7 +5,7 @@ struct LiveTelemetrySettingsCard: View {
     @ObservedObject var fanViewModel: FanViewModel
 
     var body: some View {
-        SettingsCard(title: "Live Throughput", symbol: AppImages.gauge, tint: .blue) {
+        SettingsCard(title: AppStrings.systemMonitor, symbol: AppImages.gauge, tint: .blue) {
             VStack(spacing: 8) {
                 StatRow(icon: AppImages.download, label: AppStrings.download, value: networkViewModel.downloadSpeed, color: .blue)
                 StatRow(icon: AppImages.upload, label: AppStrings.upload, value: networkViewModel.uploadSpeed, color: .green)
@@ -24,6 +24,42 @@ struct LiveTelemetrySettingsCard: View {
                 Divider().opacity(0.22)
                 StatRow(icon: AppImages.temperature, label: AppStrings.cpuTemp, value: fanViewModel.primaryTemp, color: .orange)
                 StatRow(icon: AppImages.temperature, label: AppStrings.gpuTemp, value: fanViewModel.primaryGPUTemp, color: .blue)
+            }
+        }
+    }
+}
+
+struct LanguageSettingsCard: View {
+    @ObservedObject private var languageManager = LanguageManager.shared
+
+    var body: some View {
+        SettingsCard(
+            title: AppStrings.language,
+            symbol: "globe",
+            tint: .indigo
+        ) {
+            Picker(AppStrings.language, selection: Binding(
+                get: { languageManager.selectedLanguage },
+                set: { languageManager.setLanguage($0) }
+            )) {
+                ForEach(AppLanguage.allCases) { lang in
+                    Text(lang.displayName).tag(lang)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
+            if languageManager.selectedLanguage == .system {
+                HStack(spacing: 4) {
+                    Text(AppStrings.languageCurrentSystemPrefix)
+                        .font(.system(size: 10, weight: .regular))
+                        .foregroundColor(.secondary)
+                    Text(languageManager.effectiveLanguage == .zhHans ? "简体中文" : "English")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.primary)
+                    Spacer()
+                }
+                .padding(.top, 2)
             }
         }
     }
@@ -70,7 +106,7 @@ struct MenuBarMetricsSettingsCard: View {
                             .symbolRenderingMode(.hierarchical)
                     }
 
-                Text(metric.rawValue)
+                Text(metric.localizedTitle)
                     .font(.system(size: 11, weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)

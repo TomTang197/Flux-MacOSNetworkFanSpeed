@@ -19,6 +19,7 @@ struct SettingsView: View {
     var preferencesOnly: Bool = false
     @Environment(\.openWindow) private var openWindow
     @State private var isShowingBugFeedback = false
+    @ObservedObject private var languageManager = LanguageManager.shared
 
     private var usesTwoColumnCards: Bool {
         preferredWidth == nil
@@ -48,6 +49,8 @@ struct SettingsView: View {
 
                     FanControlCard(fanViewModel: fanViewModel)
                 }
+
+                LanguageSettingsCard()
 
                 MenuBarMetricsSettingsCard(networkViewModel: networkViewModel)
 
