@@ -42,6 +42,16 @@ enum FanMode: String, CaseIterable, Identifiable, Equatable {
     case custom = "Rules"
 
     var id: String { rawValue }
+
+    var localizedTitle: String {
+        let isZh = LanguageManager.shared.effectiveLanguage == .zhHans
+        switch self {
+        case .auto: return isZh ? "自动" : "Auto"
+        case .fullBlast: return isZh ? "全速" : "Max"
+        case .manual: return isZh ? "手动" : "Manual"
+        case .custom: return isZh ? "温控规则" : "Rules"
+        }
+    }
 }
 
 struct FanThresholdRule: Identifiable, Codable, Equatable {
