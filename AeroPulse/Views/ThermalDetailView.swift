@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ThermalDetailView: View {
     @ObservedObject var fanViewModel: FanViewModel
+    @ObservedObject private var languageManager = LanguageManager.shared
     @Environment(\.dismiss) private var dismiss
     var isEmbedded: Bool = false
     var layoutWidth: CGFloat? = nil
@@ -23,7 +24,7 @@ struct ThermalDetailView: View {
                         Image(systemName: AppImages.close)
                     }
                     .buttonStyle(.plain)
-                    .help("Close thermal details")
+                    .help(AppStrings.closeThermalDetails)
                 }
             }
             .padding(.horizontal, 16)
@@ -41,7 +42,7 @@ struct ThermalDetailView: View {
 
             HStack(alignment: .top, spacing: 6) {
                 Image(systemName: AppImages.fan)
-                Text("Control input: \(fanViewModel.controlAverageTemp) · \(controlSource(cpu: cpu, gpu: gpu))")
+                Text("\(AppStrings.tr(en: "Control input", zh: "控制输入")): \(fanViewModel.controlAverageTemp) · \(controlSource(cpu: cpu, gpu: gpu))")
                     .fixedSize(horizontal: false, vertical: true)
             }
             .font(.system(size: 11, weight: .medium))
@@ -51,23 +52,26 @@ struct ThermalDetailView: View {
             .background(.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .help("Temperature input for fan rules: the higher of the CPU and GPU averages. Individual sensor peaks are for display only.")
+            .help(AppStrings.tr(
+                en: "Temperature input for fan rules: the higher of the CPU and GPU averages. Individual sensor peaks are for display only.",
+                zh: "风扇温控规则输入温度：取 CPU 与 GPU 均值中的较高者。单个传感器极值仅供展示。"
+            ))
 
             Divider().padding(.horizontal, 16)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    ThermalMatrixSection(title: "CPU sensors", sensors: groups.cpu, groupsCPU: true)
-                    ThermalMatrixSection(title: "GPU sensors", sensors: groups.gpu)
+                    ThermalMatrixSection(title: AppStrings.tr(en: "CPU sensors", zh: "CPU 传感器"), sensors: groups.cpu, groupsCPU: true)
+                    ThermalMatrixSection(title: AppStrings.tr(en: "GPU sensors", zh: "GPU 传感器"), sensors: groups.gpu)
 
                     if !groups.system.isEmpty {
-                        DisclosureGroup("System sensors (\(groups.system.count))", isExpanded: $showsSystem) {
+                        DisclosureGroup(AppStrings.tr(en: "System sensors (\(groups.system.count))", zh: "系统传感器 (\(groups.system.count))"), isExpanded: $showsSystem) {
                             ThermalMatrixSection(title: "", sensors: groups.system)
                                 .padding(.top, 10)
                         }
                     }
                     Divider()
-                    DisclosureGroup("Full sensor details", isExpanded: $showsDetails) {
+                    DisclosureGroup(AppStrings.tr(en: "Full sensor details", zh: "全部传感器明细"), isExpanded: $showsDetails) {
                         VStack(spacing: 0) {
                             ForEach(groups.cpu + groups.gpu + groups.system) { sensor in
                                 HStack(alignment: .top) {
@@ -98,10 +102,12 @@ struct ThermalDetailView: View {
     private func controlSource(cpu: Double?, gpu: Double?) -> String {
         switch (cpu, gpu) {
         case let (.some(cpu), .some(gpu)):
-            return cpu == gpu ? "CPU / GPU averages" : (cpu > gpu ? "CPU average" : "GPU average")
-        case (.some, .none): return "CPU average"
-        case (.none, .some): return "GPU average"
-        case (.none, .none): return "No valid readings"
+            return cpu == gpu
+                ? AppStrings.tr(en: "CPU / GPU averages", zh: "CPU / GPU 均值相同")
+                : (cpu > gpu ? AppStrings.tr(en: "CPU average", zh: "CPU 均值") : AppStrings.tr(en: "GPU average", zh: "GPU 均值"))
+        case (.some, .none): return AppStrings.tr(en: "CPU average", zh: "CPU 均值")
+        case (.none, .some): return AppStrings.tr(en: "GPU average", zh: "GPU 均值")
+        case (.none, .none): return AppStrings.tr(en: "No valid readings", zh: "无有效读数")
         }
     }
 }
@@ -113,7 +119,7 @@ private enum ThermalPresentation {
     }
 
     static func reading(_ sensor: SensorInfo, precise: Bool = false) -> String {
-        guard sensor.isEnabled else { return "Off" }
+        guard sensor.isEnabled else { return AppStrings.tr(en: "Off", zh: "关闭") }
         guard isValid(sensor) else { return "—" }
         return String(format: precise ? "%.1f°C" : "%.0f°", sensor.temperature)
     }
@@ -151,13 +157,13 @@ private struct ThermalSummaryView: View {
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-            Text("Average temperature")
+            Text(AppStrings.tr(en: "Average temperature", zh: "平均温度"))
                 .font(.system(size: 11)).foregroundStyle(.secondary)
-            Text(valid.map(\.temperature).max().map { String(format: "Highest %.0f°C", $0) } ?? "Highest —")
+            Text(valid.map(\.temperature).max().map { String(format: AppStrings.tr(en: "Highest %.0f°C", zh: "最高 %.0f°C"), $0) } ?? AppStrings.tr(en: "Highest —", zh: "最高 —"))
                 .font(.system(size: 12, weight: .medium))
                 .padding(.top, 3)
-                .help("Highest current reading among valid sensors; not a historical peak.")
-            Text("\(valid.count) / \(sensors.count) valid sensors")
+                .help(AppStrings.tr(en: "Highest current reading among valid sensors; not a historical peak.", zh: "当前有效传感器中的最高实时读数，非历史峰值。"))
+            Text("\(valid.count) / \(sensors.count) \(AppStrings.tr(en: "valid sensors", zh: "个有效传感器"))")
                 .font(.system(size: 10)).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -174,11 +180,15 @@ private struct ThermalMatrixSection: View {
             $0.name == $1.name ? $0.id < $1.id : $0.name.localizedStandardCompare($1.name) == .orderedAscending
         }
         guard groupsCPU else { return [("", sorted)] }
-        let definitions = [("P-Core Sensor ", "Performance"), ("E-Core Sensor ", "Efficiency"), ("S-Core Sensor ", "S-Core")]
+        let definitions = [
+            ("P-Core Sensor ", AppStrings.pCoreFilterDisplay),
+            ("E-Core Sensor ", AppStrings.eCoreFilterDisplay),
+            ("S-Core Sensor ", "S-Core")
+        ]
         var result = definitions.map { prefix, title in
             (title: title, sensors: sorted.filter { $0.name.hasPrefix(prefix) })
         }
-        result.append((title: "Other CPU sensors", sensors: sorted.filter { sensor in
+        result.append((title: AppStrings.tr(en: "Other CPU sensors", zh: "其他 CPU 传感器"), sensors: sorted.filter { sensor in
             !definitions.contains { sensor.name.hasPrefix($0.0) }
         }))
         return result.filter { !$0.sensors.isEmpty }

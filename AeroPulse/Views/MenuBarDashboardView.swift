@@ -10,6 +10,7 @@ struct MenuBarDashboardView: View {
     @ObservedObject var networkViewModel: NetworkViewModel
     @ObservedObject var fanViewModel: FanViewModel
     @ObservedObject var launchAtLoginManager: LaunchAtLoginManager
+    @ObservedObject private var languageManager = LanguageManager.shared
     @Environment(\.openWindow) private var openWindow
 
     private let columns = [
@@ -183,7 +184,7 @@ struct MenuBarDashboardView: View {
                         .foregroundColor(.indigo)
                         .font(.system(size: 11, weight: .bold))
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("FAN MODE")
+                        Text(AppStrings.fanModeUpper)
                             .font(.system(size: 8, weight: .black))
                             .foregroundColor(.secondary)
                             .tracking(0.6)
@@ -205,7 +206,7 @@ struct MenuBarDashboardView: View {
                     }
                 )) {
                     ForEach(FanMode.allCases) { mode in
-                        Text(mode.rawValue).tag(mode)
+                        Text(mode.localizedTitle).tag(mode)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -216,7 +217,7 @@ struct MenuBarDashboardView: View {
             if fanViewModel.isGameModeActive {
                 HStack(spacing: 4) {
                     Circle().fill(Color.purple).frame(width: 5, height: 5)
-                    Text("🎮 Game Mode · Rules Active")
+                    Text(AppStrings.tr(en: "🎮 Game Mode · Rules Active", zh: "🎮 游戏模式 · 规则生效中"))
                         .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
                         .foregroundColor(.purple)
                     Spacer()
@@ -225,7 +226,7 @@ struct MenuBarDashboardView: View {
             } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
                 HStack(spacing: 4) {
                     Circle().fill(Color.orange).frame(width: 5, height: 5)
-                    Text("⏳ Game Exited · Auto in \(remaining)s")
+                    Text(AppStrings.tr(en: "⏳ Game Exited · Auto in \(remaining)s", zh: "⏳ 游戏已退出 · \(remaining)秒后切回自动"))
                         .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
                         .foregroundColor(.orange)
                     Spacer()
@@ -236,7 +237,7 @@ struct MenuBarDashboardView: View {
             if fanViewModel.currentMode == .manual, let firstFan = fanViewModel.fans.first {
                 let currentTarget = fanViewModel.manualTargetRPM[firstFan.id] ?? firstFan.currentRPM
                 HStack(spacing: 8) {
-                    Text("RPM")
+                    Text(AppStrings.rpmUnit)
                         .font(.system(size: 8, weight: .bold, design: .monospaced))
                         .foregroundColor(.secondary)
                     Slider(
@@ -270,7 +271,7 @@ struct MenuBarDashboardView: View {
             } else if fanViewModel.currentMode == .custom, fanViewModel.isRulesAtMinimum {
                 HStack(spacing: 4) {
                     Circle().fill(Color.green).frame(width: 5, height: 5)
-                    Text("Rules Active · Hardware minimum speed")
+                    Text(AppStrings.rulesActiveHardwareMin)
                         .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
                         .foregroundColor(.green)
                     Spacer()
@@ -284,9 +285,15 @@ struct MenuBarDashboardView: View {
 
     private func fanRuleStatusText(activeRule: FanThresholdRule) -> String {
         if let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
-            return "Holding \(activeRule.speedPercentage)% · Downshift in \(remaining)s"
+            return AppStrings.tr(
+                en: "Holding \(activeRule.speedPercentage)% · Downshift in \(remaining)s",
+                zh: "维持 \(activeRule.speedPercentage)% · \(remaining)秒后降速"
+            )
         }
-        return "Triggered: ≥ \(Int(activeRule.temperature))°C → \(activeRule.speedPercentage)%"
+        return AppStrings.tr(
+            en: "Triggered: ≥ \(Int(activeRule.temperature))°C → \(activeRule.speedPercentage)%",
+            zh: "已触发：≥ \(Int(activeRule.temperature))°C → \(activeRule.speedPercentage)%"
+        )
     }
 
     private func refreshSnapshot() {

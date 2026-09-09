@@ -16,11 +16,11 @@ enum SMCSensorFilters {
 
 
 struct AppStrings {
-    private static var isZh: Bool {
+    static var isZh: Bool {
         LanguageManager.shared.effectiveLanguage == .zhHans
     }
 
-    private static func tr(en: String, zh: String) -> String {
+    static func tr(en: String, zh: String) -> String {
         isZh ? zh : en
     }
 
@@ -136,6 +136,40 @@ struct AppStrings {
     static var gameModeIdleStatus: String { tr(en: "No active game detected", zh: "未检测到运行中的游戏") }
     static var fanControl: String { tr(en: "Fan Control", zh: "风扇控制") }
     static var fanControlUpper: String { tr(en: "FAN CONTROL", zh: "风扇控制") }
+
+    static var settings: String { tr(en: "Settings", zh: "设置") }
+    static var settingsHelp: String { tr(en: "App preferences and hardware setup", zh: "偏好设置与硬件配置") }
+    static var done: String { tr(en: "Done", zh: "完成") }
+    static var closeThermalDetails: String { tr(en: "Close thermal details", zh: "关闭传感器详情") }
+
+    static var systemOverview: String { tr(en: "System overview", zh: "系统概览") }
+    static var network: String { tr(en: "Network", zh: "网络") }
+    static var disk: String { tr(en: "Disk", zh: "磁盘") }
+    static var read: String { tr(en: "Read", zh: "读取") }
+    static var write: String { tr(en: "Write", zh: "写入") }
+    static var systemLoad: String { tr(en: "System load", zh: "系统负载") }
+    static var power: String { tr(en: "Power", zh: "功耗") }
+    static var battery: String { tr(en: "Battery", zh: "电池") }
+
+    static var fanMode: String { tr(en: "Fan Mode", zh: "风扇模式") }
+    static var fanModeUpper: String { tr(en: "FAN MODE", zh: "风扇模式") }
+    static var syncAllFans: String { tr(en: "Sync All Fans", zh: "同步所有风扇") }
+    static var temperatureRules: String { tr(en: "Temperature rules", zh: "温控规则") }
+    static var temperatureRulesUpper: String { tr(en: "TEMPERATURE THRESHOLD RULES", zh: "温控阈值规则") }
+    static var delayDownshift: String { tr(en: "Delay Downshift", zh: "降速平滑延迟") }
+    static var rulesActiveHardwareMin: String { tr(en: "Rules Active · Hardware minimum speed", zh: "规则生效中 · 硬件最低转速") }
+    static var addThreshold: String { tr(en: "Add Threshold", zh: "添加阈值") }
+    static var resetDefaults: String { tr(en: "Reset Defaults", zh: "恢复默认") }
+    static var saveRule: String { tr(en: "Save Rule", zh: "保存规则") }
+    static var cancel: String { tr(en: "Cancel", zh: "取消") }
+    static var active: String { tr(en: "ACTIVE", zh: "生效") }
+    static var speed: String { tr(en: "Speed", zh: "转速") }
+    static var trigger: String { tr(en: "Trigger", zh: "触发") }
+    static var min: String { tr(en: "MIN", zh: "最小") }
+    static var max: String { tr(en: "MAX", zh: "最大") }
+    static var target: String { tr(en: "TARGET", zh: "目标") }
+    static var autoRulesInGameMode: String { tr(en: "Auto Rules in Game Mode", zh: "游戏模式下自动启用规则") }
+    static var all: String { tr(en: "All", zh: "全部") }
 }
 
 struct AppImages {

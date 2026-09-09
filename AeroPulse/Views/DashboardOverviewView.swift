@@ -3,24 +3,25 @@ import SwiftUI
 /// Read-only presentation of the existing telemetry. No additional sampling.
 struct DashboardOverviewView: View {
     @ObservedObject var networkViewModel: NetworkViewModel
+    @ObservedObject private var languageManager = LanguageManager.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("System overview").font(.system(size: 14, weight: .semibold))
-            metricGroup("Network", symbol: "network") {
+            Text(AppStrings.systemOverview).font(.system(size: 14, weight: .semibold))
+            metricGroup(AppStrings.network, symbol: "network") {
                 HStack(alignment: .top, spacing: 12) {
-                    reading("Download", value: networkViewModel.downloadSpeed, detail: "Total \(networkViewModel.downloadTotal)")
-                    reading("Upload", value: networkViewModel.uploadSpeed, detail: "Total \(networkViewModel.uploadTotal)")
+                    reading(AppStrings.download, value: networkViewModel.downloadSpeed, detail: "\(AppStrings.total) \(networkViewModel.downloadTotal)")
+                    reading(AppStrings.upload, value: networkViewModel.uploadSpeed, detail: "\(AppStrings.total) \(networkViewModel.uploadTotal)")
                 }
             }
             Divider()
-            metricGroup("Disk", symbol: AppImages.diskRead) {
+            metricGroup(AppStrings.disk, symbol: AppImages.diskRead) {
                 HStack(alignment: .top, spacing: 12) {
-                    reading("Read", value: networkViewModel.diskReadSpeed, detail: "Total \(networkViewModel.diskReadTotal)")
-                    reading("Write", value: networkViewModel.diskWriteSpeed, detail: "Total \(networkViewModel.diskWriteTotal)")
+                    reading(AppStrings.read, value: networkViewModel.diskReadSpeed, detail: "\(AppStrings.total) \(networkViewModel.diskReadTotal)")
+                    reading(AppStrings.write, value: networkViewModel.diskWriteSpeed, detail: "\(AppStrings.total) \(networkViewModel.diskWriteTotal)")
                 }
                 HStack {
-                    Text("Used")
+                    Text(AppStrings.diskUsed)
                     Spacer()
                     Text(networkViewModel.diskUsedPercent).monospacedDigit()
                 }
@@ -29,36 +30,36 @@ struct DashboardOverviewView: View {
                     ProgressView(value: fraction)
                         .progressViewStyle(.linear)
                         .tint(.blue)
-                        .accessibilityLabel("Disk used")
+                        .accessibilityLabel("\(AppStrings.disk) \(AppStrings.diskUsed)")
                         .accessibilityValue(networkViewModel.diskUsedPercent)
                 }
                 HStack {
-                    Text("Free \(networkViewModel.diskFreeCapacity)")
+                    Text("\(AppStrings.diskFree) \(networkViewModel.diskFreeCapacity)")
                     Spacer(minLength: 4)
-                    Text("Total \(networkViewModel.diskTotalCapacity)")
+                    Text("\(AppStrings.total) \(networkViewModel.diskTotalCapacity)")
                 }
                 .font(.system(size: 11)).foregroundStyle(.secondary)
             }
             Divider()
-            metricGroup("System load", symbol: AppImages.cpu) {
-                metricRow("CPU", value: networkViewModel.cpuUsage)
+            metricGroup(AppStrings.systemLoad, symbol: AppImages.cpu) {
+                metricRow(AppStrings.cpu, value: networkViewModel.cpuUsage)
                 metricRow(AppStrings.systemGPUUsage, value: networkViewModel.gpuUsage)
                 Text(AppStrings.systemGPUDescription)
                     .font(.system(size: 11)).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                metricRow("Memory", value: networkViewModel.memoryUsage)
-                Text("Memory \(networkViewModel.memoryUsed) / \(networkViewModel.memoryTotal)")
+                metricRow(AppStrings.memory, value: networkViewModel.memoryUsage)
+                Text("\(AppStrings.memory) \(networkViewModel.memoryUsed) / \(networkViewModel.memoryTotal)")
                     .font(.system(size: 11)).foregroundStyle(.secondary)
             }
             Divider()
-            metricGroup("Power", symbol: AppImages.powerUsage) {
-                metricRow("System", value: networkViewModel.powerUsage)
+            metricGroup(AppStrings.power, symbol: AppImages.powerUsage) {
+                metricRow(AppStrings.system, value: networkViewModel.powerUsage)
                 if !networkViewModel.powerSubtitle.isEmpty {
                     Text(networkViewModel.powerSubtitle)
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                metricRow("Battery", value: networkViewModel.chargingPowerUsage)
+                metricRow(AppStrings.battery, value: networkViewModel.chargingPowerUsage)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

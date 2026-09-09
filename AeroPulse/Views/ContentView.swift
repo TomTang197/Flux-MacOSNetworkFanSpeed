@@ -11,6 +11,7 @@ struct ContentView: View {
     let networkViewModel: NetworkViewModel
     let fanViewModel: FanViewModel
     let launchAtLoginManager: LaunchAtLoginManager
+    @ObservedObject private var languageManager = LanguageManager.shared
     @State private var showsSettings = false
     @StateObject private var windowInteraction = WindowInteractionCoordinator()
     @Environment(\.visualEffectsReduced) private var reduceVisualEffects
@@ -42,10 +43,10 @@ struct ContentView: View {
                 Spacer()
                 DashboardConnectionStatus(fanViewModel: fanViewModel)
                 Button { showsSettings = true } label: {
-                    Label("Settings", systemImage: "gearshape")
+                    Label(AppStrings.settings, systemImage: "gearshape")
                 }
                 .buttonStyle(.bordered)
-                .help("App preferences and hardware setup")
+                .help(AppStrings.settingsHelp)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
@@ -79,9 +80,9 @@ struct ContentView: View {
         .sheet(isPresented: $showsSettings) {
             VStack(spacing: 0) {
                 HStack {
-                    Text("Settings").font(.system(size: 17, weight: .semibold))
+                    Text(AppStrings.settings).font(.system(size: 17, weight: .semibold))
                     Spacer()
-                    Button("Done") { showsSettings = false }
+                    Button(AppStrings.done) { showsSettings = false }
                         .keyboardShortcut(.defaultAction)
                 }
                 .padding(20)
