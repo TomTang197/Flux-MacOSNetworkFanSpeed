@@ -9,6 +9,12 @@ enum VisualEffectsPreferences {
     static let defaultValue = false
 }
 
+enum SMCSensorFilters {
+    static let pCoreIdentifier = "P-Core"
+    static let eCoreIdentifier = "E-Core"
+}
+
+
 struct AppStrings {
     static var appName: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String

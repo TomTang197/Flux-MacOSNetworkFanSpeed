@@ -436,18 +436,18 @@ final class FanMonitor: ObservableObject {
         sensor.id.hasPrefix("Tp")
             || sensor.id.hasPrefix("Te")
             || sensor.name.contains("Core")
-            || sensor.name.contains(AppStrings.pCoreFilter)
-            || sensor.name.contains(AppStrings.eCoreFilter)
+            || sensor.name.contains(SMCSensorFilters.pCoreIdentifier)
+            || sensor.name.contains(SMCSensorFilters.eCoreIdentifier)
     }
 
     private func isKnownPerformanceCore(_ sensor: SensorInfo) -> Bool {
-        knownPerformanceCoreKeys.contains(sensor.id) || sensor.name.contains(AppStrings.pCoreFilter)
+        knownPerformanceCoreKeys.contains(sensor.id) || sensor.name.contains(SMCSensorFilters.pCoreIdentifier)
     }
 
     private func isKnownEfficiencyCore(_ sensor: SensorInfo) -> Bool {
         knownEfficiencyCoreKeys.contains(sensor.id)
             || sensor.id.hasPrefix("Te")
-            || sensor.name.contains(AppStrings.eCoreFilter)
+            || sensor.name.contains(SMCSensorFilters.eCoreIdentifier)
     }
 
     private func countPotentialCoreSensors(in sensors: [SensorInfo]) -> Int {
