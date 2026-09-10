@@ -170,6 +170,11 @@ struct AppStrings {
     static var target: String { tr(en: "TARGET", zh: "目标") }
     static var autoRulesInGameMode: String { tr(en: "Auto Rules in Game Mode", zh: "游戏模式下自动启用规则") }
     static var all: String { tr(en: "All", zh: "全部") }
+
+    static var softwareUpdate: String { tr(en: "Software Update", zh: "软件更新") }
+    static var checkForUpdates: String { tr(en: "Check for Updates…", zh: "检查更新…") }
+    static var autoCheckForUpdates: String { tr(en: "Automatically check for updates", zh: "自动检查更新") }
+    static var currentVersionPrefix: String { tr(en: "Current Version: ", zh: "当前版本：") }
 }
 
 struct AppImages {

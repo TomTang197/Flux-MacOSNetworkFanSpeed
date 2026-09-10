@@ -1,0 +1,75 @@
+name: Release AeroPulse
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app || sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Build AeroPulse (Release)
+        run: |
+          xcodebuild -project AeroPulse.xcodeproj \
+                     -scheme AeroPulse \
+                     -configuration Release \
+                     -derivedDataPath build \
+                     CODE_SIGNING_ALLOWED=NO \
+                     build
+
+      - name: Archive Application
+        run: |
+          mkdir -p dist
+          cd build/Build/Products/Release
+          ditto -c -k --keepParent AeroPulse.app ../../../../dist/AeroPulse.zip
+          cd ../../../..
+
+      - name: Download Sparkle Tools
+        run: |
+          SPARKLE_VERSION="2.6.4"
+          curl -L -o sparkle.tar.xz "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
+          mkdir -p sparkle-tools
+          tar -xf sparkle.tar.xz -C sparkle-tools
+
+      - name: Generate Sparkle Signature and Update Appcast
+        env:
+          SPARKLE_ED_KEY: ${{ secrets.SPARKLE_ED_KEY }}
+        run: |
+          if [ -n "$SPARKLE_ED_KEY" ]; then
+            echo "$SPARKLE_ED_KEY" > sparkle_key.txt
+            cp appcast.xml dist/ || true
+            ./sparkle-tools/bin/generate_appcast --ed-key-file sparkle_key.txt dist/
+            cp dist/appcast.xml ./appcast.xml
+            rm -f sparkle_key.txt
+          else
+            echo "Warning: SPARKLE_ED_KEY secret not found. Skipping appcast signing."
+          fi
+
+      - name: Commit and push updated appcast.xml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add appcast.xml
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore(release): update appcast.xml for ${GITHUB_REF_NAME}" && git push origin HEAD:main)
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/AeroPulse.zip
+            appcast.xml
+          generate_release_notes: true

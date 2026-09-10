@@ -11,6 +11,7 @@
 		C22C2B632F30B13600F46443 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = C22C2B612F30B13600F46443 /* README.md */; };
 		D1A0A0012F40000000AAAAAA /* FanPrivilegedHelper in CopyFiles */ = {isa = PBXBuildFile; fileRef = C22F655C2F3208E80043993C /* FanPrivilegedHelper */; };
 		C22F70002F32123400AAAAAA /* com.bandan.me.AeroPulse.FanService.plist in CopyFiles */ = {isa = PBXBuildFile; fileRef = C22F6FFF2F32123400AAAAAA /* com.bandan.me.AeroPulse.FanService.plist */; };
+		E0A100012F50000000AAAAAA /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = E0A100022F50000000AAAAAA /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -92,6 +93,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E0A100012F50000000AAAAAA /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -163,6 +165,7 @@
 			);
 			name = AeroPulse;
 			packageProductDependencies = (
+				E0A100022F50000000AAAAAA /* Sparkle */,
 			);
 			productName = NetworkSpeedMeter;
 			productReference = C2BEB9C32F2B504D00DAC1DD /* AeroPulse.app */;
@@ -202,6 +205,9 @@
 			targets = (
 				C2BEB9C22F2B504D00DAC1DD /* AeroPulse */,
 				C22F655B2F3208E80043993C /* FanPrivilegedHelper */,
+			);
+			packageReferences = (
+				E0A100032F50000000AAAAAA /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 		};
 /* End PBXProject section */
@@ -502,6 +508,24 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+/* Begin XCRemoteSwiftPackageReference section */
+		E0A100032F50000000AAAAAA /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.4;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E0A100022F50000000AAAAAA /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E0A100032F50000000AAAAAA /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C2BEB9BB2F2B504D00DAC1DD /* Project object */;
 }

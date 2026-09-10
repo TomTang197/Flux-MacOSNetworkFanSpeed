@@ -99,6 +99,8 @@ struct SettingsView: View {
 
                 HelperSettingsCard(fanViewModel: fanViewModel)
 
+                UpdateSettingsCard()
+
                 SettingsCard(
                     title: AppStrings.bugFeedback,
                     symbol: AppImages.bug,
@@ -496,5 +498,43 @@ struct StatRow: View, Equatable {
                 .frame(minWidth: 116, alignment: .trailing)
         }
         .frame(minHeight: 19)
+    }
+}
+
+private struct UpdateSettingsCard: View {
+    @ObservedObject private var updaterViewModel = SparkleUpdaterViewModel.shared
+
+    var body: some View {
+        SettingsCard(
+            title: AppStrings.softwareUpdate,
+            symbol: "arrow.triangle.2.circlepath.circle.fill",
+            tint: .indigo
+        ) {
+            HStack {
+                Text(AppStrings.currentVersionPrefix)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.secondary)
+                Text(updaterViewModel.appVersionDisplay)
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                Spacer()
+            }
+
+            Toggle(
+                AppStrings.autoCheckForUpdates,
+                isOn: $updaterViewModel.automaticallyChecksForUpdates
+            )
+            .font(.system(size: 11, weight: .medium))
+
+            Button {
+                updaterViewModel.checkForUpdates()
+            } label: {
+                Text(AppStrings.checkForUpdates)
+                    .font(.system(size: 10, weight: .semibold))
+                    .frame(maxWidth: .infinity, minHeight: 24)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+            .disabled(!updaterViewModel.canCheckForUpdates)
+        }
     }
 }

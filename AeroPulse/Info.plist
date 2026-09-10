@@ -7,5 +7,15 @@
         <key>com.bandan.me.AeroPulse.FanService</key>
         <string>Contents/Library/LaunchServices/com.bandan.me.AeroPulse.FanService.plist</string>
     </dict>
+    <key>SUFeedURL</key>
+    <string>https://raw.githubusercontent.com/TomTang197/Flux-MacOSNetworkFanSpeed/main/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>1+UIo5f83LEKLcnfZnSaapwaet9neQXI0EKnoFDw5kM=</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
+    <key>SUScheduledCheckInterval</key>
+    <integer>86400</integer>
+    <key>SUAllowsAutomaticUpdates</key>
+    <true/>
 </dict>
 </plist>
