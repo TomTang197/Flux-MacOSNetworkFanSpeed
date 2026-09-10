@@ -12,30 +12,36 @@ import SwiftUI
 struct MenuBarView: View {
     @ObservedObject var networkViewModel: NetworkViewModel
     @ObservedObject var fanViewModel: FanViewModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        let singleMetricRows = enabledMetricRows()
+        Group {
+            let singleMetricRows = enabledMetricRows()
 
-        if singleMetricRows.count == 1, let row = singleMetricRows.first {
-            let cacheKey = "single:\(row.metric.rawValue):\(row.symbol):\(row.value)"
-            let image = MenuBarImageCache.shared.image(for: cacheKey) {
-                renderSingleMetricImage(row)
+            if singleMetricRows.count == 1, let row = singleMetricRows.first {
+                let cacheKey = "single:\(row.metric.rawValue):\(row.symbol):\(row.value)"
+                let image = MenuBarImageCache.shared.image(for: cacheKey) {
+                    renderSingleMetricImage(row)
+                }
+                Image(nsImage: image)
+            } else {
+                let columns = groupedColumns()
+
+                if columns.isEmpty {
+                    Image(systemName: AppImages.rocket)
+                } else {
+                    let cacheKey = columns.map {
+                        "\($0.kind)-\($0.top?.metric.rawValue ?? ""):\($0.top?.value ?? "")|\($0.bottom?.metric.rawValue ?? ""):\($0.bottom?.value ?? "")"
+                    }.joined(separator: ";")
+                    let combinedImage = MenuBarImageCache.shared.image(for: cacheKey) {
+                        renderGroupedMetricsImage(columns)
+                    }
+                    Image(nsImage: combinedImage)
+                }
             }
-            return Image(nsImage: image)
         }
-
-        let columns = groupedColumns()
-
-        if columns.isEmpty {
-            return Image(systemName: AppImages.rocket)
-        } else {
-            let cacheKey = columns.map {
-                "\($0.kind)-\($0.top?.metric.rawValue ?? ""):\($0.top?.value ?? "")|\($0.bottom?.metric.rawValue ?? ""):\($0.bottom?.value ?? "")"
-            }.joined(separator: ";")
-            let combinedImage = MenuBarImageCache.shared.image(for: cacheKey) {
-                renderGroupedMetricsImage(columns)
-            }
-            return Image(nsImage: combinedImage)
+        .onAppear {
+            DashboardWindowManager.shared.registerOpenWindowAction(openWindow)
         }
     }
 

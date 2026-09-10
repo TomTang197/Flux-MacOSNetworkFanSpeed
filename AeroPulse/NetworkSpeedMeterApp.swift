@@ -9,6 +9,7 @@ import SwiftUI
 
 @main
 struct NetworkSpeedMeterApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var networkViewModel = NetworkViewModel()
     @StateObject private var fanViewModel = FanViewModel()
     @StateObject private var launchAtLoginManager = LaunchAtLoginManager()

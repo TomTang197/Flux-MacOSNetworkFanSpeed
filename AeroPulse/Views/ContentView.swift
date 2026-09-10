@@ -15,6 +15,7 @@ struct ContentView: View {
     @State private var showsSettings = false
     @StateObject private var windowInteraction = WindowInteractionCoordinator()
     @Environment(\.visualEffectsReduced) private var reduceVisualEffects
+    @Environment(\.openWindow) private var openWindow
     private let defaultWindowSize = CGSize(width: 1230, height: 650)
     private let minimumWindowSize = CGSize(width: 1040, height: 620)
     @ViewBuilder
@@ -114,6 +115,7 @@ struct ContentView: View {
             }
         }
         .onAppear {
+            DashboardWindowManager.shared.registerOpenWindowAction(openWindow)
             networkViewModel.setPresentationUpdatesPaused(false)
             networkViewModel.setDetailedSampling(true, source: .dashboardWindow)
             fanViewModel.setDetailedSampling(true, source: .dashboardWindow)
@@ -134,9 +136,10 @@ struct ContentView: View {
             networkViewModel.setDetailedSampling(false, source: .dashboardWindow)
             fanViewModel.setDetailedSampling(false, source: .dashboardWindow)
             windowInteraction.detach()
+            DashboardWindowManager.shared.unregisterDashboardWindow(nil)
             DispatchQueue.main.async {
                 let hasVisibleWindows = NSApp.windows.contains {
-                    $0.isVisible && !($0 is NSPanel) && $0.level == .normal
+                    $0.isVisible && !($0 is NSPanel) && $0.level == .normal && $0.identifier?.rawValue != "dashboard"
                 }
                 if !hasVisibleWindows {
                     NSApplication.shared.setActivationPolicy(.accessory)
@@ -146,7 +149,12 @@ struct ContentView: View {
     }
 
     private func setupWindow(_ window: NSWindow) {
+        window.identifier = NSUserInterfaceItemIdentifier("dashboard")
+        DashboardWindowManager.shared.registerDashboardWindow(window)
         window.title = AppStrings.appName
+
+        guard !window.isMiniaturized else { return }
+
         var frame = window.frame
         if frame.size.width < minimumWindowSize.width || frame.size.height < minimumWindowSize.height {
             frame.size = defaultWindowSize
@@ -174,22 +182,26 @@ struct ContentView: View {
 private struct WindowAccessor: NSViewRepresentable {
     let onWindow: (NSWindow) -> Void
 
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async {
-            if let window = view.window {
-                onWindow(window)
-            }
-        }
+    func makeNSView(context: Context) -> WindowTrackingView {
+        let view = WindowTrackingView()
+        view.onWindow = onWindow
         return view
     }
 
-    func updateNSView(_ nsView: NSView, context: Context) {
-        DispatchQueue.main.async {
-            if let window = nsView.window {
-                onWindow(window)
-            }
-        }
+    func updateNSView(_ nsView: WindowTrackingView, context: Context) {
+        nsView.onWindow = onWindow
+    }
+}
+
+private final class WindowTrackingView: NSView {
+    var onWindow: ((NSWindow) -> Void)?
+    private weak var configuredWindow: NSWindow?
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard let window, window !== configuredWindow else { return }
+        configuredWindow = window
+        onWindow?(window)
     }
 }
 
