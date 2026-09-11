@@ -5,5 +5,13 @@
         <link>https://raw.githubusercontent.com/TomTang197/Flux-MacOSNetworkFanSpeed/main/appcast.xml</link>
         <description>Most recent changes with links to updates.</description>
         <language>en</language>
+        <item>
+            <title>1.1.0</title>
+            <pubDate>Fri, 11 Sep 2026 14:34:08 +1200</pubDate>
+            <sparkle:version>2</sparkle:version>
+            <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/TomTang197/Flux-MacOSNetworkFanSpeed/releases/download/v1.1.0/AeroPulse.zip" length="4072083" type="application/octet-stream" sparkle:edSignature="glCy+ZXerS0JSZqJYafs9JxnmwdycGZs8b0lNUHLdUgKYBKnRpVTmoVc06idfPhB8wZ/qmVHCyyVbvSWaCowBA=="/>
+        </item>
     </channel>
 </rss>
