@@ -10,6 +10,7 @@ enum VisualEffectsPreferences {
 }
 
 enum SMCSensorFilters {
+    static let sCoreIdentifier = "S-Core"
     static let pCoreIdentifier = "P-Core"
     static let eCoreIdentifier = "E-Core"
 }
@@ -99,10 +100,17 @@ struct AppStrings {
     static var cpu: String { "CPU" }
     static var gpu: String { "GPU" }
     static var system: String { tr(en: "System", zh: "系统") }
-    static var pCoreFilterDisplay: String { tr(en: "P-Cores", zh: "性能核 (P-Core)") }
-    static var eCoreFilterDisplay: String { tr(en: "E-Cores", zh: "能效核 (E-Core)") }
+    static var pCoreFilterDisplay: String { tr(en: "P-Core sensors", zh: "性能核传感器 (P-Core)") }
+    static var eCoreFilterDisplay: String { tr(en: "E-Core sensors", zh: "能效核传感器 (E-Core)") }
+    static var sCoreFilterDisplay: String { tr(en: "S-Core sensors", zh: "超能核传感器 (S-Core)") }
     static var pCoreFilter: String { "P-Core" }
     static var eCoreFilter: String { "E-Core" }
+    static var sCoreFilter: String { "S-Core" }
+    static var diePackage: String { tr(en: "Die & Package", zh: "核心与封装") }
+    static var superCores: String { tr(en: "Super Cores", zh: "超能核心") }
+    static var performanceCores: String { tr(en: "Performance Cores", zh: "性能核心") }
+    static var efficiencyCores: String { tr(en: "Efficiency Cores", zh: "能效核心") }
+    static var gpuClusters: String { tr(en: "GPU Clusters", zh: "GPU 核心组") }
 
     static var noData: String { tr(en: "No data available", zh: "暂无数据") }
     static var openSystemHub: String { tr(en: "Open Dashboard", zh: "打开控制台") }

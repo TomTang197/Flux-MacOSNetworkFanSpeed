@@ -182,8 +182,14 @@ struct FanControlCard: View {
                 .toggleStyle(.switch)
                 .controlSize(.mini)
                 .font(.system(size: isDashboard ? 11 : 9.5, weight: .semibold))
+                .fixedSize()
 
-                Spacer()
+                ruleDownshiftStatus
+                    .font(.system(size: isDashboard ? 11 : 9, weight: .semibold, design: .monospaced))
+                    .lineLimit(1)
+                    // Keep the status in the control row without changing its height.
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: 18)
 
                 if fanViewModel.isRuleDownshiftDelayEnabled {
                     Stepper(
@@ -199,33 +205,12 @@ struct FanControlCard: View {
                             .frame(minWidth: 28, alignment: .trailing)
                     }
                     .controlSize(.mini)
+                    .fixedSize()
                 }
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
             .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.035)))
-
-            if let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
-                HStack(spacing: 5) {
-                    Circle()
-                        .fill(Color.orange)
-                        .frame(width: 5, height: 5)
-                    Text(AppStrings.tr(en: "Holding current speed · Downshift in \(remaining)s", zh: "维持当前转速 · \(remaining)秒后降速"))
-                        .font(.system(size: isDashboard ? 11 : 9, weight: .semibold, design: .monospaced))
-                        .foregroundColor(.orange)
-                    Spacer()
-                }
-            } else if fanViewModel.isRulesAtMinimum {
-                HStack(spacing: 5) {
-                    Circle()
-                        .fill(Color.green)
-                        .frame(width: 5, height: 5)
-                    Text(AppStrings.rulesActiveHardwareMin)
-                        .font(.system(size: isDashboard ? 11 : 9, weight: .semibold, design: .monospaced))
-                        .foregroundColor(.green)
-                    Spacer()
-                }
-            }
 
             VStack(spacing: 6) {
                 ForEach(fanViewModel.rules) { rule in
@@ -304,6 +289,34 @@ struct FanControlCard: View {
                 }
                 .padding(.top, 2)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var ruleDownshiftStatus: some View {
+        if let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
+            let detail = AppStrings.tr(
+                en: "Holding current speed · Downshift in \(remaining)s",
+                zh: "维持当前转速 · \(remaining)秒后降速"
+            )
+            ViewThatFits(in: .horizontal) {
+                Text(AppStrings.tr(en: "Downshift in \(remaining)s", zh: "\(remaining)秒后降速"))
+                    .fixedSize()
+                Text("↓ \(remaining)s")
+                    .fixedSize()
+            }
+            .foregroundStyle(.orange)
+            .help(detail)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(detail)
+        } else if fanViewModel.isRulesAtMinimum {
+            Text(AppStrings.tr(en: "Minimum speed", zh: "已达最低转速"))
+                .foregroundStyle(.green)
+                .help(AppStrings.rulesActiveHardwareMin)
+                .accessibilityLabel(AppStrings.rulesActiveHardwareMin)
+        } else {
+            Color.clear
+                .accessibilityHidden(true)
         }
     }
 

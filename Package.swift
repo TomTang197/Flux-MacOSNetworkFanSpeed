@@ -15,6 +15,13 @@ let package = Package(
             path: "AeroPulse/Performance"
         ),
         .target(
+            name: "AeroPulseSensorCatalog",
+            dependencies: ["AeroPulsePerformanceCore"],
+            path: "AeroPulse/Models",
+            exclude: ["FanStats.swift", "MetricType.swift"],
+            sources: ["SMCSensorKeys.swift"]
+        ),
+        .target(
             name: "FanHelperSafety",
             path: "FanPrivilegedHelper/Safety"
         ),
@@ -24,7 +31,7 @@ let package = Package(
         ),
         .testTarget(
             name: "AeroPulseSafetyTests",
-            dependencies: ["FanHelperSafety", "AeroPulseFanSafety", "AeroPulsePerformanceCore", "AeroPulseLocalization"],
+            dependencies: ["FanHelperSafety", "AeroPulseFanSafety", "AeroPulsePerformanceCore", "AeroPulseSensorCatalog", "AeroPulseLocalization"],
             path: "Tests/AeroPulseSafetyTests"
         ),
     ]

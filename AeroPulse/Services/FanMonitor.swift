@@ -14,12 +14,9 @@ final class FanMonitor: ObservableObject {
     private let fanTopologyRefreshEvery = 30
     private let sensorDiscoveryRefreshEvery = 30
     private let maximumCachedTemperatureAge: TimeInterval = 6
-    private static let smcHexChars = Array("0123456789abcdef")
     private let cpuBrand = FanMonitor.readCPUBrand()
-    private let expectedPerformanceCoreCount = FanMonitor.readCoreCount("hw.perflevel0.physicalcpu")
-    private let expectedEfficiencyCoreCount = FanMonitor.readCoreCount("hw.perflevel1.physicalcpu")
-    private let knownPerformanceCoreKeys = Set(SMCSensorKeys.CPU.PerformanceCores.all.map(\.key))
-    private let knownEfficiencyCoreKeys = Set(SMCSensorKeys.CPU.EfficiencyCores.all.map(\.key))
+    private lazy var cpuGeneration = AppleSiliconGeneration.detect(brand: cpuBrand)
+    private lazy var sensorCatalog = SMCSensorKeys.sensors(for: cpuGeneration)
 
     private var fanPollCount = 0
     private var sensorPollCount = 0
@@ -27,14 +24,16 @@ final class FanMonitor: ObservableObject {
     private var cachedFanInfo: [Int: FanStaticInfo] = [:]
     private var cachedFanRPM: [Int: Int] = [:]
     private var discoveredSensorDefinitions: [SMCSensorKeys.SensorDefinition] = []
-    private var extendedCoreDefinitions: [SMCSensorKeys.SensorDefinition] = []
-    private var extendedGPUDefinitions: [SMCSensorKeys.SensorDefinition] = []
-    private var hasScannedExtendedCoreKeys = false
-    private var hasScannedExtendedGPUKeys = false
     private var lastKnownTemperatures: [String: (value: Double, sampledAt: Date)] = [:]
 
     private var usesM4MaxSensorCatalog: Bool {
-        cpuBrand.localizedCaseInsensitiveContains("Apple M4 Max")
+        if case .m4(variant: .max) = cpuGeneration { return true }
+        return cpuBrand.localizedCaseInsensitiveContains("Apple M4 Max")
+    }
+
+    private var isM5Family: Bool {
+        if case .m5 = cpuGeneration { return true }
+        return false
     }
 
     struct FanData {
@@ -140,46 +139,27 @@ final class FanMonitor: ObservableObject {
     }
 
     private func readEssentialFallbackSensors() -> [SensorInfo] {
-        let fallbackKeys: [(id: String, name: String)] = [
-            ("TCMb", "CPU Die"),
-            ("TCMz", "CPU Hotspot"),
-            ("Te05", "E-Core Sensor 1"),
-            ("Te0S", "E-Core Sensor 2"),
-            ("Te06", "E-Core Sensor 3"),
-            ("Te0T", "E-Core Sensor 4"),
-            ("TC0P", "CPU Package"),
-            ("mACC", "CPU Core Average"),
-            ("Tp0P", "CPU Proximity"),
-            ("Tp01", "CPU Core 1"),
-            ("Tp02", "CPU Core 2"),
-            ("Tp03", "CPU Core 3"),
-            ("Tp04", "CPU Core 4"),
-            ("Tg1U", "GPU Sensor 1"),
-            ("Tg1k", "GPU Sensor 2"),
-            ("Tg0K", "GPU Sensor 3"),
-            ("Tg0L", "GPU Sensor 4"),
-            ("Tg0e", "GPU Sensor 6"),
-            ("Tg0j", "GPU Sensor 7"),
-            ("Tg0k", "GPU Sensor 8"),
-            ("TG0P", "GPU Proximity"),
-            ("vACC", "GPU Average"),
-            ("Tg05", "GPU Cluster 1"),
-            ("Tg0b", "GPU Cluster 2"),
-            ("Tg0d", "GPU Cluster 3"),
-            ("Ts0P", "SSD"),
-            ("TH0x", "SSD Controller"),
-        ]
+        let fallbackDefinitions = sensorCatalog
 
         var sensors: [SensorInfo] = []
         var seen = Set<String>()
-        for key in fallbackKeys {
-            guard ThermalSensorProcessing.isUsableCPUSensorKey(key.id, cpuBrand: cpuBrand) else {
+        for def in fallbackDefinitions {
+            guard ThermalSensorProcessing.isUsableCPUSensorKey(def.key, cpuBrand: cpuBrand) else {
                 continue
             }
-            guard let value = smc.getTemperature(key.id) else { continue }
-            guard seen.insert(canonicalizedDynamicSensorKey(key.id)).inserted else { continue }
+            guard let value = smc.getTemperature(def.key) else { continue }
+            guard seen.insert(canonicalizedDynamicSensorKey(def.key)).inserted else { continue }
             sensors.append(
-                SensorInfo(id: key.id, name: key.name, temperature: value, isEnabled: true)
+                SensorInfo(
+                    id: def.key,
+                    name: def.name,
+                    temperature: value,
+                    isEnabled: true,
+                    category: def.category,
+                    cpuTier: def.cpuTier,
+                    gpuKind: def.gpuKind,
+                    coreIndex: def.coreIndex
+                )
             )
         }
         return sensors
@@ -216,51 +196,9 @@ final class FanMonitor: ObservableObject {
     }
 
     private func discoverSensorDefinitions() -> [SMCSensorKeys.SensorDefinition] {
-        var definitions = supportedDefinitions(
-            SMCSensorKeys.allSensors + extendedCoreDefinitions + extendedGPUDefinitions
-        )
-        var discoveredSensors = readSensors(from: definitions)
-
-        let expectedCoreTotal = expectedPerformanceCoreCount + expectedEfficiencyCoreCount
-        if !hasScannedExtendedCoreKeys,
-            !usesM4MaxSensorCatalog,
-            expectedCoreTotal > 0,
-            countPotentialCoreSensors(in: discoveredSensors) < expectedCoreTotal
-        {
-            hasScannedExtendedCoreKeys = true
-            extendedCoreDefinitions = discoverAdditionalCoreDefinitions(excluding: definitions)
-            if !extendedCoreDefinitions.isEmpty {
-                definitions = supportedDefinitions(
-                    SMCSensorKeys.allSensors + extendedCoreDefinitions + extendedGPUDefinitions
-                )
-                discoveredSensors = readSensors(from: definitions)
-            }
-        }
-
-        if !hasScannedExtendedGPUKeys, !usesM4MaxSensorCatalog {
-            hasScannedExtendedGPUKeys = true
-            extendedGPUDefinitions = discoverAdditionalGPUDefinitions(excluding: definitions)
-            if !extendedGPUDefinitions.isEmpty {
-                definitions = supportedDefinitions(
-                    SMCSensorKeys.allSensors + extendedCoreDefinitions + extendedGPUDefinitions
-                )
-                discoveredSensors = readSensors(from: definitions)
-            }
-        }
-
-        if discoveredSensors.isEmpty {
-            definitions = supportedDefinitions(SMCSensorKeys.IntelFallback.all)
-        }
-
-        return definitions
-    }
-
-    private func supportedDefinitions(
-        _ definitions: [SMCSensorKeys.SensorDefinition]
-    ) -> [SMCSensorKeys.SensorDefinition] {
-        definitions.filter {
-            ThermalSensorProcessing.isUsableCPUSensorKey($0.key, cpuBrand: cpuBrand)
-        }
+        // Sensor counts do not equal physical core counts. Probe the selected catalog
+        // only; prefix guessing can mistake M3 Tf* GPU channels for CPU temperatures.
+        sensorCatalog
     }
 
     private func readSensors(from definitions: [SMCSensorKeys.SensorDefinition]) -> [SensorInfo] {
@@ -278,7 +216,11 @@ final class FanMonitor: ObservableObject {
                         name: sensor.name,
                         temperature: temp,
                         isEnabled: true,
-                        sampledAt: now
+                        sampledAt: now,
+                        category: sensor.category,
+                        cpuTier: sensor.cpuTier,
+                        gpuKind: sensor.gpuKind,
+                        coreIndex: sensor.coreIndex
                     )
                 )
             } else if let cached = lastKnownTemperatures[sensor.key],
@@ -293,7 +235,11 @@ final class FanMonitor: ObservableObject {
                         name: sensor.name,
                         temperature: cached.value,
                         isEnabled: true,
-                        sampledAt: cached.sampledAt
+                        sampledAt: cached.sampledAt,
+                        category: sensor.category,
+                        cpuTier: sensor.cpuTier,
+                        gpuKind: sensor.gpuKind,
+                        coreIndex: sensor.coreIndex
                     )
                 )
             } else {
@@ -315,108 +261,8 @@ final class FanMonitor: ObservableObject {
         return uniqueSensors
     }
 
-    private static let smcBase36Chars = Array("0123456789abcdefghijklmnopqrstuvwxyz")
-
-    private func discoverAdditionalCoreDefinitions(
-        excluding existingDefinitions: [SMCSensorKeys.SensorDefinition]
-    ) -> [SMCSensorKeys.SensorDefinition] {
-        let existingKeys = Set(existingDefinitions.map { canonicalizedDynamicSensorKey($0.key) })
-        var dynamicDefinitions: [SMCSensorKeys.SensorDefinition] = []
-        var seenCanonicalKeys = existingKeys
-
-        for prefix in ["Tp", "Te"] {
-            for first in ["0", "1", "2", "x"] {
-                for second in FanMonitor.smcBase36Chars {
-                    let key = "\(prefix)\(first)\(second)"
-                    let canonicalKey = canonicalizedDynamicSensorKey(key)
-                    if seenCanonicalKeys.contains(canonicalKey) { continue }
-                    guard let temp = smc.getTemperature(key), temp > 0, temp < 150 else { continue }
-                    seenCanonicalKeys.insert(canonicalKey)
-                    dynamicDefinitions.append(
-                        SMCSensorKeys.SensorDefinition(name: "CPU Core Sensor \(key)", key: key)
-                    )
-                }
-            }
-        }
-
-        dynamicDefinitions.sort { $0.key < $1.key }
-        return dynamicDefinitions
-    }
-
-    private func discoverAdditionalGPUDefinitions(
-        excluding existingDefinitions: [SMCSensorKeys.SensorDefinition]
-    ) -> [SMCSensorKeys.SensorDefinition] {
-        let existingKeys = Set(existingDefinitions.map { canonicalizedDynamicSensorKey($0.key) })
-        var dynamicDefinitions: [SMCSensorKeys.SensorDefinition] = []
-        var seenCanonicalKeys = existingKeys
-
-        for prefix in ["Tg", "TG"] {
-            for first in ["0", "1", "2", "3"] {
-                for second in FanMonitor.smcBase36Chars {
-                    let key = "\(prefix)\(first)\(second)"
-                    let canonicalKey = canonicalizedDynamicSensorKey(key)
-                    if seenCanonicalKeys.contains(canonicalKey) { continue }
-                    guard let temp = smc.getTemperature(key), temp > 0, temp < 150 else { continue }
-                    seenCanonicalKeys.insert(canonicalKey)
-                    dynamicDefinitions.append(
-                        SMCSensorKeys.SensorDefinition(name: "GPU Sensor \(key)", key: key)
-                    )
-                }
-            }
-        }
-
-        dynamicDefinitions.sort { $0.key < $1.key }
-        return dynamicDefinitions
-    }
-
-    struct CPUTier {
-        let name: String
-        let prefix: String
-        let count: Int
-    }
-
-    private static func readCPUTiers() -> [CPUTier] {
-        var size = MemoryLayout<Int32>.size
-        var nperflevels: Int32 = 0
-        var tiers: [CPUTier] = []
-
-        if sysctlbyname("hw.nperflevels", &nperflevels, &size, nil, 0) == 0 && nperflevels > 0 {
-            for i in 0..<nperflevels {
-                var count: Int32 = 0
-                var nameBuf = [CChar](repeating: 0, count: 64)
-                var nameSize = nameBuf.count
-                sysctlbyname("hw.perflevel\(i).physicalcpu", &count, &size, nil, 0)
-                sysctlbyname("hw.perflevel\(i).name", &nameBuf, &nameSize, nil, 0)
-                let rawName = String(cString: nameBuf).trimmingCharacters(in: .whitespacesAndNewlines)
-                guard count > 0 else { continue }
-
-                let prefix: String
-                let lowerName = rawName.lowercased()
-                if lowerName.contains("super") || lowerName.contains("ultra") {
-                    prefix = "S-Core"
-                } else if lowerName.contains("perf") {
-                    prefix = "P-Core"
-                } else if lowerName.contains("effic") {
-                    prefix = "E-Core"
-                } else if nperflevels >= 3 {
-                    prefix = i == 0 ? "S-Core" : (i == 1 ? "P-Core" : "E-Core")
-                } else if nperflevels == 2 {
-                    prefix = i == 0 ? "P-Core" : "E-Core"
-                } else {
-                    prefix = "Core"
-                }
-
-                tiers.append(CPUTier(name: rawName.isEmpty ? prefix : rawName, prefix: prefix, count: Int(count)))
-            }
-        }
-
-        if tiers.isEmpty {
-            let total = readCoreCount("hw.physicalcpu")
-            let fallbackCount = total > 0 ? total : 8
-            tiers.append(CPUTier(name: "Performance", prefix: "P-Core", count: fallbackCount))
-        }
-
-        return tiers
+    func discoverCPUTiers() -> [CPUTierInfo] {
+        CPUTopologyDiscovery.discoverTiers()
     }
 
     private func normalizeCoreSensors(_ sensors: [SensorInfo]) -> [SensorInfo] {
@@ -428,30 +274,9 @@ final class FanMonitor: ObservableObject {
     private func normalizeGPUSensors(_ sensors: [SensorInfo]) -> [SensorInfo] {
         ThermalSensorProcessing.normalizeGPUSensors(
             sensors,
-            preferM4Channels: usesM4MaxSensorCatalog
+            preferM4Channels: usesM4MaxSensorCatalog,
+            preferM5Channels: isM5Family
         )
-    }
-
-    private func isPotentialCoreSensor(_ sensor: SensorInfo) -> Bool {
-        sensor.id.hasPrefix("Tp")
-            || sensor.id.hasPrefix("Te")
-            || sensor.name.contains("Core")
-            || sensor.name.contains(SMCSensorFilters.pCoreIdentifier)
-            || sensor.name.contains(SMCSensorFilters.eCoreIdentifier)
-    }
-
-    private func isKnownPerformanceCore(_ sensor: SensorInfo) -> Bool {
-        knownPerformanceCoreKeys.contains(sensor.id) || sensor.name.contains(SMCSensorFilters.pCoreIdentifier)
-    }
-
-    private func isKnownEfficiencyCore(_ sensor: SensorInfo) -> Bool {
-        knownEfficiencyCoreKeys.contains(sensor.id)
-            || sensor.id.hasPrefix("Te")
-            || sensor.name.contains(SMCSensorFilters.eCoreIdentifier)
-    }
-
-    private func countPotentialCoreSensors(in sensors: [SensorInfo]) -> Int {
-        sensors.filter { isPotentialCoreSensor($0) }.count
     }
 
     private func canonicalizedDynamicSensorKey(_ key: String) -> String {
@@ -459,14 +284,6 @@ final class FanMonitor: ObservableObject {
             return "Tg" + key.dropFirst(2)
         }
         return key
-    }
-
-    private static func readCoreCount(_ sysctlName: String) -> Int {
-        var value: Int32 = 0
-        var size = MemoryLayout<Int32>.size
-        let result = sysctlbyname(sysctlName, &value, &size, nil, 0)
-        guard result == 0, value > 0 else { return 0 }
-        return Int(value)
     }
 
     private static func readCPUBrand() -> String {
