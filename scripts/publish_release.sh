@@ -67,7 +67,7 @@ fi
 echo "==> Generating signed appcast..."
 cp appcast.xml dist/ || true
 KEY_FILE=$(mktemp)
-echo "$PRIVATE_KEY" > "$KEY_FILE"
+printf "%s" "$PRIVATE_KEY" > "$KEY_FILE"
 rm -rf "$HOME/Library/Caches/Sparkle_generate_appcast"
 "$TOOLS_DIR/bin/generate_appcast" \
   --download-url-prefix "https://github.com/TomTang197/Flux-MacOSNetworkFanSpeed/releases/download/v${VERSION}/" \
@@ -78,7 +78,7 @@ cp dist/appcast.xml ./appcast.xml
 
 # 8. Commit, tag and push
 echo "==> Committing and pushing release..."
-git add AeroPulse.xcodeproj/project.pbxproj appcast.xml
+git add AeroPulse.xcodeproj/project.pbxproj appcast.xml scripts/publish_release.sh
 git diff --staged --quiet || git commit -m "chore(release): release v${VERSION}"
 git push origin main
 
