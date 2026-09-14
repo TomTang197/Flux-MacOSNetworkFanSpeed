@@ -39,4 +39,28 @@ final class DashboardWindowPolicyTests: XCTestCase {
         let later = policy.evaluateReopen(state: state, at: now.addingTimeInterval(0.16))
         XCTAssertEqual(later, .openNewWindow)
     }
+
+    func testOpeningInProgressAlwaysIgnored() {
+        var policy = DashboardWindowPolicy(debounceInterval: 0.15)
+        let state = DashboardWindowState(
+            isRegistered: false,
+            isVisible: false,
+            isMiniaturized: false,
+            isOpeningInProgress: true
+        )
+        let action = policy.evaluateReopen(state: state)
+        XCTAssertEqual(action, .ignoreThrottled)
+    }
+
+    func testHiddenAppTriggersUnhideAndOrderFront() {
+        var policy = DashboardWindowPolicy(debounceInterval: 0.15)
+        let state = DashboardWindowState(
+            isRegistered: true,
+            isVisible: false,
+            isMiniaturized: false,
+            isAppHidden: true
+        )
+        let action = policy.evaluateReopen(state: state)
+        XCTAssertEqual(action, .unhideAndOrderFront)
+    }
 }

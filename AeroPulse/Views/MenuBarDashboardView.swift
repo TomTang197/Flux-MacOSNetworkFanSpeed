@@ -12,6 +12,7 @@ struct MenuBarDashboardView: View {
     @ObservedObject var launchAtLoginManager: LaunchAtLoginManager
     @ObservedObject private var languageManager = LanguageManager.shared
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.visualEffectsReduced) private var reduceVisualEffects
     @State private var showsNetworkDetails = false
@@ -93,18 +94,39 @@ struct MenuBarDashboardView: View {
             .background(Color.secondary.opacity(0.08), in: Capsule())
 
             Menu {
-                Button(AppStrings.launchAtLoginRefresh, systemImage: AppImages.refresh) {
-                    DispatchQueue.main.async { refreshSnapshot() }
-                }
-                Section(AppStrings.launchAtLogin) {
-                    Text(loginStatusText)
-                }
+                Toggle(AppStrings.launchAtLogin, isOn: Binding(
+                    get: { launchAtLoginManager.isEnabled },
+                    set: { newValue in
+                        DispatchQueue.main.async {
+                            launchAtLoginManager.setEnabled(newValue)
+                        }
+                    }
+                ))
+
                 Divider()
+
+                Button {
+                    openSettingsWindow()
+                } label: {
+                    Label(AppStrings.settings, systemImage: "gearshape")
+                }
+                .keyboardShortcut(",", modifiers: .command)
+
+                Button {
+                    DispatchQueue.main.async { refreshSnapshot() }
+                } label: {
+                    Label(AppStrings.launchAtLoginRefresh, systemImage: AppImages.refresh)
+                }
+                .keyboardShortcut("r", modifiers: .command)
+
+                Divider()
+
                 Button(role: .destructive) {
                     NSApplication.shared.terminate(nil)
                 } label: {
                     Label(AppStrings.quitApplication, systemImage: AppImages.power)
                 }
+                .keyboardShortcut("q", modifiers: .command)
             } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.system(size: 14))
@@ -446,6 +468,17 @@ struct MenuBarDashboardView: View {
             .controlSize(.regular)
 
             Button {
+                openSettingsWindow()
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 12, weight: .medium))
+                    .frame(width: 24, height: 28)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.regular)
+            .help(AppStrings.settings)
+
+            Button {
                 DispatchQueue.main.async { refreshSnapshot() }
             } label: {
                 Image(systemName: AppImages.refresh)
@@ -461,8 +494,6 @@ struct MenuBarDashboardView: View {
     }
 
     private var loginStatusText: String {
-        // The service exposes English status values; localize their presentation
-        // here without changing the service's state or registration behavior.
         switch launchAtLoginManager.statusText {
         case "Enabled": return AppStrings.tr(en: "Enabled", zh: "已启用")
         case "Disabled": return AppStrings.tr(en: "Disabled", zh: "已关闭")
@@ -488,13 +519,34 @@ struct MenuBarDashboardView: View {
     }
 
     private func openDashboardAndDismiss() {
-        let menuWindow = NSApp.keyWindow
+        let menuExtraPanel = NSApp.windows.first { window in
+            (window is NSPanel || window.level != .normal) &&
+            window.isVisible &&
+            window.identifier?.rawValue != "dashboard"
+        }
+
         DashboardWindowManager.shared.registerOpenWindowAction(openWindow)
         DashboardWindowManager.shared.showDashboard()
 
         DispatchQueue.main.async {
-            menuWindow?.orderOut(nil)
-            menuWindow?.close()
+            menuExtraPanel?.orderOut(nil)
+        }
+    }
+
+    private func openSettingsWindow() {
+        let menuExtraPanel = NSApp.windows.first { window in
+            (window is NSPanel || window.level != .normal) &&
+            window.isVisible &&
+            window.identifier?.rawValue != "dashboard"
+        }
+
+        DashboardWindowManager.shared.transitionActivationPolicy(to: .regular)
+        NSApp.unhide(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        openSettings()
+
+        DispatchQueue.main.async {
+            menuExtraPanel?.orderOut(nil)
         }
     }
 }

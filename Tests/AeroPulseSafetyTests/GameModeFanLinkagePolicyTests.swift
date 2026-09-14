@@ -154,4 +154,19 @@ final class GameModeFanLinkagePolicyTests: XCTestCase {
         XCTAssertFalse(settingsDecision.isCooldownActive)
         XCTAssertNil(settingsDecision.remainingCooldown)
     }
+
+    func testResumeGameLinkageRestoresRuleSwitching() {
+        var policy = GameModeFanLinkagePolicy()
+        _ = policy.handleGameModeChange(isActive: true, now: baseDate, enabled: true, exitDelay: 60)
+
+        // User manually overrides
+        policy.handleUserManualOverride()
+        XCTAssertTrue(policy.isUserOverridden)
+
+        // User clicks resume linkage
+        let resumeDecision = policy.resumeGameLinkage(enabled: true)
+        XCTAssertFalse(policy.isUserOverridden)
+        XCTAssertEqual(resumeDecision.action, .switchMode(.rules))
+        XCTAssertTrue(resumeDecision.isGamingActive)
+    }
 }

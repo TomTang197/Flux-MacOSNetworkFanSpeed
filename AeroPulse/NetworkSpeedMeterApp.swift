@@ -44,5 +44,22 @@ struct NetworkSpeedMeterApp: App {
         }
 
         .menuBarExtraStyle(.window)
+
+        Settings {
+            ScrollView {
+                SettingsView(
+                    networkViewModel: networkViewModel,
+                    fanViewModel: fanViewModel,
+                    launchAtLoginManager: launchAtLoginManager,
+                    showWindowButton: false,
+                    preferredWidth: nil,
+                    layoutWidth: 620,
+                    preferencesOnly: true
+                )
+                .padding(20)
+            }
+            .frame(minWidth: 560, idealWidth: 620, minHeight: 500, idealHeight: 580)
+            .environment(\.visualEffectsReduced, reduceVisualEffects)
+        }
     }
 }

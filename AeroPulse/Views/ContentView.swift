@@ -119,11 +119,9 @@ struct ContentView: View {
             networkViewModel.setPresentationUpdatesPaused(false)
             networkViewModel.setDetailedSampling(true, source: .dashboardWindow)
             fanViewModel.setDetailedSampling(true, source: .dashboardWindow)
-            DispatchQueue.main.async {
-                NSApp.setActivationPolicy(.regular)
-                NSApp.unhide(nil)
-                NSApp.activate(ignoringOtherApps: true)
-            }
+            DashboardWindowManager.shared.transitionActivationPolicy(to: .regular)
+            NSApp.unhide(nil)
+            NSApp.activate(ignoringOtherApps: true)
         }
         .onChange(of: windowInteraction.isInteracting) { _, isInteracting in
             networkViewModel.setPresentationUpdatesPaused(isInteracting)
@@ -137,14 +135,7 @@ struct ContentView: View {
             fanViewModel.setDetailedSampling(false, source: .dashboardWindow)
             windowInteraction.detach()
             DashboardWindowManager.shared.unregisterDashboardWindow(nil)
-            DispatchQueue.main.async {
-                let hasVisibleWindows = NSApp.windows.contains {
-                    $0.isVisible && !($0 is NSPanel) && $0.level == .normal && $0.identifier?.rawValue != "dashboard"
-                }
-                if !hasVisibleWindows {
-                    NSApplication.shared.setActivationPolicy(.accessory)
-                }
-            }
+            DashboardWindowManager.shared.transitionActivationPolicy(to: .accessory)
         }
     }
 
@@ -174,7 +165,6 @@ struct ContentView: View {
         windowInteraction.attach(to: window)
 
         window.makeKeyAndOrderFront(nil)
-        window.orderFrontRegardless()
         NSApp.activate(ignoringOtherApps: true)
     }
 }

@@ -22,7 +22,8 @@ final class FanMonitor: ObservableObject {
     private var sensorPollCount = 0
     private var cachedFanCount: Int?
     private var cachedFanInfo: [Int: FanStaticInfo] = [:]
-    private var cachedFanRPM: [Int: Int] = [:]
+    private var cachedFanRPM: [Int: (rpm: Int, sampledAt: Date)] = [:]
+    private let maximumCachedFanRPMAge: TimeInterval = 4
     private var discoveredSensorDefinitions: [SMCSensorKeys.SensorDefinition] = []
     private var lastKnownTemperatures: [String: (value: Double, sampledAt: Date)] = [:]
 
@@ -54,6 +55,11 @@ final class FanMonitor: ObservableObject {
         let maxRPM: Int
     }
 
+    func clearCache() {
+        cachedFanRPM.removeAll()
+        lastKnownTemperatures.removeAll()
+    }
+
     func getFans() -> [FanInfo] {
         if cachedFanCount == nil || cachedFanInfo.isEmpty {
             refreshFanTopology()
@@ -65,9 +71,16 @@ final class FanMonitor: ObservableObject {
         for i in 0..<count {
             let currentReading = smc.getFanRPM(i)
             if let currentReading, currentReading > 0 {
-                cachedFanRPM[i] = currentReading
+                cachedFanRPM[i] = (currentReading, Date())
             }
-            guard let rpm = currentReading ?? cachedFanRPM[i] else { continue }
+            let validCachedRPM: Int? = {
+                guard let cached = cachedFanRPM[i] else { return nil }
+                if Date().timeIntervalSince(cached.sampledAt) <= maximumCachedFanRPMAge {
+                    return cached.rpm
+                }
+                return nil
+            }()
+            guard let rpm = currentReading ?? validCachedRPM else { continue }
 
             let info = cachedFanInfo[i] ?? FanStaticInfo(
                 name: i == 0 ? "Exhaust" : "Fan \(i)",

@@ -9,6 +9,8 @@ final class DashboardWindowManager: NSObject {
     private var openWindowAction: OpenWindowAction?
     private weak var registeredWindow: NSWindow?
     private var policy = DashboardWindowPolicy()
+    private var isOpeningInProgress = false
+    private var pendingAccessorySwitchWorkItem: DispatchWorkItem?
 
     override private init() {
         super.init()
@@ -20,6 +22,7 @@ final class DashboardWindowManager: NSObject {
 
     func registerDashboardWindow(_ window: NSWindow) {
         self.registeredWindow = window
+        self.isOpeningInProgress = false
         window.identifier = NSUserInterfaceItemIdentifier("dashboard")
     }
 
@@ -33,8 +36,35 @@ final class DashboardWindowManager: NSObject {
         }
     }
 
+    /// Safely transitions activation policy to avoid race conditions when reopening rapidly after Cmd+W.
+    func transitionActivationPolicy(to target: NSApplication.ActivationPolicy) {
+        pendingAccessorySwitchWorkItem?.cancel()
+        pendingAccessorySwitchWorkItem = nil
+
+        if target == .regular {
+            if NSApp.activationPolicy() != .regular {
+                NSApp.setActivationPolicy(.regular)
+            }
+        } else {
+            let workItem = DispatchWorkItem { [weak self] in
+                guard let self else { return }
+                let hasActiveDashboard = self.registeredWindow != nil || self.isOpeningInProgress
+                let hasOtherWindows = NSApp.windows.contains {
+                    $0.isVisible && !($0 is NSPanel) && $0.level == .normal && $0.identifier?.rawValue != "dashboard"
+                }
+                if !hasActiveDashboard && !hasOtherWindows {
+                    if NSApp.activationPolicy() != .accessory {
+                        NSApp.setActivationPolicy(.accessory)
+                    }
+                }
+            }
+            self.pendingAccessorySwitchWorkItem = workItem
+            DispatchQueue.main.async(execute: workItem)
+        }
+    }
+
     func showDashboard() {
-        NSApp.setActivationPolicy(.regular)
+        transitionActivationPolicy(to: .regular)
         NSApp.unhide(nil)
         NSApp.activate(ignoringOtherApps: true)
 
@@ -42,10 +72,12 @@ final class DashboardWindowManager: NSObject {
         let state = DashboardWindowState(
             isRegistered: window != nil,
             isVisible: window?.isVisible ?? false,
-            isMiniaturized: window?.isMiniaturized ?? false
+            isMiniaturized: window?.isMiniaturized ?? false,
+            isAppHidden: NSApp.isHidden,
+            isOpeningInProgress: isOpeningInProgress
         )
 
-        let action = policy.evaluateReopen(state: state, at: Date())
+        let action = policy.evaluateReopen(state: state)
 
         switch action {
         case .deminiaturizeAndOrderFront:
@@ -54,14 +86,17 @@ final class DashboardWindowManager: NSObject {
                 window.deminiaturize(nil)
             }
             window.makeKeyAndOrderFront(nil)
-            window.orderFrontRegardless()
+
+        case .unhideAndOrderFront:
+            NSApp.unhide(nil)
+            window?.makeKeyAndOrderFront(nil)
 
         case .orderFront:
             guard let window else { return }
             window.makeKeyAndOrderFront(nil)
-            window.orderFrontRegardless()
 
         case .openNewWindow:
+            isOpeningInProgress = true
             if let openWindow = openWindowAction {
                 openWindow(id: "dashboard")
             } else {
@@ -69,6 +104,9 @@ final class DashboardWindowManager: NSObject {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
                     self?.openWindowAction?(id: "dashboard")
                 }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                self?.isOpeningInProgress = false
             }
 
         case .ignoreThrottled:

@@ -30,12 +30,12 @@ final class WindowInteractionCoordinator: NSObject, ObservableObject {
     private weak var window: NSWindow?
     private var policy = WindowInteractionPolicy()
     private var settleWorkItem: DispatchWorkItem?
+    private var watchdogWorkItem: DispatchWorkItem?
     private var originalHasShadow = true
     private var permanentlyReducesEffects = false
 
     func attach(to window: NSWindow) {
         if self.window === window {
-            applyWindowShadow()
             return
         }
 
@@ -68,13 +68,10 @@ final class WindowInteractionCoordinator: NSObject, ObservableObject {
             name: NSWindow.didEndLiveResizeNotification,
             object: window
         )
-
-        applyWindowShadow()
     }
 
     func detach() {
-        settleWorkItem?.cancel()
-        settleWorkItem = nil
+        cancelAllTimers()
         NotificationCenter.default.removeObserver(self)
 
         if let window, window.hasShadow != originalHasShadow {
@@ -88,20 +85,21 @@ final class WindowInteractionCoordinator: NSObject, ObservableObject {
     }
 
     func setPermanentlyReducedEffects(_ reduced: Bool) {
-        guard permanentlyReducesEffects != reduced else { return }
         permanentlyReducesEffects = reduced
-        applyWindowShadow()
     }
 
     @objc private func windowWillMove(_ notification: Notification) {
         beginInteraction()
+        scheduleWatchdog()
     }
 
     @objc private func windowDidMove(_ notification: Notification) {
+        cancelWatchdog()
         scheduleSettle()
     }
 
     @objc private func windowWillStartLiveResize(_ notification: Notification) {
+        cancelWatchdog()
         beginInteraction()
     }
 
@@ -114,17 +112,31 @@ final class WindowInteractionCoordinator: NSObject, ObservableObject {
         settleWorkItem = nil
         _ = policy.beginInteraction()
         publishInteractionState()
-        applyWindowShadow()
+    }
+
+    private func scheduleWatchdog() {
+        watchdogWorkItem?.cancel()
+        let token = policy.beginInteraction()
+        let item = DispatchWorkItem { [weak self] in
+            // If no move notification was received within 300ms, user only clicked the title bar without moving.
+            self?.finishInteraction(token: token, force: true)
+        }
+        watchdogWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: item)
+    }
+
+    private func cancelWatchdog() {
+        watchdogWorkItem?.cancel()
+        watchdogWorkItem = nil
     }
 
     private func scheduleSettle() {
         settleWorkItem?.cancel()
         let token = policy.beginInteraction()
         publishInteractionState()
-        applyWindowShadow()
 
         let workItem = DispatchWorkItem { [weak self] in
-            self?.finishInteraction(token: token)
+            self?.finishInteraction(token: token, force: false)
         }
         settleWorkItem = workItem
         DispatchQueue.main.asyncAfter(
@@ -133,25 +145,27 @@ final class WindowInteractionCoordinator: NSObject, ObservableObject {
         )
     }
 
-    private func finishInteraction(token: UInt64) {
+    private func finishInteraction(token: UInt64, force: Bool) {
+        // Prevent premature settling while the user is still actively live-resizing the window
+        if !force, let window = self.window, window.inLiveResize {
+            return
+        }
+
         guard policy.finishInteraction(ifCurrent: token) else { return }
         settleWorkItem = nil
+        watchdogWorkItem = nil
         publishInteractionState()
-        applyWindowShadow()
+    }
+
+    private func cancelAllTimers() {
+        settleWorkItem?.cancel()
+        settleWorkItem = nil
+        watchdogWorkItem?.cancel()
+        watchdogWorkItem = nil
     }
 
     private func publishInteractionState() {
         guard isInteracting != policy.isInteracting else { return }
         isInteracting = policy.isInteracting
-    }
-
-    private func applyWindowShadow() {
-        guard let window else { return }
-        let shouldShowShadow =
-            originalHasShadow && !permanentlyReducesEffects && !policy.isInteracting
-
-        guard window.hasShadow != shouldShowShadow else { return }
-        window.hasShadow = shouldShowShadow
-        window.invalidateShadow()
     }
 }

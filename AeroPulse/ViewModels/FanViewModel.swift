@@ -44,6 +44,7 @@ final class FanViewModel: ObservableObject {
     @Published private(set) var isGameModeLinkageEnabled: Bool = false
     @Published private(set) var gameModeExitDelaySeconds: Int = 60
     @Published private(set) var isGameModeActive: Bool = false
+    @Published private(set) var isGameModeUserOverridden: Bool = false
     @Published private(set) var gameModeCooldownRemainingSeconds: Int? = nil
 
     private let monitor = FanMonitor()
@@ -321,6 +322,7 @@ final class FanViewModel: ObservableObject {
 
     private func applyGameModeDecision(_ decision: GameModeLinkageDecision) {
         isGameModeActive = decision.isGamingActive
+        isGameModeUserOverridden = gameModePolicy.isUserOverridden
         gameModeCooldownRemainingSeconds = decision.remainingCooldown.map { max(1, Int(ceil($0))) }
 
         if decision.isCooldownActive {
@@ -341,6 +343,11 @@ final class FanViewModel: ObservableObject {
                 setFanMode(.auto, isUserInitiated: false)
             }
         }
+    }
+
+    func resumeGameModeLinkage() {
+        let decision = gameModePolicy.resumeGameLinkage(enabled: isGameModeLinkageEnabled)
+        applyGameModeDecision(decision)
     }
 
     private func startCooldownTimer() {
@@ -434,10 +441,21 @@ final class FanViewModel: ObservableObject {
     func setFanMode(_ mode: FanMode, isUserInitiated: Bool = false) {
         if isUserInitiated {
             gameModePolicy.handleUserManualOverride()
+            isGameModeUserOverridden = gameModePolicy.isUserOverridden
             if gameModeCooldownRemainingSeconds != nil {
                 gameModeCooldownRemainingSeconds = nil
                 stopCooldownTimer()
             }
+        }
+
+        // If switching to .auto and helper is not installed, the hardware is ALREADY in default system auto control.
+        // Never prompt for administrator privileges to select or stay on Auto.
+        if mode == .auto && !helperInstalled {
+            currentMode = .auto
+            activeRule = nil
+            isRulesAtMinimum = false
+            resetRuleControlState()
+            return
         }
 
         guard helperInstalled else {
@@ -486,6 +504,7 @@ final class FanViewModel: ObservableObject {
 
     func setTargetRPM(fanIndex: Int, rpm: Int) {
         gameModePolicy.handleUserManualOverride()
+        isGameModeUserOverridden = gameModePolicy.isUserOverridden
         if gameModeCooldownRemainingSeconds != nil {
             gameModeCooldownRemainingSeconds = nil
             stopCooldownTimer()

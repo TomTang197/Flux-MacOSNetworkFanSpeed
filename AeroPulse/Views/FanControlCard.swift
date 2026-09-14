@@ -333,11 +333,27 @@ struct FanControlCard: View {
                 Spacer()
 
                 if fanViewModel.isGameModeActive {
-                    HStack(spacing: 4) {
-                        Circle().fill(Color.purple).frame(width: 5, height: 5)
-                        Text(AppStrings.tr(en: "Active · Rules", zh: "生效中 · 规则"))
-                            .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold, design: .monospaced))
-                            .foregroundColor(.purple)
+                    if fanViewModel.isGameModeUserOverridden {
+                        HStack(spacing: 6) {
+                            HStack(spacing: 4) {
+                                Circle().fill(Color.orange).frame(width: 5, height: 5)
+                                Text(AppStrings.tr(en: "Overridden", zh: "已手动接管"))
+                                    .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.orange)
+                            }
+                            Button(AppStrings.tr(en: "Resume", zh: "恢复联动")) {
+                                fanViewModel.resumeGameModeLinkage()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.mini)
+                        }
+                    } else {
+                        HStack(spacing: 4) {
+                            Circle().fill(Color.purple).frame(width: 5, height: 5)
+                            Text(AppStrings.tr(en: "Active · Rules", zh: "生效中 · 规则"))
+                                .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold, design: .monospaced))
+                                .foregroundColor(.purple)
+                        }
                     }
                 } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
                     HStack(spacing: 4) {

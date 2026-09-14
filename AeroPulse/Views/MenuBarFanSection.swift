@@ -40,8 +40,27 @@ struct MenuBarFanSection: View {
 
             modePicker
 
-            if fanViewModel.currentMode == .manual, let fan = fanViewModel.fans.first {
-                manualControl(fan: fan)
+            if fanViewModel.currentMode == .manual {
+                if fanViewModel.fans.count > 1 && !fanViewModel.syncAllFans {
+                    ForEach(fanViewModel.fans) { fan in
+                        manualControl(fan: fan, label: fan.name)
+                    }
+                } else if let fan = fanViewModel.fans.first {
+                    manualControl(fan: fan, label: fanViewModel.fans.count > 1 ? AppStrings.syncAllFans : nil)
+                }
+
+                if fanViewModel.fans.count > 1 {
+                    HStack {
+                        Spacer()
+                        Toggle(AppStrings.syncAllFans, isOn: $fanViewModel.syncAllFans)
+                            .toggleStyle(.switch)
+                            .controlSize(.mini)
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .padding(.top, 2)
+                }
+            } else if fanViewModel.currentMode == .custom {
+                smartRulesInfo
             }
 
             noticeBanner
@@ -68,6 +87,50 @@ struct MenuBarFanSection: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(AppStrings.tr(en: "\(title) average temperature", zh: "\(title) 平均温度"))
         .accessibilityValue(value)
+    }
+
+    private var smartRulesInfo: some View {
+        VStack(spacing: 4) {
+            HStack {
+                Text(AppStrings.tr(en: "Control Avg", zh: "控制基准均温"))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(fanViewModel.controlAverageTemp)
+                    .font(.system(size: 11.5, weight: .bold, design: .monospaced))
+                    .foregroundColor(.orange)
+            }
+            if let rule = fanViewModel.activeRule {
+                HStack {
+                    Text(AppStrings.tr(en: "Active Tier", zh: "当前档位"))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("≥\(Int(rule.temperature))°C → \(rule.speedPercentage)%")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.teal)
+                }
+            }
+            Button {
+                DashboardWindowManager.shared.showDashboard()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 10))
+                    Text(AppStrings.tr(en: "Configure Rules in Dashboard…", zh: "在控制台中配置规则…"))
+                        .font(.system(size: 11, weight: .medium))
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 9))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 1)
+        }
+        .padding(.top, 2)
     }
 
     private var modePicker: some View {
@@ -123,13 +186,13 @@ struct MenuBarFanSection: View {
     }
 
     @ViewBuilder
-    private func manualControl(fan: FanInfo) -> some View {
+    private func manualControl(fan: FanInfo, label: String? = nil) -> some View {
         let target = fanViewModel.manualTargetRPM[fan.id] ?? fan.currentRPM
         let lowerBound = max(0, fan.minRPM)
         let upperBound = fan.maxRPM
         VStack(spacing: 4) {
             MenuBarValueRow(
-                title: AppStrings.tr(en: "Target speed", zh: "目标转速"),
+                title: label ?? AppStrings.tr(en: "Target speed", zh: "目标转速"),
                 value: "\(target) RPM"
             )
             if upperBound > lowerBound {
@@ -163,6 +226,8 @@ struct MenuBarFanSection: View {
             badgePill(AppStrings.tr(en: "Installing…", zh: "安装组件中…"), icon: "clock", color: .orange)
         } else if !fanViewModel.helperInstalled {
             badgePill(AppStrings.tr(en: "Setup required", zh: "待设置"), icon: "info.circle", color: .orange)
+        } else if fanViewModel.isGameModeActive && fanViewModel.isGameModeUserOverridden {
+            badgePill(AppStrings.tr(en: "Overridden", zh: "已接管"), icon: "hand.raised", color: .orange)
         } else if fanViewModel.isGameModeActive {
             badgePill(AppStrings.tr(en: "Game Mode", zh: "游戏模式"), icon: "gamecontroller", color: .green)
         } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {

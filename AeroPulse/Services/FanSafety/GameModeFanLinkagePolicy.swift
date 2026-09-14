@@ -157,6 +157,24 @@ public struct GameModeFanLinkagePolicy {
         }
     }
 
+    public mutating func resumeGameLinkage(enabled: Bool) -> GameModeLinkageDecision {
+        isUserOverridden = false
+        guard isGamingActive, enabled else {
+            return GameModeLinkageDecision(
+                action: .none,
+                remainingCooldown: nil,
+                isGamingActive: isGamingActive,
+                isCooldownActive: false
+            )
+        }
+        return GameModeLinkageDecision(
+            action: .switchMode(.rules),
+            remainingCooldown: nil,
+            isGamingActive: true,
+            isCooldownActive: false
+        )
+    }
+
     public mutating func handleSettingsChanged(
         enabled: Bool,
         exitDelay: TimeInterval,
