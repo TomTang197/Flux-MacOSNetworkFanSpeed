@@ -25,6 +25,8 @@ final class FanViewModel: ObservableObject {
         "com.bandan.me.AeroPulse.GameModeLinkageEnabled"
     private let gameModeExitDelaySecondsStorageKey =
         "com.bandan.me.AeroPulse.GameModeExitDelaySeconds"
+    private let fanCurrentModeStorageKey =
+        "com.bandan.me.AeroPulse.FanCurrentMode"
 
     @Published var fans: [FanInfo] = []
     @Published var sensors: [SensorInfo] = []
@@ -52,12 +54,14 @@ final class FanViewModel: ObservableObject {
     private let helperInstaller = PrivilegedHelperInstaller.shared
     private let gameModeMonitor = GameModeMonitor()
     private var gameModePolicy = GameModeFanLinkagePolicy()
+    private var wakeResumePolicy = FanWakeResumePolicy(requiredFreshSamples: 2)
+    private var consecutiveStaleTemperatureCycles = 0
     private var gameModeCooldownTimer: AnyCancellable?
     private let samplingQueue = DispatchQueue(label: "AeroPulse.FanMonitorSampling", qos: .utility)
     private var timer: AnyCancellable?
     private let detailedRefreshInterval: TimeInterval = 2.0
     private let backgroundRefreshInterval: TimeInterval = 4.0
-    private let maximumControlTemperatureAge: TimeInterval = 6.0
+    private let maximumControlTemperatureAge: TimeInterval = 10.0
     private var helperPollCounter = 0
     private var emptySampleCounter = 0
     private var isSamplingData = false
@@ -74,6 +78,7 @@ final class FanViewModel: ObservableObject {
         loadRules()
         loadRuleDownshiftSettings()
         loadGameModeLinkageSettings()
+        loadSavedFanMode()
         setupGameModeObservation()
         observeSafetyLifecycleEvents()
         DispatchQueue.main.async { [weak self] in
@@ -94,6 +99,18 @@ final class FanViewModel: ObservableObject {
         }
     }
 
+    private func loadSavedFanMode() {
+        if let saved = UserDefaults.standard.string(forKey: fanCurrentModeStorageKey),
+           let mode = FanMode(rawValue: saved),
+           mode == .custom {
+            wakeResumePolicy = FanWakeResumePolicy(
+                state: .waking(consecutiveFreshSamples: 0),
+                targetToResume: .customRules,
+                requiredFreshSamples: 2
+            )
+        }
+    }
+
     private func observeSafetyLifecycleEvents() {
         let terminationObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification,
@@ -109,12 +126,15 @@ final class FanViewModel: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.currentMode = .auto
-            self?.activeRule = nil
-            self?.isRulesAtMinimum = false
-            self?.resetRuleControlState()
-            self?.gameModeCooldownRemainingSeconds = nil
-            self?.gameModeCooldownTimer?.cancel()
+            guard let self else { return }
+            if self.wakeResumePolicy.state == .active && self.wakeResumePolicy.targetToResume == nil {
+                self.currentMode = .auto
+                self.activeRule = nil
+                self.isRulesAtMinimum = false
+                self.resetRuleControlState()
+                self.gameModeCooldownRemainingSeconds = nil
+                self.gameModeCooldownTimer?.cancel()
+            }
         }
         defaultNotificationObservers.append(leaseObserver)
 
@@ -123,9 +143,47 @@ final class FanViewModel: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.restoreSystemControlForSafety(waitForReply: true)
+            self?.handleSystemWillSleep()
         }
         workspaceNotificationObservers.append(sleepObserver)
+
+        let wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handleSystemDidWake()
+        }
+        workspaceNotificationObservers.append(wakeObserver)
+    }
+
+    private func handleSystemWillSleep() {
+        let action = wakeResumePolicy.handleWillSleep(isCustomModeActive: currentMode == .custom)
+        if action == .restoreSystemAuto {
+            controlClient.setControlTemperatureDeadline(nil)
+            let reply = DispatchSemaphore(value: 0)
+            controlClient.resetToAutomatic { _ in reply.signal() }
+            _ = reply.wait(timeout: .now() + 1.5)
+        }
+        currentMode = .auto
+        activeRule = nil
+        isRulesAtMinimum = false
+        resetRuleControlState()
+        gameModeCooldownRemainingSeconds = nil
+        gameModeCooldownTimer?.cancel()
+        controlTemperatureSample = nil
+        consecutiveStaleTemperatureCycles = 0
+    }
+
+    private func handleSystemDidWake() {
+        wakeResumePolicy.handleDidWake()
+        controlTemperatureSample = nil
+        consecutiveStaleTemperatureCycles = 0
+        resetRuleControlState()
+        SMCService.shared.reconnect()
+        refreshHelperStatus()
+        restartTimer()
+        refreshData()
     }
 
     private func restoreSystemControlForSafety(waitForReply: Bool) {
@@ -440,6 +498,12 @@ final class FanViewModel: ObservableObject {
 
     func setFanMode(_ mode: FanMode, isUserInitiated: Bool = false) {
         if isUserInitiated {
+            wakeResumePolicy.handleUserOverride()
+            if mode == .custom || mode == .auto {
+                UserDefaults.standard.set(mode.rawValue, forKey: fanCurrentModeStorageKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: fanCurrentModeStorageKey)
+            }
             gameModePolicy.handleUserManualOverride()
             isGameModeUserOverridden = gameModePolicy.isUserOverridden
             if gameModeCooldownRemainingSeconds != nil {
@@ -559,9 +623,16 @@ final class FanViewModel: ObservableObject {
                   now: now,
                   maximumAge: maximumControlTemperatureAge
               ) else {
-            restoreSystemControlForSafety(waitForReply: false)
+            consecutiveStaleTemperatureCycles += 1
+            controlClient.resetToAutomatic()
+            activeRule = nil
+            isRulesAtMinimum = false
+            if consecutiveStaleTemperatureCycles >= 8 {
+                restoreSystemControlForSafety(waitForReply: false)
+            }
             return
         }
+        consecutiveStaleTemperatureCycles = 0
         let controlTemperature = sample.value
         let decision = FanRuleMatchPolicy.decision(
             temperature: controlTemperature,
@@ -710,6 +781,20 @@ final class FanViewModel: ObservableObject {
                 }
                 if let sampledControlTemperature {
                     self.controlTemperatureSample = sampledControlTemperature
+                }
+
+                let isFresh = self.controlTemperatureSample != nil &&
+                    TemperatureFreshnessPolicy.isFresh(
+                        sampledAt: self.controlTemperatureSample?.sampledAt,
+                        now: Date(),
+                        maximumAge: self.maximumControlTemperatureAge
+                    )
+                let wakeAction = self.wakeResumePolicy.handleSample(
+                    isFresh: isFresh,
+                    helperInstalled: self.helperInstalled
+                )
+                if case .resume(let target) = wakeAction, target == .customRules {
+                    self.setFanMode(.custom, isUserInitiated: false)
                 }
 
                 if self.currentMode == .custom {
