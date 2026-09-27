@@ -40,6 +40,20 @@ final class FanModeWritePlannerTests: XCTestCase {
         )
     }
 
+    func testBatchTargetPlanSkipsUnlockWhenAlreadyInManualMode() {
+        XCTAssertEqual(
+            FanTargetBatchWritePlanner.plan(
+                targets: [(index: 0, rpm: 5777), (index: 1, rpm: 5777)],
+                hasFtst: true,
+                needsUnlock: false
+            ),
+            [
+                .writeTarget(index: 0, rpm: 5777),
+                .writeTarget(index: 1, rpm: 5777),
+            ]
+        )
+    }
+
     func testThermalManagerModeRetryIsBounded() {
         XCTAssertTrue(FanModeUnlockRetryPolicy.shouldRetry(afterAttempt: 1))
         XCTAssertTrue(FanModeUnlockRetryPolicy.shouldRetry(afterAttempt: 299))

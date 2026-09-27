@@ -561,7 +561,6 @@ final class FanViewModel: ObservableObject {
 
         case .custom:
             isRulesAtMinimum = true
-            submitRuleSpeedPercentage(0)
             applyThresholdRules()
         }
     }
@@ -624,7 +623,6 @@ final class FanViewModel: ObservableObject {
                   maximumAge: maximumControlTemperatureAge
               ) else {
             consecutiveStaleTemperatureCycles += 1
-            controlClient.resetToAutomatic()
             activeRule = nil
             isRulesAtMinimum = false
             if consecutiveStaleTemperatureCycles >= 8 {
@@ -665,7 +663,7 @@ final class FanViewModel: ObservableObject {
             max(1, Int(ceil($0)))
         }
         controlClient.setControlTemperatureDeadline(
-            sample.sampledAt.addingTimeInterval(maximumControlTemperatureAge)
+            now.addingTimeInterval(maximumControlTemperatureAge)
         )
         submitRuleSpeedPercentage(controlDecision.target.speedPercentage)
     }

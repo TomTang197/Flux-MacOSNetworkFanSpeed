@@ -132,15 +132,18 @@ enum FanTargetBatchWriteOperation: Equatable {
 enum FanTargetBatchWritePlanner {
     static func plan(
         targets: [(index: Int, rpm: Int)],
-        hasFtst: Bool
+        hasFtst: Bool,
+        needsUnlock: Bool = true
     ) -> [FanTargetBatchWriteOperation] {
         var operations: [FanTargetBatchWriteOperation] = []
-        if hasFtst, !targets.isEmpty {
+        if hasFtst, needsUnlock, !targets.isEmpty {
             operations.append(.writeFtst(1))
             operations.append(.wait(seconds: 3))
         }
         for target in targets {
-            operations.append(.writeMode(index: target.index, value: 1))
+            if needsUnlock {
+                operations.append(.writeMode(index: target.index, value: 1))
+            }
             operations.append(.writeTarget(index: target.index, rpm: target.rpm))
         }
         return operations

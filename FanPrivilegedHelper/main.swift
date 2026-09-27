@@ -492,8 +492,12 @@ final class SMCWriter {
 
     private func setFanTargetsDirect(targets: [(index: Int, rpm: Int)]) -> kern_return_t {
         let hasFtst = getInfo("Ftst") != nil
-        logger.notice("Starting direct fan-target batch count=\(targets.count) hasFtst=\(hasFtst)")
-        for operation in FanTargetBatchWritePlanner.plan(targets: targets, hasFtst: hasFtst) {
+        let needsUnlock = hasFtst && targets.contains { target in
+            let modeKey = resolveFanModeKey(index: target.index)
+            return readNumericKey(modeKey) != 1
+        }
+        logger.notice("Starting direct fan-target batch count=\(targets.count) hasFtst=\(hasFtst) needsUnlock=\(needsUnlock)")
+        for operation in FanTargetBatchWritePlanner.plan(targets: targets, hasFtst: hasFtst, needsUnlock: needsUnlock) {
             switch operation {
             case .writeFtst(let value):
                 guard let ftstInfo = getInfo("Ftst") else { return kIOReturnNotFound }
