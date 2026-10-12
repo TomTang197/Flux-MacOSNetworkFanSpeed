@@ -47,7 +47,9 @@ unavailable, readable efficiency channels, then remaining CPU channels, provide
 fallbacks. Each average retains the oldest participating sample timestamp.
 
 Fan rules continue to use the higher of the CPU and GPU averages, rather than
-the maximum individual sensor. A displayed average represents the available
+the maximum individual sensor. Hotspot readings (`TCMz`) represent peak junction
+temperatures and are excluded from average calculations to prevent transient thermal
+spikes from oscillating control inputs. A displayed average represents the available
 channels, not a measurement of every physical CPU core.
 
 ## M4 Max observations (2026-09-11)

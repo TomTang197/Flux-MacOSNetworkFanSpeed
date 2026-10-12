@@ -61,7 +61,7 @@ final class ThermalSensorProcessingTests: XCTestCase {
             SensorInfo(id: "TCMb", name: "CPU Die", temperature: 50, isEnabled: true),
             SensorInfo(id: "TCMz", name: "CPU Hotspot", temperature: 74, isEnabled: true),
         ]
-        XCTAssertEqual(try XCTUnwrap(ThermalSensorProcessing.primaryCPUTemperature(from: sensors)), 62)
+        XCTAssertEqual(try XCTUnwrap(ThermalSensorProcessing.primaryCPUTemperature(from: sensors)), 50)
         XCTAssertEqual(try XCTUnwrap(ThermalSensorProcessing.primaryCPUTemperature(from: Array(sensors.prefix(1)))), 39)
     }
 
@@ -224,12 +224,22 @@ final class ThermalSensorProcessingTests: XCTestCase {
             ThermalSensorProcessing.controlTemperatureSample(from: sensors)
         )
 
-        XCTAssertEqual(cpuAverage.value, 50, accuracy: 0.001)
-        XCTAssertEqual(cpuAverage.sampledAt, hardwareTimestamp.addingTimeInterval(-1))
+        XCTAssertEqual(cpuAverage.value, 40, accuracy: 0.001)
+        XCTAssertEqual(cpuAverage.sampledAt, hardwareTimestamp)
         XCTAssertEqual(gpuAverage.value, 56, accuracy: 0.001)
         XCTAssertEqual(gpuAverage.sampledAt, hardwareTimestamp.addingTimeInterval(-3))
         XCTAssertEqual(controlSample.value, 56, accuracy: 0.001)
         XCTAssertEqual(controlSample.sampledAt, hardwareTimestamp.addingTimeInterval(-3))
+    }
+
+    func testHotspotSensorsDoNotInflateAverageCalculations() throws {
+        let sensors = [
+            SensorInfo(id: "TCMb", name: "CPU Die", temperature: 50, isEnabled: true),
+            SensorInfo(id: "TCMz", name: "CPU Hotspot", temperature: 80, isEnabled: true),
+        ]
+        let sample = try XCTUnwrap(ThermalSensorProcessing.averageCPUTemperatureSample(from: sensors))
+        // Hotspot (80°C) must not be averaged with Die (50°C) to produce 65°C.
+        XCTAssertEqual(sample.value, 50, accuracy: 0.001)
     }
 
     func testPrimaryCPUTemperatureUsesCoreChannelsWithoutDoubleCountingDie() throws {

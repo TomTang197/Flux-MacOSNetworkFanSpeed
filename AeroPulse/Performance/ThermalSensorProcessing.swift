@@ -141,10 +141,19 @@ enum ThermalSensorProcessing {
         return key
     }
 
+    static func isHotspotSensor(_ sensor: SensorInfo) -> Bool {
+        sensor.id == "TCMz"
+            || sensor.id == "TGMz"
+            || sensor.name.localizedCaseInsensitiveContains("hotspot")
+            || sensor.name.localizedCaseInsensitiveContains("热点")
+    }
+
     private static func averageTemperatureSample(
         from sensors: [SensorInfo]
     ) -> SensorTemperatureSample? {
-        let validSensors = sensors.filter(isUsableTemperature)
+        let usableSensors = sensors.filter(isUsableTemperature)
+        let nonHotspotSensors = usableSensors.filter { !isHotspotSensor($0) }
+        let validSensors = nonHotspotSensors.isEmpty ? usableSensors : nonHotspotSensors
         guard !validSensors.isEmpty,
               let oldestTimestamp = validSensors.map(\.sampledAt).min() else {
             return nil
