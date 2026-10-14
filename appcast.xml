@@ -6,6 +6,14 @@
         <description>Most recent changes with links to updates.</description>
         <language>en</language>
         <item>
+            <title>1.2.5</title>
+            <pubDate>Wed, 14 Oct 2026 17:57:42 +1300</pubDate>
+            <sparkle:version>8</sparkle:version>
+            <sparkle:shortVersionString>1.2.5</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/TomTang197/Flux-MacOSNetworkFanSpeed/releases/download/v1.2.5/AeroPulse.zip" length="4132327" type="application/octet-stream" sparkle:edSignature="/F98Ix2idsV1XUvSxhXz9hJ2zOfMJIUOII0v2xaALHHYJMwn4qL0q1bDVYctjvlBaGKavstvuicJ58HtfeHwCg=="/>
+        </item>
+        <item>
             <title>1.2.4</title>
             <pubDate>Wed, 14 Oct 2026 17:37:55 +1300</pubDate>
             <sparkle:version>7</sparkle:version>
@@ -20,14 +28,6 @@
             <sparkle:shortVersionString>1.2.3</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <enclosure url="https://github.com/TomTang197/Flux-MacOSNetworkFanSpeed/releases/download/v1.2.3/AeroPulse.zip" length="4111515" type="application/octet-stream" sparkle:edSignature="A21LMeWkhoZsfclIaOgbOezH1Pd2HAf74dwBJ0im1KUVGVD+kwtgirBNvbkie1crbsjmYLDQGx8CbNJPZz1JDA=="/>
-        </item>
-        <item>
-            <title>1.2.2</title>
-            <pubDate>Sun, 27 Sep 2026 21:56:22 +1300</pubDate>
-            <sparkle:version>5</sparkle:version>
-            <sparkle:shortVersionString>1.2.2</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/TomTang197/Flux-MacOSNetworkFanSpeed/releases/download/v1.2.2/AeroPulse.zip" length="4110755" type="application/octet-stream" sparkle:edSignature="axbS3E0HwTYBf+2w/Tbx54bi7mFuDyD5l6X8Lc3xE5lvRwd92wU4ch+W9A+5kWZItEYaMw+9yLXN9P9nrci0Bg=="/>
         </item>
     </channel>
 </rss>
