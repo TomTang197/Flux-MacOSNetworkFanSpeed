@@ -95,4 +95,54 @@ final class FanWakeResumePolicyTests: XCTestCase {
         let action = policy.handleSample(isFresh: true, helperInstalled: true)
         XCTAssertEqual(action, .none)
     }
+
+    func testDarkWakeReSleepPreservesResumeIntent() {
+        var policy = FanWakeResumePolicy(requiredFreshSamples: 2)
+        _ = policy.handleWillSleep(isCustomModeActive: true)
+        policy.handleDidWake()
+        XCTAssertEqual(policy.state, .waking(consecutiveFreshSamples: 0))
+        XCTAssertEqual(policy.targetToResume, .customRules)
+
+        // DarkWake maintenance ends, system goes back to sleep while still waking (isCustomModeActive is false)
+        let action = policy.handleWillSleep(isCustomModeActive: false)
+        XCTAssertEqual(action, .restoreSystemAuto)
+        XCTAssertEqual(policy.state, .sleeping)
+        XCTAssertEqual(policy.targetToResume, .customRules, "DarkWake re-sleep should NOT erase resume intent")
+
+        // Final wake by user: intent must still be present!
+        policy.handleDidWake()
+        XCTAssertEqual(policy.state, .waking(consecutiveFreshSamples: 0))
+        XCTAssertEqual(policy.targetToResume, .customRules)
+    }
+
+    func testTransientLeaseLossRearmsWakingWithinBudget() {
+        var policy = FanWakeResumePolicy(requiredFreshSamples: 2, maxRecoveryAttempts: 2)
+        _ = policy.handleWillSleep(isCustomModeActive: true)
+        policy.handleDidWake()
+
+        _ = policy.handleSample(isFresh: true, helperInstalled: true)
+        let resumeAction = policy.handleSample(isFresh: true, helperInstalled: true)
+        XCTAssertEqual(resumeAction, .resume(.customRules))
+        XCTAssertEqual(policy.state, .active)
+
+        // Transient lease loss right after resume -> should rearm waking state
+        let lossAction1 = policy.handleTransientLeaseLoss()
+        XCTAssertEqual(lossAction1, .rearmWaking)
+        XCTAssertEqual(policy.state, .waking(consecutiveFreshSamples: 0))
+        XCTAssertEqual(policy.targetToResume, .customRules)
+
+        // Sample fresh again to re-resume
+        _ = policy.handleSample(isFresh: true, helperInstalled: true)
+        _ = policy.handleSample(isFresh: true, helperInstalled: true)
+
+        // Second transient loss -> still within budget (max 2)
+        let lossAction2 = policy.handleTransientLeaseLoss()
+        XCTAssertEqual(lossAction2, .rearmWaking)
+
+        // Third loss -> exceeds budget, drops to auto
+        let lossAction3 = policy.handleTransientLeaseLoss()
+        XCTAssertEqual(lossAction3, .dropToAuto)
+        XCTAssertEqual(policy.state, .active)
+        XCTAssertNil(policy.targetToResume)
+    }
 }

@@ -15,6 +15,7 @@ final class SMCService {
     private var connection: io_connect_t = 0
     private var keyInfoCache: [String: (size: UInt32, type: UInt32)] = [:]
     private var invalidKeys: [String: Date] = [:]
+    private var reconnectedAt: Date?
     private let invalidKeyRetryInterval: TimeInterval = 30
     private let keyInfoCacheLock = NSLock()
 
@@ -32,6 +33,9 @@ final class SMCService {
     func reconnect() {
         close()
         clearCache()
+        keyInfoCacheLock.lock()
+        reconnectedAt = Date()
+        keyInfoCacheLock.unlock()
         open()
     }
 
@@ -242,7 +246,8 @@ final class SMCService {
         if InvalidSensorRetryPolicy.shouldSkipRetry(
             invalidatedAt: invalidatedAt,
             now: now,
-            retryInterval: invalidKeyRetryInterval
+            retryInterval: invalidKeyRetryInterval,
+            reconnectedAt: reconnectedAt
         ) {
             return true
         }

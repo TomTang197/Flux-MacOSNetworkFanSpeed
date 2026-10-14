@@ -8,6 +8,8 @@ public enum FanWakeResumeAction: Equatable {
     case none
     case resume(FanResumeTarget)
     case restoreSystemAuto
+    case rearmWaking
+    case dropToAuto
 }
 
 public enum FanSleepWakeState: Equatable {
@@ -20,22 +22,27 @@ public struct FanWakeResumePolicy {
     public private(set) var state: FanSleepWakeState
     public private(set) var targetToResume: FanResumeTarget?
     public let requiredFreshSamples: Int
+    public let maxRecoveryAttempts: Int
+    public private(set) var currentRecoveryAttempts: Int = 0
 
     public init(
         state: FanSleepWakeState = .active,
         targetToResume: FanResumeTarget? = nil,
-        requiredFreshSamples: Int = 2
+        requiredFreshSamples: Int = 2,
+        maxRecoveryAttempts: Int = 3
     ) {
         self.state = state
         self.targetToResume = targetToResume
         self.requiredFreshSamples = max(1, requiredFreshSamples)
+        self.maxRecoveryAttempts = max(1, maxRecoveryAttempts)
     }
 
     /// Called when the system is about to sleep (NSWorkspace.willSleepNotification)
     /// Returns .restoreSystemAuto so hardware can be safely reset to automatic control during sleep.
     public mutating func handleWillSleep(isCustomModeActive: Bool) -> FanWakeResumeAction {
         state = .sleeping
-        if isCustomModeActive {
+        // Preserve resume intent if custom mode was active, OR if we were already in the process of waking/resuming
+        if isCustomModeActive || targetToResume != nil {
             targetToResume = .customRules
         } else {
             targetToResume = nil
@@ -45,6 +52,7 @@ public struct FanWakeResumePolicy {
 
     /// Called when the system wakes from sleep (NSWorkspace.didWakeNotification)
     public mutating func handleDidWake() {
+        currentRecoveryAttempts = 0
         if targetToResume != nil {
             state = .waking(consecutiveFreshSamples: 0)
         } else {
@@ -75,9 +83,25 @@ public struct FanWakeResumePolicy {
         }
     }
 
+    /// Called when fan control lease is lost unexpectedly during or shortly after wake
+    public mutating func handleTransientLeaseLoss() -> FanWakeResumeAction {
+        guard currentRecoveryAttempts < maxRecoveryAttempts else {
+            state = .active
+            targetToResume = nil
+            return .dropToAuto
+        }
+
+        currentRecoveryAttempts += 1
+        targetToResume = .customRules
+        state = .waking(consecutiveFreshSamples: 0)
+        return .rearmWaking
+    }
+
     /// Called when user explicitly selects a fan mode, or external reset cancels resume
     public mutating func handleUserOverride() {
         targetToResume = nil
+        currentRecoveryAttempts = 0
         state = .active
     }
 }
+

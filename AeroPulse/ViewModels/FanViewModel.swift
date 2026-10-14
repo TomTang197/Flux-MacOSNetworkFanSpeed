@@ -127,6 +127,18 @@ final class FanViewModel: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             guard let self else { return }
+            let savedMode = UserDefaults.standard.string(forKey: self.fanCurrentModeStorageKey)
+            if self.currentMode == .custom || savedMode == FanMode.custom.rawValue {
+                let recoveryAction = self.wakeResumePolicy.handleTransientLeaseLoss()
+                if recoveryAction == .rearmWaking {
+                    self.currentMode = .auto
+                    self.activeRule = nil
+                    self.isRulesAtMinimum = false
+                    self.resetRuleControlState()
+                    return
+                }
+            }
+
             if self.wakeResumePolicy.state == .active && self.wakeResumePolicy.targetToResume == nil {
                 self.currentMode = .auto
                 self.activeRule = nil
@@ -180,10 +192,14 @@ final class FanViewModel: ObservableObject {
         controlTemperatureSample = nil
         consecutiveStaleTemperatureCycles = 0
         resetRuleControlState()
+        monitor.clearCache()
         SMCService.shared.reconnect()
         refreshHelperStatus()
         restartTimer()
-        refreshData()
+        // Wait 1.0s for SMC bus and hardware drivers to finish wake initialization before first read
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.refreshData()
+        }
     }
 
     private func restoreSystemControlForSafety(waitForReply: Bool) {
@@ -662,9 +678,8 @@ final class FanViewModel: ObservableObject {
         ruleDownshiftRemainingSeconds = controlDecision.remainingDelay.map {
             max(1, Int(ceil($0)))
         }
-        controlClient.setControlTemperatureDeadline(
-            now.addingTimeInterval(maximumControlTemperatureAge)
-        )
+        let deadline = now.addingTimeInterval(max(15.0, maximumControlTemperatureAge + 5.0))
+        controlClient.setControlTemperatureDeadline(deadline)
         submitRuleSpeedPercentage(controlDecision.target.speedPercentage)
     }
 

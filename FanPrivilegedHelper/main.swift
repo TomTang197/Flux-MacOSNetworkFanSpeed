@@ -131,6 +131,9 @@ final class SMCWriter {
     }
 
     private func callSMC(_ cmd: SMCCmd, inputStruct: inout SMCParamStruct) -> kern_return_t {
+        if connection == 0 {
+            _ = open()
+        }
         guard connection != 0 else { return kIOReturnNotOpen }
 
         let inputStructSize = MemoryLayout<SMCParamStruct>.size
@@ -139,7 +142,7 @@ final class SMCWriter {
 
         inputStruct.data8 = cmd.rawValue
 
-        let result = IOConnectCallStructMethod(
+        var result = IOConnectCallStructMethod(
             connection,
             SMCSelector.callMethod.rawValue,
             &inputStruct,
@@ -147,6 +150,22 @@ final class SMCWriter {
             &outputStruct,
             &outputStructSize
         )
+
+        // If connection is dead or invalid (e.g. across system sleep/wake), attempt reconnect and retry once
+        if result == kIOReturnNotResponding || result == kIOReturnNotOpen || result == kIOReturnNoDevice || result == Int32(bitPattern: 0xe00002c0) {
+            logger.notice("callSMC encountered stale connection (\(result, privacy: .public)), attempting reconnect...")
+            close()
+            if open() {
+                result = IOConnectCallStructMethod(
+                    connection,
+                    SMCSelector.callMethod.rawValue,
+                    &inputStruct,
+                    inputStructSize,
+                    &outputStruct,
+                    &outputStructSize
+                )
+            }
+        }
 
         if result == kIOReturnSuccess {
             inputStruct = outputStruct
