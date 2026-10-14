@@ -44,6 +44,8 @@ final class FanViewModel: ObservableObject {
     @Published private(set) var ruleDownshiftDelaySeconds: Int = 10
     @Published private(set) var ruleDownshiftRemainingSeconds: Int? = nil
     @Published private(set) var pendingRuleDownshiftSpeedPercentage: Int? = nil
+    @Published private(set) var modeSwitchTransitionRemainingSeconds: Int? = nil
+    @Published private(set) var transitioningMode: FanMode? = nil
     @Published private(set) var isGameModeLinkageEnabled: Bool = false
     @Published private(set) var gameModeExitDelaySeconds: Int = 60
     @Published private(set) var isGameModeActive: Bool = false
@@ -59,6 +61,8 @@ final class FanViewModel: ObservableObject {
     private var consecutiveStaleTemperatureCycles = 0
     private var gameModeCooldownTimer: AnyCancellable?
     private var ruleDownshiftTimer: AnyCancellable?
+    private var modeSwitchTransitionPolicy = ModeSwitchTransitionPolicy(duration: 4.0)
+    private var modeSwitchTimer: AnyCancellable?
     private let samplingQueue = DispatchQueue(label: "AeroPulse.FanMonitorSampling", qos: .utility)
     private var timer: AnyCancellable?
     private let detailedRefreshInterval: TimeInterval = 2.0
@@ -93,6 +97,7 @@ final class FanViewModel: ObservableObject {
         timer?.cancel()
         gameModeCooldownTimer?.cancel()
         ruleDownshiftTimer?.cancel()
+        modeSwitchTimer?.cancel()
         gameModeMonitor.stopMonitoring()
         for observer in defaultNotificationObservers {
             NotificationCenter.default.removeObserver(observer)
@@ -499,6 +504,32 @@ final class FanViewModel: ObservableObject {
         applyThresholdRules()
     }
 
+    private func startModeSwitchTransition(to mode: FanMode) {
+        let now = Date()
+        modeSwitchTransitionPolicy.startTransition(to: mode.rawValue, now: now)
+        modeSwitchTransitionRemainingSeconds = modeSwitchTransitionPolicy.remainingSeconds(now: now)
+        transitioningMode = mode
+
+        modeSwitchTimer?.cancel()
+        modeSwitchTimer = Timer.publish(every: 1.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] now in
+                self?.tickModeSwitchTransition(now: now)
+            }
+    }
+
+    private func tickModeSwitchTransition(now: Date) {
+        let result = modeSwitchTransitionPolicy.tick(now: now)
+        if result.isTransitioning {
+            modeSwitchTransitionRemainingSeconds = result.remainingSeconds
+        } else {
+            modeSwitchTransitionRemainingSeconds = nil
+            transitioningMode = nil
+            modeSwitchTimer?.cancel()
+            modeSwitchTimer = nil
+        }
+    }
+
     func addRule(temperature: Double, speedPercentage: Int) {
         let newRule = FanThresholdRule(temperature: temperature, speedPercentage: speedPercentage)
         rules.append(newRule)
@@ -543,6 +574,7 @@ final class FanViewModel: ObservableObject {
 
     func setFanMode(_ mode: FanMode, isUserInitiated: Bool = false) {
         if isUserInitiated {
+            startModeSwitchTransition(to: mode)
             wakeResumePolicy.handleUserOverride()
             if mode == .custom || mode == .auto {
                 UserDefaults.standard.set(mode.rawValue, forKey: fanCurrentModeStorageKey)

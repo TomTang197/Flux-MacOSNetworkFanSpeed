@@ -181,14 +181,22 @@ struct MenuBarFanSection: View {
                         fanViewModel.setFanMode(mode, isUserInitiated: true)
                     }
                 } label: {
-                    Text(mode.localizedTitle)
-                        .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
-                        .foregroundStyle(isSelected ? .primary : (hoveredMode == mode ? .primary : .secondary))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 5)
-                        .contentShape(Rectangle())
+                    let isTransitioning = fanViewModel.transitioningMode == mode && fanViewModel.modeSwitchTransitionRemainingSeconds != nil
+                    HStack(spacing: 3) {
+                        Text(mode.localizedTitle)
+                            .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
+                        if isTransitioning, let remaining = fanViewModel.modeSwitchTransitionRemainingSeconds {
+                            Text("\(remaining)s")
+                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.blue)
+                        }
+                    }
+                    .foregroundStyle(isSelected ? .primary : (hoveredMode == mode ? .primary : .secondary))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 5)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .onHover { isHovered in
@@ -251,7 +259,9 @@ struct MenuBarFanSection: View {
 
     @ViewBuilder
     private var statusBadge: some View {
-        if fanViewModel.fans.isEmpty {
+        if let remaining = fanViewModel.modeSwitchTransitionRemainingSeconds, let mode = fanViewModel.transitioningMode {
+            badgePill("\(mode.localizedTitle) \(remaining)s", icon: "arrow.triangle.2.circlepath", color: .blue)
+        } else if fanViewModel.fans.isEmpty {
             badgePill(AppStrings.tr(en: "Unavailable", zh: "无数据"), icon: "exclamationmark.circle", color: .secondary)
         } else if fanViewModel.isInstallingHelper {
             badgePill(AppStrings.tr(en: "Installing…", zh: "安装组件中…"), icon: "clock", color: .orange)
@@ -296,7 +306,16 @@ struct MenuBarFanSection: View {
 
     @ViewBuilder
     private var noticeBanner: some View {
-        if fanViewModel.fans.isEmpty {
+        if let remaining = fanViewModel.modeSwitchTransitionRemainingSeconds, let mode = fanViewModel.transitioningMode {
+            statusLine(
+                AppStrings.tr(
+                    en: "Applying \(mode.localizedTitle) · Hardware ramping in \(remaining)s",
+                    zh: "正在切换至「\(mode.localizedTitle)」· 转速响应过渡中（\(remaining) 秒）"
+                ),
+                icon: "arrow.triangle.2.circlepath",
+                color: .blue
+            )
+        } else if fanViewModel.fans.isEmpty {
             statusLine(AppStrings.tr(en: "Fan data unavailable", zh: "暂无风扇数据"), icon: "info.circle")
         } else if fanViewModel.isInstallingHelper {
             statusLine(fanViewModel.helperStatusMessage, icon: "clock", color: .orange)

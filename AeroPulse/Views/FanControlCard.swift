@@ -54,7 +54,12 @@ struct FanControlCard: View {
                     }
                 )) {
                     ForEach(FanMode.allCases) { mode in
-                        Text(mode.localizedTitle).tag(mode)
+                        let isTransitioning = fanViewModel.transitioningMode == mode && fanViewModel.modeSwitchTransitionRemainingSeconds != nil
+                        if isTransitioning, let remaining = fanViewModel.modeSwitchTransitionRemainingSeconds {
+                            Text("\(mode.localizedTitle) (\(remaining)s)").tag(mode)
+                        } else {
+                            Text(mode.localizedTitle).tag(mode)
+                        }
                     }
                 }
                 .pickerStyle(.segmented)
@@ -143,7 +148,18 @@ struct FanControlCard: View {
 
     @ViewBuilder
     private var transitionBadge: some View {
-        if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
+        if let remaining = fanViewModel.modeSwitchTransitionRemainingSeconds, let mode = fanViewModel.transitioningMode {
+            HStack(spacing: 3) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 9))
+                Text(AppStrings.tr(en: "\(mode.localizedTitle) in \(remaining)s", zh: "切换中 \(remaining)s"))
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+            }
+            .foregroundStyle(.blue)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color.blue.opacity(0.12), in: Capsule())
+        } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
             HStack(spacing: 3) {
                 Image(systemName: "clock")
                     .font(.system(size: 9))
@@ -180,6 +196,12 @@ struct FanControlCard: View {
     }
 
     private var statusDetail: String {
+        if let remaining = fanViewModel.modeSwitchTransitionRemainingSeconds, let mode = fanViewModel.transitioningMode {
+            return AppStrings.tr(
+                en: "Mode switch requested. Transitioning to \(mode.localizedTitle), hardware fan speed is ramping (countdown: \(remaining)s)...",
+                zh: "已请求切换模式。正在切换至「\(mode.localizedTitle)」，风扇转速响应与生效过渡中（倒计时 \(remaining) 秒）..."
+            )
+        }
         switch fanViewModel.currentMode {
         case .auto:
             if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
