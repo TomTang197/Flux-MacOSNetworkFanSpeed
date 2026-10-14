@@ -45,6 +45,17 @@ struct FanRuleControlTarget: Equatable {
 struct FanRuleControlDecision: Equatable {
     let target: FanRuleControlTarget
     let remainingDelay: TimeInterval?
+    let pendingTarget: FanRuleControlTarget?
+
+    init(
+        target: FanRuleControlTarget,
+        remainingDelay: TimeInterval? = nil,
+        pendingTarget: FanRuleControlTarget? = nil
+    ) {
+        self.target = target
+        self.remainingDelay = remainingDelay
+        self.pendingTarget = pendingTarget
+    }
 }
 
 struct FanRuleDownshiftPolicy {
@@ -66,7 +77,7 @@ struct FanRuleDownshiftPolicy {
               delay > 0 else {
             currentTarget = requestedTarget
             pendingDownshiftStartedAt = nil
-            return FanRuleControlDecision(target: currentTarget, remainingDelay: nil)
+            return FanRuleControlDecision(target: currentTarget, remainingDelay: nil, pendingTarget: nil)
         }
 
         let startedAt = pendingDownshiftStartedAt ?? now
@@ -76,13 +87,14 @@ struct FanRuleDownshiftPolicy {
         guard elapsed >= delay else {
             return FanRuleControlDecision(
                 target: currentTarget,
-                remainingDelay: max(0, delay - elapsed)
+                remainingDelay: max(0, delay - elapsed),
+                pendingTarget: requestedTarget
             )
         }
 
         currentTarget = requestedTarget
         pendingDownshiftStartedAt = nil
-        return FanRuleControlDecision(target: currentTarget, remainingDelay: nil)
+        return FanRuleControlDecision(target: currentTarget, remainingDelay: nil, pendingTarget: nil)
     }
 
     mutating func cancelPendingDownshift() {

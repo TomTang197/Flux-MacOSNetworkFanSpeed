@@ -45,10 +45,13 @@ final class FanRuleDownshiftPolicyTests: XCTestCase {
         )
 
         XCTAssertEqual(initial.target, high)
+        XCTAssertEqual(initial.pendingTarget, low)
         XCTAssertEqual(initial.remainingDelay ?? -1, 10, accuracy: 0.001)
         XCTAssertEqual(beforeDeadline.target, high)
+        XCTAssertEqual(beforeDeadline.pendingTarget, low)
         XCTAssertEqual(beforeDeadline.remainingDelay ?? -1, 0.1, accuracy: 0.001)
         XCTAssertEqual(atDeadline.target, low)
+        XCTAssertNil(atDeadline.pendingTarget)
         XCTAssertNil(atDeadline.remainingDelay)
     }
 
@@ -76,8 +79,10 @@ final class FanRuleDownshiftPolicyTests: XCTestCase {
         )
 
         XCTAssertEqual(recovered.target, medium)
+        XCTAssertNil(recovered.pendingTarget)
         XCTAssertNil(recovered.remainingDelay)
         XCTAssertEqual(lowerAgain.target, medium)
+        XCTAssertEqual(lowerAgain.pendingTarget, low)
         XCTAssertEqual(lowerAgain.remainingDelay ?? -1, 10, accuracy: 0.001)
     }
 
@@ -105,8 +110,10 @@ final class FanRuleDownshiftPolicyTests: XCTestCase {
         )
 
         XCTAssertEqual(colder.target, high)
+        XCTAssertEqual(colder.pendingTarget, baseline)
         XCTAssertEqual(colder.remainingDelay ?? -1, 2, accuracy: 0.001)
         XCTAssertEqual(atDeadline.target, baseline)
+        XCTAssertNil(atDeadline.pendingTarget)
         XCTAssertNil(atDeadline.remainingDelay)
     }
 

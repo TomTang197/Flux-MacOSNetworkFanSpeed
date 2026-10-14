@@ -110,6 +110,37 @@ struct MenuBarFanSection: View {
                         .font(.system(size: 11, weight: .semibold, design: .monospaced))
                         .foregroundColor(.teal)
                 }
+            } else if fanViewModel.isRulesAtMinimum {
+                HStack {
+                    Text(AppStrings.tr(en: "Active Tier", zh: "当前档位"))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(AppStrings.tr(en: "Hardware Minimum", zh: "硬件最低转速"))
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+                }
+            }
+            if let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
+                let current = fanViewModel.activeRule?.speedPercentage ?? 0
+                let pending = fanViewModel.pendingRuleDownshiftSpeedPercentage ?? 0
+                let pendingStr = pending == 0 ? AppStrings.tr(en: "min", zh: "最低") : "\(pending)%"
+                HStack(spacing: 4) {
+                    Image(systemName: "hourglass")
+                        .font(.system(size: 10))
+                    Text(AppStrings.tr(
+                        en: "Holding \(current)% · Target \(pendingStr) in \(remaining)s",
+                        zh: "平滑缓冲中：维持 \(current)% · \(remaining)s 后降至 \(pendingStr)"
+                    ))
+                    .font(.system(size: 10.5, weight: .medium))
+                    Spacer()
+                    Text("↓ \(remaining)s")
+                        .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                }
+                .foregroundStyle(.orange)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3.5)
+                .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
             }
             Button {
                 DashboardWindowManager.shared.showDashboard()
@@ -232,6 +263,8 @@ struct MenuBarFanSection: View {
             badgePill(AppStrings.tr(en: "Game Mode", zh: "游戏模式"), icon: "gamecontroller", color: .green)
         } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
             badgePill("\(remaining)s", icon: "clock", color: .orange)
+        } else if fanViewModel.currentMode == .custom, let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
+            badgePill("↓ \(remaining)s", icon: "hourglass", color: .orange)
         } else if fanViewModel.currentMode == .custom, let rule = fanViewModel.activeRule {
             badgePill("\(rule.speedPercentage)%", icon: "speedometer", color: .teal)
         } else {
@@ -279,10 +312,16 @@ struct MenuBarFanSection: View {
                 icon: "clock",
                 color: .orange
             )
-        } else if fanViewModel.currentMode == .custom, let rule = fanViewModel.activeRule, let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
+        } else if fanViewModel.currentMode == .custom, let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
+            let current = fanViewModel.activeRule?.speedPercentage ?? 0
+            let pending = fanViewModel.pendingRuleDownshiftSpeedPercentage ?? 0
+            let pendingStr = pending == 0 ? AppStrings.tr(en: "min", zh: "最低转速") : "\(pending)%"
             statusLine(
-                AppStrings.tr(en: "Holding \(rule.speedPercentage)% · Downshift in \(remaining)s", zh: "维持 \(rule.speedPercentage)% · \(remaining) 秒后降速"),
-                icon: "clock",
+                AppStrings.tr(
+                    en: "Holding \(current)% · Transitioning to \(pendingStr) in \(remaining)s",
+                    zh: "维持 \(current)% · \(remaining) 秒后降速至 \(pendingStr)"
+                ),
+                icon: "arrow.down.circle",
                 color: .orange
             )
         }

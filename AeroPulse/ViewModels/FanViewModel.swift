@@ -43,6 +43,7 @@ final class FanViewModel: ObservableObject {
     @Published private(set) var isRuleDownshiftDelayEnabled: Bool = true
     @Published private(set) var ruleDownshiftDelaySeconds: Int = 10
     @Published private(set) var ruleDownshiftRemainingSeconds: Int? = nil
+    @Published private(set) var pendingRuleDownshiftSpeedPercentage: Int? = nil
     @Published private(set) var isGameModeLinkageEnabled: Bool = false
     @Published private(set) var gameModeExitDelaySeconds: Int = 60
     @Published private(set) var isGameModeActive: Bool = false
@@ -57,6 +58,7 @@ final class FanViewModel: ObservableObject {
     private var wakeResumePolicy = FanWakeResumePolicy(requiredFreshSamples: 2)
     private var consecutiveStaleTemperatureCycles = 0
     private var gameModeCooldownTimer: AnyCancellable?
+    private var ruleDownshiftTimer: AnyCancellable?
     private let samplingQueue = DispatchQueue(label: "AeroPulse.FanMonitorSampling", qos: .utility)
     private var timer: AnyCancellable?
     private let detailedRefreshInterval: TimeInterval = 2.0
@@ -90,6 +92,7 @@ final class FanViewModel: ObservableObject {
     deinit {
         timer?.cancel()
         gameModeCooldownTimer?.cancel()
+        ruleDownshiftTimer?.cancel()
         gameModeMonitor.stopMonitoring()
         for observer in defaultNotificationObservers {
             NotificationCenter.default.removeObserver(observer)
@@ -463,11 +466,37 @@ final class FanViewModel: ObservableObject {
     }
 
     private func restartRuleDownshiftObservation() {
+        stopRuleDownshiftTimer()
         ruleDownshiftPolicy.cancelPendingDownshift()
         ruleDownshiftRemainingSeconds = nil
+        pendingRuleDownshiftSpeedPercentage = nil
         if currentMode == .custom {
             applyThresholdRules()
         }
+    }
+
+    private func startRuleDownshiftTimerIfNeeded() {
+        guard ruleDownshiftTimer == nil else { return }
+        ruleDownshiftTimer = Timer.publish(every: 1.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                self?.tickRuleDownshift()
+            }
+    }
+
+    private func stopRuleDownshiftTimer() {
+        ruleDownshiftTimer?.cancel()
+        ruleDownshiftTimer = nil
+    }
+
+    private func tickRuleDownshift() {
+        guard currentMode == .custom, isRuleDownshiftDelayEnabled else {
+            stopRuleDownshiftTimer()
+            ruleDownshiftRemainingSeconds = nil
+            pendingRuleDownshiftSpeedPercentage = nil
+            return
+        }
+        applyThresholdRules()
     }
 
     func addRule(temperature: Double, speedPercentage: Int) {
@@ -678,6 +707,14 @@ final class FanViewModel: ObservableObject {
         ruleDownshiftRemainingSeconds = controlDecision.remainingDelay.map {
             max(1, Int(ceil($0)))
         }
+        pendingRuleDownshiftSpeedPercentage = controlDecision.pendingTarget?.speedPercentage
+
+        if controlDecision.remainingDelay != nil {
+            startRuleDownshiftTimerIfNeeded()
+        } else {
+            stopRuleDownshiftTimer()
+        }
+
         let deadline = now.addingTimeInterval(max(15.0, maximumControlTemperatureAge + 5.0))
         controlClient.setControlTemperatureDeadline(deadline)
         submitRuleSpeedPercentage(controlDecision.target.speedPercentage)
@@ -714,11 +751,13 @@ final class FanViewModel: ObservableObject {
     }
 
     private func resetRuleControlState() {
+        stopRuleDownshiftTimer()
         ruleTargetSubmissionGate.reset()
         ruleDownshiftPolicy = FanRuleDownshiftPolicy(
             initialTarget: FanRuleControlTarget(ruleIndex: nil, speedPercentage: 0)
         )
         ruleDownshiftRemainingSeconds = nil
+        pendingRuleDownshiftSpeedPercentage = nil
     }
 
     private func sampleControlTemperature(

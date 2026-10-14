@@ -126,7 +126,11 @@ struct FanControlCard: View {
 
     private var controlStatus: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(statusTitle).font(.system(size: 13, weight: .semibold))
+            HStack {
+                Text(statusTitle).font(.system(size: 13, weight: .semibold))
+                Spacer()
+                transitionBadge
+            }
             Text(statusDetail)
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
@@ -135,6 +139,35 @@ struct FanControlCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    @ViewBuilder
+    private var transitionBadge: some View {
+        if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
+            HStack(spacing: 3) {
+                Image(systemName: "clock")
+                    .font(.system(size: 9))
+                Text(AppStrings.tr(en: "Auto in \(remaining)s", zh: "\(remaining)s 后恢复自动"))
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+            }
+            .foregroundStyle(.orange)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color.orange.opacity(0.12), in: Capsule())
+        } else if fanViewModel.currentMode == .custom, let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
+            let pending = fanViewModel.pendingRuleDownshiftSpeedPercentage ?? 0
+            let pendingStr = pending == 0 ? AppStrings.tr(en: "min", zh: "最低") : "\(pending)%"
+            HStack(spacing: 3) {
+                Image(systemName: "hourglass")
+                    .font(.system(size: 9))
+                Text(AppStrings.tr(en: "↓ \(remaining)s (\(pendingStr))", zh: "↓ \(remaining)s (切至 \(pendingStr))"))
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+            }
+            .foregroundStyle(.orange)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color.orange.opacity(0.12), in: Capsule())
+        }
     }
 
     private var statusTitle: String {
@@ -148,13 +181,32 @@ struct FanControlCard: View {
 
     private var statusDetail: String {
         switch fanViewModel.currentMode {
-        case .auto: return AppStrings.tr(en: "macOS manages fan speed. Live readings are shown below.", zh: "macOS 自动管理风扇转速。下方展示实时数据。")
-        case .fullBlast: return AppStrings.tr(en: "Requests each fan’s maximum speed. Compare the live RPM below.", zh: "请求风扇以最大转速运行。可对比下方实时转速。")
-        case .manual: return AppStrings.tr(en: "Adjust the target for each fan below. Live RPM may take time to reach the target.", zh: "在下方调整每个风扇的目标转速。实时转速可能需要几秒响应。")
-        case .custom: return AppStrings.tr(
-            en: "Rule input: \(fanViewModel.controlAverageTemp), the higher CPU / GPU average. Live RPM is shown below.",
-            zh: "规则依据输入：\(fanViewModel.controlAverageTemp)，取 CPU / GPU 的较高均值。实时转速显示如下。"
-        )
+        case .auto:
+            if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
+                return AppStrings.tr(
+                    en: "Game closed. Cooldown timer active: returning to auto control in \(remaining)s.",
+                    zh: "游戏已退出。冷却倒计时生效中：\(remaining) 秒后恢复系统自动控制。"
+                )
+            }
+            return AppStrings.tr(en: "macOS manages fan speed. Live readings are shown below.", zh: "macOS 自动管理风扇转速。下方展示实时数据。")
+        case .fullBlast:
+            return AppStrings.tr(en: "Requests each fan’s maximum speed. Compare the live RPM below.", zh: "请求风扇以最大转速运行。可对比下方实时转速。")
+        case .manual:
+            return AppStrings.tr(en: "Adjust the target for each fan below. Live RPM may take time to reach the target.", zh: "在下方调整每个风扇的目标转速。实时转速可能需要几秒响应。")
+        case .custom:
+            if let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
+                let current = fanViewModel.activeRule?.speedPercentage ?? 0
+                let pending = fanViewModel.pendingRuleDownshiftSpeedPercentage ?? 0
+                let pendingStr = pending == 0 ? AppStrings.tr(en: "hardware minimum speed", zh: "硬件最低转速") : "\(pending)%"
+                return AppStrings.tr(
+                    en: "Rule input: \(fanViewModel.controlAverageTemp). Downshift delay active: holding \(current)% for \(remaining) more seconds before transitioning to \(pendingStr).",
+                    zh: "规则依据输入：\(fanViewModel.controlAverageTemp)。降速平滑缓冲生效中：维持 \(current)%，倒计时 \(remaining) 秒后平滑切换至 \(pendingStr)。"
+                )
+            }
+            return AppStrings.tr(
+                en: "Rule input: \(fanViewModel.controlAverageTemp), the higher CPU / GPU average. Live RPM is shown below.",
+                zh: "规则依据输入：\(fanViewModel.controlAverageTemp)，取 CPU / GPU 的较高均值。实时转速显示如下。"
+            )
         }
     }
 
@@ -214,10 +266,13 @@ struct FanControlCard: View {
 
             VStack(spacing: 6) {
                 ForEach(fanViewModel.rules) { rule in
+                    let isPending = fanViewModel.ruleDownshiftRemainingSeconds != nil &&
+                        fanViewModel.pendingRuleDownshiftSpeedPercentage == rule.speedPercentage
                     RuleRowView(
                         rule: rule,
                         isDashboard: isDashboard,
                         isActive: fanViewModel.activeRule?.id == rule.id,
+                        isPending: isPending,
                         fans: sortedFans,
                         onUpdate: { updated in
                             fanViewModel.updateRule(updated)
@@ -246,7 +301,7 @@ struct FanControlCard: View {
                             get: { Double(newRulePercentage) },
                             set: { newRulePercentage = Int($0) }
                         ), in: 10...100, step: 5)
-                        .controlSize(.mini)
+                            .controlSize(.mini)
                     }
                     HStack {
                         Button(AppStrings.cancel) {
@@ -295,13 +350,25 @@ struct FanControlCard: View {
     @ViewBuilder
     private var ruleDownshiftStatus: some View {
         if let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
+            let pending = fanViewModel.pendingRuleDownshiftSpeedPercentage ?? 0
+            let pendingStr = pending == 0 ? AppStrings.tr(en: "min", zh: "最低") : "\(pending)%"
             let detail = AppStrings.tr(
-                en: "Holding current speed · Downshift in \(remaining)s",
-                zh: "维持当前转速 · \(remaining)秒后降速"
+                en: "Holding current speed · Downshift to \(pendingStr) in \(remaining)s",
+                zh: "维持当前转速 · \(remaining)秒后降速至 \(pendingStr)"
             )
             ViewThatFits(in: .horizontal) {
-                Text(AppStrings.tr(en: "Downshift in \(remaining)s", zh: "\(remaining)秒后降速"))
-                    .fixedSize()
+                HStack(spacing: 3) {
+                    Image(systemName: "hourglass")
+                        .font(.system(size: 8.5))
+                    Text(AppStrings.tr(en: "Downshift in \(remaining)s (\(pendingStr))", zh: "\(remaining)s 后切至 \(pendingStr)"))
+                }
+                .fixedSize()
+                HStack(spacing: 2) {
+                    Image(systemName: "hourglass")
+                        .font(.system(size: 8))
+                    Text("↓ \(remaining)s (\(pendingStr))")
+                }
+                .fixedSize()
                 Text("↓ \(remaining)s")
                     .fixedSize()
             }
@@ -432,6 +499,7 @@ private struct RuleRowView: View {
     let rule: FanThresholdRule
     var isDashboard: Bool = false
     let isActive: Bool
+    var isPending: Bool = false
     let fans: [FanInfo]
     let onUpdate: (FanThresholdRule) -> Void
     let onDelete: () -> Void
@@ -452,13 +520,13 @@ private struct RuleRowView: View {
             HStack(spacing: 8) {
                 // Active status badge
                 Circle()
-                    .fill(isActive ? Color.green : Color.clear)
+                    .fill(isActive ? Color.green : (isPending ? Color.orange : Color.clear))
                     .frame(width: 6, height: 6)
-                    .overlay(Circle().stroke(isActive ? Color.green : Color.secondary.opacity(0.3), lineWidth: 1))
+                    .overlay(Circle().stroke(isActive ? Color.green : (isPending ? Color.orange : Color.secondary.opacity(0.3)), lineWidth: 1))
 
                 Text("≥ \(Int(rule.temperature))°C")
                     .font(.system(size: 10.5, weight: .bold, design: .monospaced))
-                    .foregroundColor(isActive ? .green : .primary)
+                    .foregroundColor(isActive ? .green : (isPending ? .orange : .primary))
                     .frame(minWidth: 50, alignment: .leading)
 
                 Image(systemName: "arrow.right")
@@ -467,7 +535,7 @@ private struct RuleRowView: View {
 
                 Text(estimatedRPMText)
                     .font(.system(size: isDashboard ? 11 : 10, weight: .semibold, design: .monospaced))
-                    .foregroundColor(isActive ? .green : .secondary)
+                    .foregroundColor(isActive ? .green : (isPending ? .orange : .secondary))
 
                 Spacer()
 
@@ -478,6 +546,17 @@ private struct RuleRowView: View {
                         .padding(.vertical, 1.5)
                         .background(Capsule().fill(Color.green.opacity(0.2)))
                         .foregroundColor(.green)
+                } else if isPending {
+                    HStack(spacing: 2) {
+                        Image(systemName: "hourglass")
+                            .font(.system(size: 6.5))
+                        Text(AppStrings.tr(en: "PENDING", zh: "待生效"))
+                            .font(.system(size: 7.5, weight: .black))
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1.5)
+                    .background(Capsule().fill(Color.orange.opacity(0.2)))
+                    .foregroundColor(.orange)
                 }
 
                 Button {
@@ -536,11 +615,11 @@ private struct RuleRowView: View {
         .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: 7)
-                .fill(isActive ? Color.green.opacity(0.08) : Color.primary.opacity(0.035))
+                .fill(isActive ? Color.green.opacity(0.08) : (isPending ? Color.orange.opacity(0.06) : Color.primary.opacity(0.035)))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 7)
-                .stroke(isActive ? Color.green.opacity(0.3) : Color.clear, lineWidth: 1)
+                .stroke(isActive ? Color.green.opacity(0.3) : (isPending ? Color.orange.opacity(0.3) : Color.clear), lineWidth: 1)
         )
         .onAppear {
             temp = rule.temperature
