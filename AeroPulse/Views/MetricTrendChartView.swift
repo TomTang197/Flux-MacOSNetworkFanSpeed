@@ -21,6 +21,13 @@ struct MetricTrendChartView: View {
     var secondaryTitle: String? = nil
 
     @AppStorage("AeroPulse.SelectedTrendTimeRange") private var selectedRangeRaw: String = TrendTimeRange.fiveMinutes.rawValue
+    @State private var hoverLocation: CGPoint? = nil
+
+    private static let timeFormatter: DateFormatter = {
+        let df = DateFormatter()
+        df.dateFormat = "HH:mm:ss"
+        return df
+    }()
 
     private var selectedRange: TrendTimeRange {
         TrendTimeRange(rawValue: selectedRangeRaw) ?? .fiveMinutes
@@ -182,6 +189,89 @@ struct MetricTrendChartView: View {
                         let coords = primary.map(computePoint)
                         renderSeries(coords: coords, color: tintColor, in: context, width: w, height: h, fillAlpha: 0.20)
                     }
+
+                    // Hover inspection crosshair and tooltip
+                    if let loc = hoverLocation {
+                        let allPoints = primary + secondary
+                        if !allPoints.isEmpty {
+                            let closestPri = primary.min(by: {
+                                abs(computePoint(pt: $0).x - loc.x) < abs(computePoint(pt: $1).x - loc.x)
+                            })
+                            let closestSec = secondary.min(by: {
+                                abs(computePoint(pt: $0).x - loc.x) < abs(computePoint(pt: $1).x - loc.x)
+                            })
+
+                            let snapX = closestPri.map { computePoint(pt: $0).x }
+                                ?? closestSec.map { computePoint(pt: $0).x }
+                                ?? loc.x
+
+                            // Vertical indicator hairline
+                            var vGuide = Path()
+                            vGuide.move(to: CGPoint(x: snapX, y: 0))
+                            vGuide.addLine(to: CGPoint(x: snapX, y: h))
+                            context.stroke(
+                                vGuide,
+                                with: .color(.primary.opacity(0.40)),
+                                style: StrokeStyle(lineWidth: 1.0, dash: [3, 3])
+                            )
+
+                            // Secondary dot snap
+                            if let secPt = closestSec {
+                                let coord = computePoint(pt: secPt)
+                                let r: CGFloat = 3.5
+                                let rect = CGRect(x: coord.x - r, y: coord.y - r, width: r * 2, height: r * 2)
+                                context.fill(Path(ellipseIn: rect), with: .color(secondaryColor))
+                                context.stroke(Path(ellipseIn: rect), with: .color(.white), style: StrokeStyle(lineWidth: 1.2))
+                            }
+
+                            // Primary dot snap
+                            if let priPt = closestPri {
+                                let coord = computePoint(pt: priPt)
+                                let r: CGFloat = 3.5
+                                let rect = CGRect(x: coord.x - r, y: coord.y - r, width: r * 2, height: r * 2)
+                                context.fill(Path(ellipseIn: rect), with: .color(tintColor))
+                                context.stroke(Path(ellipseIn: rect), with: .color(.white), style: StrokeStyle(lineWidth: 1.2))
+                            }
+
+                            // Floating HUD Tooltip
+                            let targetTime = closestPri?.timestamp ?? closestSec?.timestamp ?? currentNow
+                            let timeStr = Self.timeFormatter.string(from: targetTime)
+                            var parts: [String] = [timeStr]
+                            if let pri = closestPri {
+                                parts.append(String(format: "%.0f %@", pri.value, unit))
+                            }
+                            if let sec = closestSec, let secTitle = secondaryTitle {
+                                parts.append(String(format: "%@: %.0f %@", secTitle, sec.value, unit))
+                            }
+                            let tooltipString = parts.joined(separator: " · ")
+
+                            let badgeWidth: CGFloat = CGFloat(tooltipString.count * 6 + 18)
+                            let badgeHeight: CGFloat = 18
+                            let badgeX = min(w - badgeWidth / 2 - 4, max(badgeWidth / 2 + 4, snapX))
+                            let badgeY: CGFloat = 11
+
+                            let badgeRect = CGRect(
+                                x: badgeX - badgeWidth / 2,
+                                y: badgeY - badgeHeight / 2,
+                                width: badgeWidth,
+                                height: badgeHeight
+                            )
+                            context.fill(
+                                Path(roundedRect: badgeRect, cornerRadius: 4),
+                                with: .color(Color(nsColor: .windowBackgroundColor).opacity(0.92))
+                            )
+                            context.stroke(
+                                Path(roundedRect: badgeRect, cornerRadius: 4),
+                                with: .color(.secondary.opacity(0.35)),
+                                style: StrokeStyle(lineWidth: 0.8)
+                            )
+
+                            let resolvedText = Text(tooltipString)
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundColor(.primary)
+                            context.draw(resolvedText, at: CGPoint(x: badgeX, y: badgeY), anchor: .center)
+                        }
+                    }
                 }
             } else {
                 HStack(spacing: 6) {
@@ -193,6 +283,14 @@ struct MetricTrendChartView: View {
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .onContinuousHover { phase in
+            switch phase {
+            case .active(let location):
+                hoverLocation = location
+            case .ended:
+                hoverLocation = nil
             }
         }
         .transaction { $0.animation = nil }
