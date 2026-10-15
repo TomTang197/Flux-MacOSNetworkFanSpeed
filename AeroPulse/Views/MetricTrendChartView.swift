@@ -148,49 +148,66 @@ struct MetricTrendChartView: View {
     }
 
     private var headerRow: some View {
-        HStack(alignment: .center) {
-            HStack(spacing: 12) {
-                // Primary series legend & current value
-                HStack(spacing: 5) {
-                    Circle()
-                        .fill(tintColor)
-                        .frame(width: 6, height: 6)
-                        .shadow(color: tintColor.opacity(0.45), radius: 2)
+        ViewThatFits(in: .horizontal) {
+            // Priority 1: Spacious single-line layout
+            HStack(alignment: .center) {
+                legendGroup
+                Spacer(minLength: 8)
+                timeRangeSelector
+            }
 
-                    Text(title)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-
-                    if let latest = primaryFiltered.last?.value ?? points.last?.value {
-                        Text(formatValue(latest))
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundStyle(tintColor)
-                    }
+            // Priority 2: Responsive two-line layout when width is constrained
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .center) {
+                    legendGroup
+                    Spacer(minLength: 4)
                 }
+                HStack {
+                    Spacer(minLength: 0)
+                    timeRangeSelector
+                }
+            }
+        }
+    }
 
-                // Secondary series legend & current value
-                if let secLatest = secondaryFiltered.last?.value ?? secondaryPoints?.last?.value,
-                   let secTitle = secondaryTitle {
-                    HStack(spacing: 5) {
-                        Circle()
-                            .fill(secondaryColor)
-                            .frame(width: 6, height: 6)
-                            .shadow(color: secondaryColor.opacity(0.45), radius: 2)
+    private var legendGroup: some View {
+        HStack(spacing: 12) {
+            // Primary series legend & current value
+            HStack(spacing: 5) {
+                Circle()
+                    .fill(tintColor)
+                    .frame(width: 6, height: 6)
+                    .shadow(color: tintColor.opacity(0.45), radius: 2)
 
-                        Text(secTitle)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(.secondary)
+                Text(title)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
 
-                        Text(formatValue(secLatest))
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundStyle(secondaryColor)
-                    }
+                if let latest = primaryFiltered.last?.value ?? points.last?.value {
+                    Text(formatValue(latest))
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(tintColor)
                 }
             }
 
-            Spacer(minLength: 8)
+            // Secondary series legend & current value
+            if let secLatest = secondaryFiltered.last?.value ?? secondaryPoints?.last?.value,
+               let secTitle = secondaryTitle {
+                HStack(spacing: 5) {
+                    Circle()
+                        .fill(secondaryColor)
+                        .frame(width: 6, height: 6)
+                        .shadow(color: secondaryColor.opacity(0.45), radius: 2)
 
-            timeRangeSelector
+                    Text(secTitle)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+
+                    Text(formatValue(secLatest))
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(secondaryColor)
+                }
+            }
         }
     }
 
@@ -215,7 +232,7 @@ struct MetricTrendChartView: View {
                 .foregroundStyle(.secondary.opacity(0.8))
             }
 
-            Spacer()
+            Spacer(minLength: 4)
 
             Text(selectedRange.localizedTitle)
                 .font(.system(size: 9, weight: .bold, design: .rounded))

@@ -16,8 +16,8 @@ struct ContentView: View {
     @StateObject private var windowInteraction = WindowInteractionCoordinator()
     @Environment(\.visualEffectsReduced) private var reduceVisualEffects
     @Environment(\.openWindow) private var openWindow
-    private let defaultWindowSize = CGSize(width: 1230, height: 650)
-    private let minimumWindowSize = CGSize(width: 1040, height: 620)
+    private let defaultWindowSize = CGSize(width: 1380, height: 820)
+    private let minimumWindowSize = CGSize(width: 1120, height: 680)
     @ViewBuilder
     private var dashboardBackground: some View {
         if windowInteraction.isInteracting || reduceVisualEffects {
@@ -60,20 +60,20 @@ struct ContentView: View {
                         DashboardOverviewView(networkViewModel: networkViewModel)
                             .padding(20)
                     }
-                    .frame(width: usableWidth * 0.28)
+                    .frame(width: usableWidth * 0.27)
                     Divider()
                     ThermalDetailView(
                         fanViewModel: fanViewModel,
                         isEmbedded: true,
-                        layoutWidth: usableWidth * 0.35
+                        layoutWidth: usableWidth * 0.38
                     )
-                    .frame(width: usableWidth * 0.35, height: proxy.size.height)
+                    .frame(width: usableWidth * 0.38, height: proxy.size.height)
                     Divider()
                     ScrollView(.vertical) {
                         FanControlCard(fanViewModel: fanViewModel, isDashboard: true)
                             .padding(16)
                     }
-                    .frame(width: usableWidth * 0.37)
+                    .frame(width: usableWidth * 0.35)
                 }
                 .frame(height: proxy.size.height, alignment: .top)
             }
@@ -146,9 +146,16 @@ struct ContentView: View {
 
         guard !window.isMiniaturized else { return }
 
+        let screen = window.screen ?? NSScreen.main
+        let visibleFrame = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        let targetWidth = min(defaultWindowSize.width, max(minimumWindowSize.width, visibleFrame.width - 40))
+        let targetHeight = min(defaultWindowSize.height, max(minimumWindowSize.height, visibleFrame.height - 50))
+
         var frame = window.frame
-        if frame.size.width < minimumWindowSize.width || frame.size.height < minimumWindowSize.height {
-            frame.size = defaultWindowSize
+        if frame.size.width < 1300 || frame.size.height < 750 {
+            frame.size = CGSize(width: targetWidth, height: targetHeight)
+            frame.origin.x = visibleFrame.origin.x + max(0, (visibleFrame.width - targetWidth) / 2)
+            frame.origin.y = visibleFrame.origin.y + max(0, (visibleFrame.height - targetHeight) / 2)
             window.setFrame(frame, display: true, animate: false)
         }
 

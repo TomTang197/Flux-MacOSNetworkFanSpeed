@@ -15,6 +15,7 @@ struct MenuBarView: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
+        let _ = DashboardWindowManager.shared.registerOpenWindowAction(openWindow)
         Group {
             let singleMetricRows = enabledMetricRows()
 

@@ -30,6 +30,7 @@ struct NetworkSpeedMeterApp: App {
             )
             .environment(\.visualEffectsReduced, reduceVisualEffects)
         }
+        .defaultSize(width: 1380, height: 820)
         .defaultLaunchBehavior(.suppressed)
 
         MenuBarExtra {

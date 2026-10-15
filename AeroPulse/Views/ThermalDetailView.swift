@@ -7,7 +7,6 @@ struct ThermalDetailView: View {
     @Environment(\.dismiss) private var dismiss
     var isEmbedded: Bool = false
     var layoutWidth: CGFloat? = nil
-    @State private var showsSystem = true
 
     var body: some View {
         let groups = ThermalSensorGroups(sensors: fanViewModel.sensors)
@@ -90,10 +89,10 @@ struct ThermalDetailView: View {
                     )
 
                     if !groups.system.isEmpty {
-                        DisclosureGroup(AppStrings.tr(en: "System sensors (\(groups.system.count))", zh: "系统传感器 (\(groups.system.count))"), isExpanded: $showsSystem) {
-                            ThermalMatrixSection(title: "", sensors: groups.system)
-                                .padding(.top, 10)
-                        }
+                        ThermalMatrixSection(
+                            title: AppStrings.tr(en: "System sensors", zh: "系统传感器"),
+                            sensors: groups.system
+                        )
                     }
                 }
                 .font(.system(size: 12, weight: .medium))
@@ -231,7 +230,7 @@ private struct ThermalMatrixSection: View {
             if sensors.isEmpty {
                 Text(AppStrings.noData).foregroundStyle(.secondary).padding(.vertical, 6)
             }
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 8)], spacing: 8) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), spacing: 8)], spacing: 8) {
                 ForEach(sortedSensors) { sensor in
                     ThermalSensorTile(sensor: sensor, displayName: ThermalPresentation.displayName(sensor))
                         .equatable()
@@ -250,6 +249,7 @@ private struct ThermalSensorTile: View, Equatable {
             Text(displayName)
                 .font(.system(size: 10, weight: .medium))
                 .lineLimit(1)
+                .minimumScaleFactor(0.85)
                 .truncationMode(.middle)
             Spacer(minLength: 0)
             Text(ThermalPresentation.reading(sensor))
