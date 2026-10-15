@@ -31,7 +31,7 @@
 - Create: `AeroPulse/Services/FanSafety/RollingHistoryBuffer.swift`
 - Create: `Tests/AeroPulseSafetyTests/RollingHistoryBufferTests.swift`
 
-- [ ] **Step 1: Write failing unit test for `RollingHistoryBuffer`**
+- [x] **Step 1: Write failing unit test for `RollingHistoryBuffer`**
 
 ```swift
 import XCTest
@@ -85,12 +85,12 @@ final class RollingHistoryBufferTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `swift test --filter RollingHistoryBufferTests`
 Expected: Compilation failure because `RollingHistoryBuffer` does not exist yet.
 
-- [ ] **Step 3: Implement `MetricHistoryPoint` and `RollingHistoryBuffer`**
+- [x] **Step 3: Implement `MetricHistoryPoint` and `RollingHistoryBuffer`**
 
 ```swift
 import Foundation
@@ -156,12 +156,12 @@ public struct RollingHistoryBuffer: Equatable {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `swift test --filter RollingHistoryBufferTests`
 Expected: PASS (4 tests passed).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add AeroPulse/Services/FanSafety/RollingHistoryBuffer.swift Tests/AeroPulseSafetyTests/RollingHistoryBufferTests.swift
@@ -175,7 +175,7 @@ git commit -m "feat(telemetry): add RollingHistoryBuffer and MetricHistoryPoint 
 **Files:**
 - Modify: `AeroPulse/ViewModels/FanViewModel.swift`
 
-- [ ] **Step 1: Declare history properties and buffer instances in `FanViewModel`**
+- [x] **Step 1: Declare history properties and buffer instances in `FanViewModel`**
 
 Add `@Published` properties:
 ```swift
@@ -191,7 +191,7 @@ private var gpuHistoryBuffer = RollingHistoryBuffer(capacity: 60)
 private var fanRPMHistoryBuffers: [Int: RollingHistoryBuffer] = [:]
 ```
 
-- [ ] **Step 2: Append samples in telemetry update pipeline**
+- [x] **Step 2: Append samples in telemetry update pipeline**
 
 In `updateSensorsAndFans(...)` or `refreshData()` after extracting temperatures and fan readings:
 ```swift
@@ -216,12 +216,12 @@ for fan in newFans {
 fanRPMHistory = updatedFanRPMHistory
 ```
 
-- [ ] **Step 3: Run unit tests**
+- [x] **Step 3: Run unit tests**
 
 Run: `swift test`
 Expected: PASS (all 138 tests pass).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add AeroPulse/ViewModels/FanViewModel.swift
@@ -237,7 +237,7 @@ git commit -m "feat(viewmodel): collect rolling telemetry history in FanViewMode
 - Create: `AeroPulse/Views/MiniSparklineView.swift`
 - Modify: `AeroPulse/Localization/AppStrings.swift`
 
-- [ ] **Step 1: Add localization strings**
+- [x] **Step 1: Add localization strings**
 
 In `AppStrings.swift`:
 ```swift
@@ -247,7 +247,7 @@ static var temperatureTrend: String { tr(en: "Temperature Trend", zh: "温度走
 static var fanRPMTrend: String { tr(en: "Fan Speed Trend", zh: "风扇转速走势") }
 ```
 
-- [ ] **Step 2: Implement `MetricTrendChartView`**
+- [x] **Step 2: Implement `MetricTrendChartView`**
 
 Features:
 - Normalized coordinate mapping with minimum vertical padding (span ≥ 5 units).
@@ -399,7 +399,7 @@ struct MetricTrendChartView: View {
 }
 ```
 
-- [ ] **Step 3: Implement `MiniSparklineView`**
+- [x] **Step 3: Implement `MiniSparklineView`**
 
 ```swift
 import SwiftUI
@@ -456,7 +456,7 @@ struct MiniSparklineView: View {
 }
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add AeroPulse/Views/MetricTrendChartView.swift AeroPulse/Views/MiniSparklineView.swift AeroPulse/Localization/AppStrings.swift
@@ -470,7 +470,7 @@ git commit -m "feat(ui): create MetricTrendChartView and MiniSparklineView compo
 **Files:**
 - Modify: `AeroPulse/Views/ThermalDetailView.swift`
 
-- [ ] **Step 1: Embed `MetricTrendChartView` into `ThermalDetailView`**
+- [x] **Step 1: Embed `MetricTrendChartView` into `ThermalDetailView`**
 
 Insert the dual-series CPU/GPU temperature trend card below the `ThermalSummaryView` cards and above the sensor list:
 ```swift
@@ -487,12 +487,12 @@ MetricTrendChartView(
 .padding(.bottom, 6)
 ```
 
-- [ ] **Step 2: Verify `swift test` and view compilation**
+- [x] **Step 2: Verify `swift test` and view compilation**
 
 Run: `swift test`
 Expected: PASS.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add AeroPulse/Views/ThermalDetailView.swift
@@ -506,7 +506,7 @@ git commit -m "feat(dashboard): integrate dual temperature trend chart in Therma
 **Files:**
 - Modify: `AeroPulse/Views/FanControlCard.swift`
 
-- [ ] **Step 1: Embed `MetricTrendChartView` in `FanControlCard`**
+- [x] **Step 1: Embed `MetricTrendChartView` in `FanControlCard`**
 
 Insert the live Fan RPM trend chart directly above the fan speed rows list when fans are present:
 ```swift
@@ -520,12 +520,12 @@ if isDashboard, let firstFan = sortedFans.first, let history = fanViewModel.fanR
 }
 ```
 
-- [ ] **Step 2: Verify `swift test`**
+- [x] **Step 2: Verify `swift test`**
 
 Run: `swift test`
 Expected: PASS.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add AeroPulse/Views/FanControlCard.swift
@@ -539,7 +539,7 @@ git commit -m "feat(dashboard): integrate fan RPM trend chart in FanControlCard"
 **Files:**
 - Modify: `AeroPulse/Views/MenuBarFanSection.swift`
 
-- [ ] **Step 1: Add sparklines to CPU & GPU temperature rows**
+- [x] **Step 1: Add sparklines to CPU & GPU temperature rows**
 
 In `temperatureRow(title:value:dotColor:)`:
 ```swift
@@ -570,7 +570,7 @@ private func temperatureRow(
     ...
 ```
 
-- [ ] **Step 2: Add sparkline to Fan RPM row in MenuBar**
+- [x] **Step 2: Add sparkline to Fan RPM row in MenuBar**
 
 In the top fan RPM row:
 ```swift
@@ -581,12 +581,12 @@ if let primaryFan = fanViewModel.fans.first,
 }
 ```
 
-- [ ] **Step 3: Run unit tests and verify**
+- [x] **Step 3: Run unit tests and verify**
 
 Run: `swift test`
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add AeroPulse/Views/MenuBarFanSection.swift
@@ -600,17 +600,17 @@ git commit -m "feat(menubar): add mini sparklines to temperature and fan RPM row
 **Files:**
 - None (verification phase)
 
-- [ ] **Step 1: Run complete test suite**
+- [x] **Step 1: Run complete test suite**
 
 Run: `swift test`
 Expected: PASS (all tests pass).
 
-- [ ] **Step 2: Verify Release build with `xcodebuild`**
+- [x] **Step 2: Verify Release build with `xcodebuild`**
 
 Run: `xcodebuild -project AeroPulse.xcodeproj -scheme AeroPulse -configuration Release build CODE_SIGNING_ALLOWED=NO`
 Expected: `** BUILD SUCCEEDED **`.
 
-- [ ] **Step 3: Commit any final cleanup and push to branch**
+- [x] **Step 3: Commit any final cleanup and push to branch**
 
 ```bash
 git push origin main
