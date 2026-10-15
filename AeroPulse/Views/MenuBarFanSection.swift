@@ -23,17 +23,39 @@ struct MenuBarFanSection: View {
             .accessibilityAddTraits(.isHeader)
 
             HStack(alignment: .top, spacing: 10) {
-                MenuBarReadout(
-                    title: AppStrings.tr(en: "Current speed", zh: "当前转速"),
-                    value: fanViewModel.fans.isEmpty ? "— RPM" : fanViewModel.primaryFanRPM,
-                    icon: AppImages.fan,
-                    iconColor: .teal,
-                    size: 21
-                )
-                .equatable()
+                VStack(alignment: .leading, spacing: 3) {
+                    MenuBarReadout(
+                        title: AppStrings.tr(en: "Current speed", zh: "当前转速"),
+                        value: fanViewModel.fans.isEmpty ? "— RPM" : fanViewModel.primaryFanRPM,
+                        icon: AppImages.fan,
+                        iconColor: .teal,
+                        size: 21
+                    )
+                    .equatable()
+
+                    if let primaryFan = fanViewModel.fans.first,
+                       let history = fanViewModel.fanRPMHistory[primaryFan.id],
+                       history.count > 1 {
+                        MiniSparklineView(points: history, tintColor: .teal, width: 68, height: 16)
+                            .padding(.top, 2)
+                    }
+                }
+
+                Spacer()
+
                 VStack(alignment: .trailing, spacing: 5) {
-                    temperatureRow(title: "CPU", value: fanViewModel.primaryTemp, dotColor: .red)
-                    temperatureRow(title: "GPU", value: fanViewModel.primaryGPUTemp, dotColor: .pink)
+                    temperatureRow(
+                        title: "CPU",
+                        value: fanViewModel.primaryTemp,
+                        dotColor: .orange,
+                        history: fanViewModel.cpuTemperatureHistory
+                    )
+                    temperatureRow(
+                        title: "GPU",
+                        value: fanViewModel.primaryGPUTemp,
+                        dotColor: .purple,
+                        history: fanViewModel.gpuTemperatureHistory
+                    )
                 }
                 .help(AppStrings.tr(en: "Average CPU and GPU sensor temperatures", zh: "CPU 与 GPU 传感器平均温度"))
             }
@@ -68,7 +90,12 @@ struct MenuBarFanSection: View {
         .animation(reduceMotion || reduceVisualEffects ? nil : .spring(response: 0.32, dampingFraction: 0.82), value: fanViewModel.currentMode)
     }
 
-    private func temperatureRow(title: String, value: String, dotColor: Color) -> some View {
+    private func temperatureRow(
+        title: String,
+        value: String,
+        dotColor: Color,
+        history: [MetricHistoryPoint]
+    ) -> some View {
         HStack(spacing: 4) {
             Circle()
                 .fill(dotColor)
@@ -80,6 +107,9 @@ struct MenuBarFanSection: View {
                 .font(.system(size: 12.5, weight: .semibold))
                 .monospacedDigit()
                 .frame(minWidth: 40, alignment: .trailing)
+            if history.count > 1 {
+                MiniSparklineView(points: history, tintColor: dotColor)
+            }
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 2.5)
