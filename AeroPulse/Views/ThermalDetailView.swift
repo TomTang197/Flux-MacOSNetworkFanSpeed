@@ -49,6 +49,18 @@ struct ThermalDetailView: View {
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 16)
 
+            MetricTrendChartView(
+                title: AppStrings.tr(en: "CPU", zh: "CPU 温度"),
+                points: fanViewModel.cpuTemperatureHistory,
+                unit: "°C",
+                tintColor: .orange,
+                secondaryPoints: fanViewModel.gpuTemperatureHistory,
+                secondaryColor: .purple,
+                secondaryTitle: AppStrings.tr(en: "GPU", zh: "GPU")
+            )
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+
             HStack(alignment: .top, spacing: 6) {
                 Image(systemName: AppImages.fan)
                 Text("\(AppStrings.tr(en: "Control input", zh: "控制输入")): \(fanViewModel.controlAverageTemp) · \(controlSource(cpu: cpu, gpu: gpu))")
