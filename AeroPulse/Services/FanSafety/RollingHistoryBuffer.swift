@@ -5,6 +5,9 @@ public enum TrendTimeRange: String, CaseIterable, Identifiable, Equatable {
     case fiveMinutes = "5m"
     case fifteenMinutes = "15m"
     case thirtyMinutes = "30m"
+    case twentyFourHours = "24h"
+    case sevenDays = "7d"
+    case thirtyDays = "30d"
 
     public var id: String { rawValue }
 
@@ -14,6 +17,18 @@ public enum TrendTimeRange: String, CaseIterable, Identifiable, Equatable {
         case .fiveMinutes: return 300
         case .fifteenMinutes: return 900
         case .thirtyMinutes: return 1800
+        case .twentyFourHours: return 86400
+        case .sevenDays: return 604800
+        case .thirtyDays: return 2592000
+        }
+    }
+
+    public var isLongTerm: Bool {
+        switch self {
+        case .twentyFourHours, .sevenDays, .thirtyDays:
+            return true
+        default:
+            return false
         }
     }
 }
