@@ -1,9 +1,7 @@
 import Foundation
 
 public enum TrendTimeRange: String, CaseIterable, Identifiable, Equatable {
-    case oneMinute = "1m"
     case fiveMinutes = "5m"
-    case fifteenMinutes = "15m"
     case thirtyMinutes = "30m"
     case twentyFourHours = "24h"
     case sevenDays = "7d"
@@ -13,9 +11,7 @@ public enum TrendTimeRange: String, CaseIterable, Identifiable, Equatable {
 
     public var duration: TimeInterval {
         switch self {
-        case .oneMinute: return 60
         case .fiveMinutes: return 300
-        case .fifteenMinutes: return 900
         case .thirtyMinutes: return 1800
         case .twentyFourHours: return 86400
         case .sevenDays: return 604800

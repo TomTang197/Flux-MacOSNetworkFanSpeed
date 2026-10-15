@@ -3,9 +3,7 @@ import SwiftUI
 extension TrendTimeRange {
     var localizedTitle: String {
         switch self {
-        case .oneMinute: return AppStrings.tr(en: "1m", zh: "1分")
         case .fiveMinutes: return AppStrings.tr(en: "5m", zh: "5分")
-        case .fifteenMinutes: return AppStrings.tr(en: "15m", zh: "15分")
         case .thirtyMinutes: return AppStrings.tr(en: "30m", zh: "30分")
         case .twentyFourHours: return AppStrings.tr(en: "24h", zh: "24时")
         case .sevenDays: return AppStrings.tr(en: "7d", zh: "7天")
@@ -72,7 +70,7 @@ struct MetricTrendChartView: View {
         let currentNow = now
         if selectedRange.isLongTerm, let metricKey {
             let rollups = TelemetryHistoryStore.shared.queryHistory(metricKey: metricKey, range: selectedRange, now: currentNow)
-            if !rollups.isEmpty {
+            if rollups.count > 1 {
                 return rollups.map {
                     ChartDataPoint(timestamp: $0.timestamp, value: $0.avgValue, minValue: $0.minValue, maxValue: $0.maxValue)
                 }
@@ -88,7 +86,7 @@ struct MetricTrendChartView: View {
         let currentNow = now
         if selectedRange.isLongTerm, let secondaryMetricKey {
             let rollups = TelemetryHistoryStore.shared.queryHistory(metricKey: secondaryMetricKey, range: selectedRange, now: currentNow)
-            if !rollups.isEmpty {
+            if rollups.count > 1 {
                 return rollups.map {
                     ChartDataPoint(timestamp: $0.timestamp, value: $0.avgValue, minValue: $0.minValue, maxValue: $0.maxValue)
                 }
@@ -122,6 +120,11 @@ struct MetricTrendChartView: View {
         }
         .padding(10)
         .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .onAppear {
+            if selectedRangeRaw == "1m" || selectedRangeRaw == "15m" {
+                selectedRangeRaw = TrendTimeRange.fiveMinutes.rawValue
+            }
+        }
         .transaction { $0.animation = nil }
     }
 
@@ -183,15 +186,15 @@ struct MetricTrendChartView: View {
     }
 
     private var timeRangeSelector: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 3) {
             ForEach(TrendTimeRange.allCases) { range in
                 Button {
                     selectedRangeRaw = range.rawValue
                 } label: {
                     Text(range.localizedTitle)
-                        .font(.system(size: 9, weight: selectedRange == range ? .bold : .medium))
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 2)
+                        .font(.system(size: 9.5, weight: selectedRange == range ? .bold : .medium))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2.5)
                         .background(
                             selectedRange == range
                                 ? Color.primary.opacity(0.12)
@@ -216,16 +219,7 @@ struct MetricTrendChartView: View {
 
         let oldestDate = (primary + secondary).map(\.timestamp).min() ?? currentNow
         let availableHistory = max(0, currentNow.timeIntervalSince(oldestDate))
-        let effectiveDuration: TimeInterval
-        if selectedRange.isLongTerm {
-            if availableHistory > min(3600.0, duration * 0.1) {
-                effectiveDuration = duration
-            } else {
-                effectiveDuration = max(60.0, availableHistory)
-            }
-        } else {
-            effectiveDuration = min(duration, max(30.0, availableHistory))
-        }
+        let effectiveDuration = min(duration, max(60.0, availableHistory))
 
         return ZStack {
             if primary.count > 1 || secondary.count > 1 {
@@ -278,88 +272,96 @@ struct MetricTrendChartView: View {
                                 ?? closestSec.map { computePoint(pt: $0).x }
                                 ?? loc.x
 
-                            // Vertical indicator hairline
-                            var vGuide = Path()
-                            vGuide.move(to: CGPoint(x: snapX, y: 0))
-                            vGuide.addLine(to: CGPoint(x: snapX, y: h))
-                            context.stroke(
-                                vGuide,
-                                with: .color(.primary.opacity(0.40)),
-                                style: StrokeStyle(lineWidth: 1.0, dash: [3, 3])
+                            let minDistance = min(
+                                closestPri.map { abs(computePoint(pt: $0).x - loc.x) } ?? .infinity,
+                                closestSec.map { abs(computePoint(pt: $0).x - loc.x) } ?? .infinity
                             )
 
-                            // Secondary dot snap
-                            if let secPt = closestSec {
-                                let coord = computePoint(pt: secPt)
-                                let r: CGFloat = 3.5
-                                let rect = CGRect(x: coord.x - r, y: coord.y - r, width: r * 2, height: r * 2)
-                                context.fill(Path(ellipseIn: rect), with: .color(secondaryColor))
-                                context.stroke(Path(ellipseIn: rect), with: .color(.white), style: StrokeStyle(lineWidth: 1.2))
-                            }
+                            // Only draw crosshair and tooltip if mouse is within 35px of actual data points
+                            if minDistance <= 35 {
+                                // Vertical indicator hairline
+                                var vGuide = Path()
+                                vGuide.move(to: CGPoint(x: snapX, y: 0))
+                                vGuide.addLine(to: CGPoint(x: snapX, y: h))
+                                context.stroke(
+                                    vGuide,
+                                    with: .color(.primary.opacity(0.40)),
+                                    style: StrokeStyle(lineWidth: 1.0, dash: [3, 3])
+                                )
 
-                            // Primary dot snap
-                            if let priPt = closestPri {
-                                let coord = computePoint(pt: priPt)
-                                let r: CGFloat = 3.5
-                                let rect = CGRect(x: coord.x - r, y: coord.y - r, width: r * 2, height: r * 2)
-                                context.fill(Path(ellipseIn: rect), with: .color(tintColor))
-                                context.stroke(Path(ellipseIn: rect), with: .color(.white), style: StrokeStyle(lineWidth: 1.2))
-                            }
-
-                            // Floating HUD Tooltip
-                            let targetTime = closestPri?.timestamp ?? closestSec?.timestamp ?? currentNow
-                            let timeStr: String
-                            switch selectedRange {
-                            case .oneMinute, .fiveMinutes, .fifteenMinutes, .thirtyMinutes:
-                                timeStr = Self.timeFormatter.string(from: targetTime)
-                            case .twentyFourHours:
-                                timeStr = Self.timeFormatter24h.string(from: targetTime)
-                            case .sevenDays, .thirtyDays:
-                                timeStr = Self.dateFormatterMultiDay.string(from: targetTime)
-                            }
-
-                            var parts: [String] = [timeStr]
-                            if let pri = closestPri {
-                                if selectedRange.isLongTerm, let minV = pri.minValue, let maxV = pri.maxValue {
-                                    parts.append(String(format: "%.0f %@ (%.0f~%.0f)", pri.value, unit, minV, maxV))
-                                } else {
-                                    parts.append(String(format: "%.0f %@", pri.value, unit))
+                                // Secondary dot snap
+                                if let secPt = closestSec {
+                                    let coord = computePoint(pt: secPt)
+                                    let r: CGFloat = 3.5
+                                    let rect = CGRect(x: coord.x - r, y: coord.y - r, width: r * 2, height: r * 2)
+                                    context.fill(Path(ellipseIn: rect), with: .color(secondaryColor))
+                                    context.stroke(Path(ellipseIn: rect), with: .color(.white), style: StrokeStyle(lineWidth: 1.2))
                                 }
-                            }
-                            if let sec = closestSec, let secTitle = secondaryTitle {
-                                if selectedRange.isLongTerm, let minV = sec.minValue, let maxV = sec.maxValue {
-                                    parts.append(String(format: "%@: %.0f %@ (%.0f~%.0f)", secTitle, sec.value, unit, minV, maxV))
-                                } else {
-                                    parts.append(String(format: "%@: %.0f %@", secTitle, sec.value, unit))
+
+                                // Primary dot snap
+                                if let priPt = closestPri {
+                                    let coord = computePoint(pt: priPt)
+                                    let r: CGFloat = 3.5
+                                    let rect = CGRect(x: coord.x - r, y: coord.y - r, width: r * 2, height: r * 2)
+                                    context.fill(Path(ellipseIn: rect), with: .color(tintColor))
+                                    context.stroke(Path(ellipseIn: rect), with: .color(.white), style: StrokeStyle(lineWidth: 1.2))
                                 }
+
+                                // Floating HUD Tooltip
+                                let targetTime = closestPri?.timestamp ?? closestSec?.timestamp ?? currentNow
+                                let timeStr: String
+                                switch selectedRange {
+                                case .fiveMinutes, .thirtyMinutes:
+                                    timeStr = Self.timeFormatter.string(from: targetTime)
+                                case .twentyFourHours:
+                                    timeStr = Self.timeFormatter24h.string(from: targetTime)
+                                case .sevenDays, .thirtyDays:
+                                    timeStr = Self.dateFormatterMultiDay.string(from: targetTime)
+                                }
+
+                                var parts: [String] = [timeStr]
+                                if let pri = closestPri {
+                                    if selectedRange.isLongTerm, let minV = pri.minValue, let maxV = pri.maxValue {
+                                        parts.append(String(format: "%.0f %@ (%.0f~%.0f)", pri.value, unit, minV, maxV))
+                                    } else {
+                                        parts.append(String(format: "%.0f %@", pri.value, unit))
+                                    }
+                                }
+                                if let sec = closestSec, let secTitle = secondaryTitle {
+                                    if selectedRange.isLongTerm, let minV = sec.minValue, let maxV = sec.maxValue {
+                                        parts.append(String(format: "%@: %.0f %@ (%.0f~%.0f)", secTitle, sec.value, unit, minV, maxV))
+                                    } else {
+                                        parts.append(String(format: "%@: %.0f %@", secTitle, sec.value, unit))
+                                    }
+                                }
+                                let tooltipString = parts.joined(separator: " · ")
+
+                                let badgeWidth: CGFloat = CGFloat(tooltipString.count * 6 + 18)
+                                let badgeHeight: CGFloat = 18
+                                let badgeX = min(w - badgeWidth / 2 - 4, max(badgeWidth / 2 + 4, snapX))
+                                let badgeY: CGFloat = 11
+
+                                let badgeRect = CGRect(
+                                    x: badgeX - badgeWidth / 2,
+                                    y: badgeY - badgeHeight / 2,
+                                    width: badgeWidth,
+                                    height: badgeHeight
+                                )
+                                context.fill(
+                                    Path(roundedRect: badgeRect, cornerRadius: 4),
+                                    with: .color(Color(nsColor: .windowBackgroundColor).opacity(0.92))
+                                )
+                                context.stroke(
+                                    Path(roundedRect: badgeRect, cornerRadius: 4),
+                                    with: .color(.secondary.opacity(0.35)),
+                                    style: StrokeStyle(lineWidth: 0.8)
+                                )
+
+                                let resolvedText = Text(tooltipString)
+                                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.primary)
+                                context.draw(resolvedText, at: CGPoint(x: badgeX, y: badgeY), anchor: .center)
                             }
-                            let tooltipString = parts.joined(separator: " · ")
-
-                            let badgeWidth: CGFloat = CGFloat(tooltipString.count * 6 + 18)
-                            let badgeHeight: CGFloat = 18
-                            let badgeX = min(w - badgeWidth / 2 - 4, max(badgeWidth / 2 + 4, snapX))
-                            let badgeY: CGFloat = 11
-
-                            let badgeRect = CGRect(
-                                x: badgeX - badgeWidth / 2,
-                                y: badgeY - badgeHeight / 2,
-                                width: badgeWidth,
-                                height: badgeHeight
-                            )
-                            context.fill(
-                                Path(roundedRect: badgeRect, cornerRadius: 4),
-                                with: .color(Color(nsColor: .windowBackgroundColor).opacity(0.92))
-                            )
-                            context.stroke(
-                                Path(roundedRect: badgeRect, cornerRadius: 4),
-                                with: .color(.secondary.opacity(0.35)),
-                                style: StrokeStyle(lineWidth: 0.8)
-                            )
-
-                            let resolvedText = Text(tooltipString)
-                                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                .foregroundColor(.primary)
-                            context.draw(resolvedText, at: CGPoint(x: badgeX, y: badgeY), anchor: .center)
                         }
                     }
                 }

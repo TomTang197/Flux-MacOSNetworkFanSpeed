@@ -55,6 +55,7 @@ public final class TelemetryHistoryStore {
     }
 
     private var activeBuckets: [String: BucketAccumulator] = [:]
+    private var knownMetricKeys: Set<String> = ["cpu_temp", "gpu_temp", "fan_rpm_0", "fan_rpm_1"]
     private var currentBucketMinute: Int64 = 0
     private var lastRollup15mMinute: Int64 = 0
     private var lastRollupHourlyMinute: Int64 = 0
@@ -67,6 +68,7 @@ public final class TelemetryHistoryStore {
     public func record(metricKey: String, value: Double, timestamp: Date = Date()) {
         queue.async { [weak self] in
             guard let self else { return }
+            self.knownMetricKeys.insert(metricKey)
             let epochSeconds = Int64(timestamp.timeIntervalSince1970)
             let bucketMinute = (epochSeconds / 60) * 60
 
@@ -146,7 +148,7 @@ public final class TelemetryHistoryStore {
         let startTime = bucketTime
         let endTime = bucketTime + 899
 
-        let metrics = ["cpu_temp", "gpu_temp", "fan_rpm_0", "fan_rpm_1"]
+        let metrics = knownMetricKeys
         for metric in metrics {
             guard let oneMinRecords = try? database.query(
                 metricKey: metric,
@@ -184,7 +186,7 @@ public final class TelemetryHistoryStore {
         let startTime = bucketTime
         let endTime = bucketTime + 3599
 
-        let metrics = ["cpu_temp", "gpu_temp", "fan_rpm_0", "fan_rpm_1"]
+        let metrics = knownMetricKeys
         for metric in metrics {
             guard let records15 = try? database.query(
                 metricKey: metric,
@@ -231,34 +233,48 @@ public final class TelemetryHistoryStore {
         return queue.sync {
             let epoch = Int64(now.timeIntervalSince1970)
             let startTime = epoch - Int64(range.duration)
-            let resolution: Int
+
+            func fetch(resolution: Int) -> [HistoricalRollupPoint] {
+                guard let rawRecords = try? database.query(
+                    metricKey: metricKey,
+                    resolution: resolution,
+                    startTime: startTime,
+                    endTime: epoch
+                ) else {
+                    return []
+                }
+                return rawRecords.map { rec in
+                    HistoricalRollupPoint(
+                        timestamp: Date(timeIntervalSince1970: TimeInterval(rec.bucketTime)),
+                        avgValue: rec.avgValue,
+                        minValue: rec.minValue,
+                        maxValue: rec.maxValue
+                    )
+                }
+            }
+
             switch range {
             case .twentyFourHours:
-                resolution = 1 // 1-minute resolution
+                return fetch(resolution: 1)
             case .sevenDays:
-                resolution = 2 // 15-minute resolution
+                let res2 = fetch(resolution: 2)
+                if !res2.isEmpty {
+                    return res2
+                }
+                // Fall back to 1-minute resolution if 15-minute rollups are not yet populated
+                return fetch(resolution: 1)
             case .thirtyDays:
-                resolution = 3 // 1-hour resolution
+                let res3 = fetch(resolution: 3)
+                if !res3.isEmpty {
+                    return res3
+                }
+                let res2 = fetch(resolution: 2)
+                if !res2.isEmpty {
+                    return res2
+                }
+                return fetch(resolution: 1)
             default:
-                resolution = 1
-            }
-
-            guard let rawRecords = try? database.query(
-                metricKey: metricKey,
-                resolution: resolution,
-                startTime: startTime,
-                endTime: epoch
-            ) else {
-                return []
-            }
-
-            return rawRecords.map { rec in
-                HistoricalRollupPoint(
-                    timestamp: Date(timeIntervalSince1970: TimeInterval(rec.bucketTime)),
-                    avgValue: rec.avgValue,
-                    minValue: rec.minValue,
-                    maxValue: rec.maxValue
-                )
+                return fetch(resolution: 1)
             }
         }
     }
