@@ -51,6 +51,13 @@ final class FanViewModel: ObservableObject {
     @Published private(set) var isGameModeActive: Bool = false
     @Published private(set) var isGameModeUserOverridden: Bool = false
     @Published private(set) var gameModeCooldownRemainingSeconds: Int? = nil
+    @Published private(set) var cpuTemperatureHistory: [MetricHistoryPoint] = []
+    @Published private(set) var gpuTemperatureHistory: [MetricHistoryPoint] = []
+    @Published private(set) var fanRPMHistory: [Int: [MetricHistoryPoint]] = [:]
+
+    private var cpuHistoryBuffer = RollingHistoryBuffer(capacity: 60)
+    private var gpuHistoryBuffer = RollingHistoryBuffer(capacity: 60)
+    private var fanRPMHistoryBuffers: [Int: RollingHistoryBuffer] = [:]
 
     private let monitor = FanMonitor()
     private let controlClient = FanControlClient.shared
@@ -866,6 +873,26 @@ final class FanViewModel: ObservableObject {
                 if let sampledControlTemperature {
                     self.controlTemperatureSample = sampledControlTemperature
                 }
+
+                let now = Date()
+                if let cpuTemp = ThermalSensorProcessing.primaryCPUTemperature(from: sampledSensors) {
+                    self.cpuHistoryBuffer.append(value: cpuTemp, timestamp: now)
+                    self.cpuTemperatureHistory = self.cpuHistoryBuffer.points
+                }
+
+                if let gpuTemp = ThermalSensorProcessing.primaryGPUTemperature(from: sampledSensors) {
+                    self.gpuHistoryBuffer.append(value: gpuTemp, timestamp: now)
+                    self.gpuTemperatureHistory = self.gpuHistoryBuffer.points
+                }
+
+                var updatedFanRPMHistory: [Int: [MetricHistoryPoint]] = [:]
+                for fan in sampledFans {
+                    var buffer = self.fanRPMHistoryBuffers[fan.id] ?? RollingHistoryBuffer(capacity: 60)
+                    buffer.append(value: Double(fan.currentRPM), timestamp: now)
+                    self.fanRPMHistoryBuffers[fan.id] = buffer
+                    updatedFanRPMHistory[fan.id] = buffer.points
+                }
+                self.fanRPMHistory = updatedFanRPMHistory
 
                 let isFresh = self.controlTemperatureSample != nil &&
                     TemperatureFreshnessPolicy.isFresh(
