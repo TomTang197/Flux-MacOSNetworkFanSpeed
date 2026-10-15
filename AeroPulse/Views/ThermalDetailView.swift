@@ -56,7 +56,9 @@ struct ThermalDetailView: View {
                 tintColor: .orange,
                 secondaryPoints: fanViewModel.gpuTemperatureHistory,
                 secondaryColor: .purple,
-                secondaryTitle: AppStrings.tr(en: "GPU", zh: "GPU")
+                secondaryTitle: AppStrings.tr(en: "GPU", zh: "GPU"),
+                metricKey: "cpu_temp",
+                secondaryMetricKey: "gpu_temp"
             )
             .padding(.horizontal, 16)
             .padding(.top, 10)

@@ -185,6 +185,7 @@ struct AppStrings {
     static var currentVersionPrefix: String { tr(en: "Current Version: ", zh: "当前版本：") }
 
     static var trendMin: String { tr(en: "Min", zh: "最低") }
+    static var trendAvg: String { tr(en: "Avg", zh: "均值") }
     static var trendMax: String { tr(en: "Max", zh: "最高") }
     static var temperatureTrend: String { tr(en: "Temperature Trend", zh: "温度走势") }
     static var fanRPMTrend: String { tr(en: "Fan Speed Trend", zh: "风扇转速走势") }

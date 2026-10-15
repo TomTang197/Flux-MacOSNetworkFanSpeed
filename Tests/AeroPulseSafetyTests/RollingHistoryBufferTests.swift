@@ -83,5 +83,16 @@ final class RollingHistoryBufferTests: XCTestCase {
         XCTAssertEqual(TrendTimeRange.fiveMinutes.duration, 300)
         XCTAssertEqual(TrendTimeRange.fifteenMinutes.duration, 900)
         XCTAssertEqual(TrendTimeRange.thirtyMinutes.duration, 1800)
+        XCTAssertEqual(TrendTimeRange.twentyFourHours.duration, 86400)
+        XCTAssertEqual(TrendTimeRange.sevenDays.duration, 604800)
+        XCTAssertEqual(TrendTimeRange.thirtyDays.duration, 2592000)
+
+        XCTAssertFalse(TrendTimeRange.oneMinute.isLongTerm)
+        XCTAssertFalse(TrendTimeRange.fiveMinutes.isLongTerm)
+        XCTAssertFalse(TrendTimeRange.fifteenMinutes.isLongTerm)
+        XCTAssertFalse(TrendTimeRange.thirtyMinutes.isLongTerm)
+        XCTAssertTrue(TrendTimeRange.twentyFourHours.isLongTerm)
+        XCTAssertTrue(TrendTimeRange.sevenDays.isLongTerm)
+        XCTAssertTrue(TrendTimeRange.thirtyDays.isLongTerm)
     }
 }

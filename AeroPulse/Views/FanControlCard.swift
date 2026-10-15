@@ -78,7 +78,9 @@ struct FanControlCard: View {
                         tintColor: .teal,
                         secondaryPoints: secondHistory,
                         secondaryColor: .cyan,
-                        secondaryTitle: secondFan?.name
+                        secondaryTitle: secondFan?.name,
+                        metricKey: "fan_rpm_\(firstFan.id)",
+                        secondaryMetricKey: secondFan.map { "fan_rpm_\($0.id)" }
                     )
                 }
 

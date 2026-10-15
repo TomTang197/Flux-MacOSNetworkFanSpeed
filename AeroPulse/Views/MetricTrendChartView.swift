@@ -1,4 +1,5 @@
 import SwiftUI
+import AeroPulseFanSafety
 
 extension TrendTimeRange {
     var localizedTitle: String {
@@ -7,7 +8,26 @@ extension TrendTimeRange {
         case .fiveMinutes: return AppStrings.tr(en: "5m", zh: "5分")
         case .fifteenMinutes: return AppStrings.tr(en: "15m", zh: "15分")
         case .thirtyMinutes: return AppStrings.tr(en: "30m", zh: "30分")
+        case .twentyFourHours: return AppStrings.tr(en: "24h", zh: "24时")
+        case .sevenDays: return AppStrings.tr(en: "7d", zh: "7天")
+        case .thirtyDays: return AppStrings.tr(en: "30d", zh: "30天")
         }
+    }
+}
+
+struct ChartDataPoint: Identifiable {
+    let id: UUID
+    let timestamp: Date
+    let value: Double
+    let minValue: Double?
+    let maxValue: Double?
+
+    init(id: UUID = UUID(), timestamp: Date, value: Double, minValue: Double? = nil, maxValue: Double? = nil) {
+        self.id = id
+        self.timestamp = timestamp
+        self.value = value
+        self.minValue = minValue
+        self.maxValue = maxValue
     }
 }
 
@@ -19,6 +39,8 @@ struct MetricTrendChartView: View {
     var secondaryPoints: [MetricHistoryPoint]? = nil
     var secondaryColor: Color = .purple
     var secondaryTitle: String? = nil
+    var metricKey: String? = nil
+    var secondaryMetricKey: String? = nil
 
     @AppStorage("AeroPulse.SelectedTrendTimeRange") private var selectedRangeRaw: String = TrendTimeRange.fiveMinutes.rawValue
     @State private var hoverLocation: CGPoint? = nil
@@ -29,21 +51,55 @@ struct MetricTrendChartView: View {
         return df
     }()
 
+    private static let timeFormatter24h: DateFormatter = {
+        let df = DateFormatter()
+        df.dateFormat = "HH:mm"
+        return df
+    }()
+
+    private static let dateFormatterMultiDay: DateFormatter = {
+        let df = DateFormatter()
+        df.dateFormat = "MM-dd HH:mm"
+        return df
+    }()
+
     private var selectedRange: TrendTimeRange {
         TrendTimeRange(rawValue: selectedRangeRaw) ?? .fiveMinutes
     }
 
     private var now: Date { Date() }
 
-    private var primaryFiltered: [MetricHistoryPoint] {
-        let cutoff = now.addingTimeInterval(-selectedRange.duration)
-        return points.filter { $0.timestamp >= cutoff }
+    private var primaryFiltered: [ChartDataPoint] {
+        let currentNow = now
+        if selectedRange.isLongTerm, let metricKey {
+            let rollups = TelemetryHistoryStore.shared.queryHistory(metricKey: metricKey, range: selectedRange, now: currentNow)
+            if !rollups.isEmpty {
+                return rollups.map {
+                    ChartDataPoint(timestamp: $0.timestamp, value: $0.avgValue, minValue: $0.minValue, maxValue: $0.maxValue)
+                }
+            }
+        }
+        let cutoff = currentNow.addingTimeInterval(-selectedRange.duration)
+        return points
+            .filter { $0.timestamp >= cutoff }
+            .map { ChartDataPoint(timestamp: $0.timestamp, value: $0.value) }
     }
 
-    private var secondaryFiltered: [MetricHistoryPoint] {
+    private var secondaryFiltered: [ChartDataPoint] {
+        let currentNow = now
+        if selectedRange.isLongTerm, let secondaryMetricKey {
+            let rollups = TelemetryHistoryStore.shared.queryHistory(metricKey: secondaryMetricKey, range: selectedRange, now: currentNow)
+            if !rollups.isEmpty {
+                return rollups.map {
+                    ChartDataPoint(timestamp: $0.timestamp, value: $0.avgValue, minValue: $0.minValue, maxValue: $0.maxValue)
+                }
+            }
+        }
         guard let secondaryPoints else { return [] }
-        let cutoff = now.addingTimeInterval(-selectedRange.duration)
-        return secondaryPoints.filter { $0.timestamp >= cutoff }
+        let cutoff = currentNow.addingTimeInterval(-selectedRange.duration)
+        return secondaryPoints
+            .filter { $0.timestamp >= cutoff }
+            .map { ChartDataPoint(timestamp: $0.timestamp, value: $0.value) }
     }
 
     private var combinedValues: [Double] {
@@ -103,9 +159,18 @@ struct MetricTrendChartView: View {
     private var subHeaderRow: some View {
         HStack(spacing: 8) {
             if let minVal = combinedValues.min(), let maxVal = combinedValues.max() {
-                Text("\(AppStrings.trendMin): \(Int(minVal))\(unit)")
-                Text("·")
-                Text("\(AppStrings.trendMax): \(Int(maxVal))\(unit)")
+                if selectedRange.isLongTerm {
+                    let avg = combinedValues.reduce(0, +) / Double(max(1, combinedValues.count))
+                    Text("\(AppStrings.trendAvg): \(Int(avg))\(unit)")
+                    Text("·")
+                    Text("\(AppStrings.trendMin): \(Int(minVal))\(unit)")
+                    Text("·")
+                    Text("\(AppStrings.trendMax): \(Int(maxVal))\(unit)")
+                } else {
+                    Text("\(AppStrings.trendMin): \(Int(minVal))\(unit)")
+                    Text("·")
+                    Text("\(AppStrings.trendMax): \(Int(maxVal))\(unit)")
+                }
             } else {
                 Text(AppStrings.tr(en: "Waiting for telemetry…", zh: "等待遥测数据…"))
             }
@@ -125,8 +190,8 @@ struct MetricTrendChartView: View {
                     selectedRangeRaw = range.rawValue
                 } label: {
                     Text(range.localizedTitle)
-                        .font(.system(size: 9.5, weight: selectedRange == range ? .bold : .medium))
-                        .padding(.horizontal, 5)
+                        .font(.system(size: 9, weight: selectedRange == range ? .bold : .medium))
+                        .padding(.horizontal, 4)
                         .padding(.vertical, 2)
                         .background(
                             selectedRange == range
@@ -152,7 +217,16 @@ struct MetricTrendChartView: View {
 
         let oldestDate = (primary + secondary).map(\.timestamp).min() ?? currentNow
         let availableHistory = max(0, currentNow.timeIntervalSince(oldestDate))
-        let effectiveDuration = min(duration, max(30.0, availableHistory))
+        let effectiveDuration: TimeInterval
+        if selectedRange.isLongTerm {
+            if availableHistory > min(3600.0, duration * 0.1) {
+                effectiveDuration = duration
+            } else {
+                effectiveDuration = max(60.0, availableHistory)
+            }
+        } else {
+            effectiveDuration = min(duration, max(30.0, availableHistory))
+        }
 
         return ZStack {
             if primary.count > 1 || secondary.count > 1 {
@@ -170,7 +244,7 @@ struct MetricTrendChartView: View {
                         style: StrokeStyle(lineWidth: 0.5, dash: [4, 4])
                     )
 
-                    func computePoint(pt: MetricHistoryPoint) -> CGPoint {
+                    func computePoint(pt: ChartDataPoint) -> CGPoint {
                         let elapsed = max(0, min(effectiveDuration, currentNow.timeIntervalSince(pt.timestamp)))
                         let x = w * (1.0 - CGFloat(elapsed / effectiveDuration))
                         let normY = (pt.value - bounds.lower) / max(0.1, bounds.upper - bounds.lower)
@@ -235,13 +309,30 @@ struct MetricTrendChartView: View {
 
                             // Floating HUD Tooltip
                             let targetTime = closestPri?.timestamp ?? closestSec?.timestamp ?? currentNow
-                            let timeStr = Self.timeFormatter.string(from: targetTime)
+                            let timeStr: String
+                            switch selectedRange {
+                            case .oneMinute, .fiveMinutes, .fifteenMinutes, .thirtyMinutes:
+                                timeStr = Self.timeFormatter.string(from: targetTime)
+                            case .twentyFourHours:
+                                timeStr = Self.timeFormatter24h.string(from: targetTime)
+                            case .sevenDays, .thirtyDays:
+                                timeStr = Self.dateFormatterMultiDay.string(from: targetTime)
+                            }
+
                             var parts: [String] = [timeStr]
                             if let pri = closestPri {
-                                parts.append(String(format: "%.0f %@", pri.value, unit))
+                                if selectedRange.isLongTerm, let minV = pri.minValue, let maxV = pri.maxValue {
+                                    parts.append(String(format: "%.0f %@ (%.0f~%.0f)", pri.value, unit, minV, maxV))
+                                } else {
+                                    parts.append(String(format: "%.0f %@", pri.value, unit))
+                                }
                             }
                             if let sec = closestSec, let secTitle = secondaryTitle {
-                                parts.append(String(format: "%@: %.0f %@", secTitle, sec.value, unit))
+                                if selectedRange.isLongTerm, let minV = sec.minValue, let maxV = sec.maxValue {
+                                    parts.append(String(format: "%@: %.0f %@ (%.0f~%.0f)", secTitle, sec.value, unit, minV, maxV))
+                                } else {
+                                    parts.append(String(format: "%@: %.0f %@", secTitle, sec.value, unit))
+                                }
                             }
                             let tooltipString = parts.joined(separator: " · ")
 
@@ -267,7 +358,7 @@ struct MetricTrendChartView: View {
                             )
 
                             let resolvedText = Text(tooltipString)
-                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
                                 .foregroundColor(.primary)
                             context.draw(resolvedText, at: CGPoint(x: badgeX, y: badgeY), anchor: .center)
                         }
