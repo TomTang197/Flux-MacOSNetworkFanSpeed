@@ -1,5 +1,4 @@
 import SwiftUI
-import AeroPulseFanSafety
 
 extension TrendTimeRange {
     var localizedTitle: String {
