@@ -5,6 +5,7 @@ public final class LanguageManager: ObservableObject {
     public static let shared = LanguageManager()
     
     public static let userDefaultsKey = "AppLanguagePreference"
+    public static let appleLanguagesKey = "AppleLanguages"
     
     private let userDefaults: UserDefaults
     private let preferredLanguagesProvider: () -> [String]
@@ -27,6 +28,7 @@ public final class LanguageManager: ObservableObject {
             selection: initialSelection,
             preferredLanguages: preferredLanguagesProvider()
         )
+        Self.applyAppleLanguages(for: initialSelection, defaults: userDefaults)
 
         NotificationCenter.default.publisher(for: NSLocale.currentLocaleDidChangeNotification)
             .receive(on: RunLoop.main)
@@ -36,9 +38,21 @@ public final class LanguageManager: ObservableObject {
             .store(in: &cancellables)
     }
 
+    public static func applyAppleLanguages(for language: AppLanguage, defaults: UserDefaults) {
+        switch language {
+        case .zhHans:
+            defaults.set(["zh-Hans", "zh-CN", "en"], forKey: appleLanguagesKey)
+        case .en:
+            defaults.set(["en"], forKey: appleLanguagesKey)
+        case .system:
+            defaults.removeObject(forKey: appleLanguagesKey)
+        }
+    }
+
     public func setLanguage(_ language: AppLanguage) {
         selectedLanguage = language
         userDefaults.set(language.rawValue, forKey: Self.userDefaultsKey)
+        Self.applyAppleLanguages(for: language, defaults: userDefaults)
         refreshEffectiveLanguage()
     }
 

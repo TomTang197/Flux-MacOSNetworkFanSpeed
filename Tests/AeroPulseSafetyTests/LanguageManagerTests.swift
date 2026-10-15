@@ -75,6 +75,7 @@ final class LanguageManagerTests: XCTestCase {
         XCTAssertEqual(manager.selectedLanguage, .en)
         XCTAssertEqual(manager.effectiveLanguage, .en)
         XCTAssertEqual(userDefaults.string(forKey: LanguageManager.userDefaultsKey), AppLanguage.en.rawValue)
+        XCTAssertEqual(userDefaults.array(forKey: LanguageManager.appleLanguagesKey) as? [String], ["en"])
     }
 
     func testSetLanguageZhHansPersistsAndUpdatesEffectiveLanguage() {
@@ -89,6 +90,7 @@ final class LanguageManagerTests: XCTestCase {
         XCTAssertEqual(manager.selectedLanguage, .zhHans)
         XCTAssertEqual(manager.effectiveLanguage, .zhHans)
         XCTAssertEqual(userDefaults.string(forKey: LanguageManager.userDefaultsKey), AppLanguage.zhHans.rawValue)
+        XCTAssertEqual(userDefaults.array(forKey: LanguageManager.appleLanguagesKey) as? [String], ["zh-Hans", "zh-CN", "en"])
     }
 
     func testSetLanguageSystemRestoresEffectiveLanguageToMatchPreferred() {
@@ -100,11 +102,27 @@ final class LanguageManagerTests: XCTestCase {
         manager.setLanguage(.en)
         XCTAssertEqual(manager.selectedLanguage, .en)
         XCTAssertEqual(manager.effectiveLanguage, .en)
+        XCTAssertEqual(userDefaults.array(forKey: LanguageManager.appleLanguagesKey) as? [String], ["en"])
 
         manager.setLanguage(.system)
         XCTAssertEqual(manager.selectedLanguage, .system)
         XCTAssertEqual(manager.effectiveLanguage, .zhHans)
         XCTAssertEqual(userDefaults.string(forKey: LanguageManager.userDefaultsKey), AppLanguage.system.rawValue)
+        XCTAssertNil(userDefaults.persistentDomain(forName: suiteName)?[LanguageManager.appleLanguagesKey])
+    }
+
+    func testAppleLanguagesInitializationFromSavedDefaults() {
+        userDefaults.set(AppLanguage.zhHans.rawValue, forKey: LanguageManager.userDefaultsKey)
+        let _ = LanguageManager(userDefaults: userDefaults)
+        XCTAssertEqual(userDefaults.array(forKey: LanguageManager.appleLanguagesKey) as? [String], ["zh-Hans", "zh-CN", "en"])
+
+        userDefaults.set(AppLanguage.en.rawValue, forKey: LanguageManager.userDefaultsKey)
+        let _ = LanguageManager(userDefaults: userDefaults)
+        XCTAssertEqual(userDefaults.array(forKey: LanguageManager.appleLanguagesKey) as? [String], ["en"])
+
+        userDefaults.set(AppLanguage.system.rawValue, forKey: LanguageManager.userDefaultsKey)
+        let _ = LanguageManager(userDefaults: userDefaults)
+        XCTAssertNil(userDefaults.persistentDomain(forName: suiteName)?[LanguageManager.appleLanguagesKey])
     }
 
     func testComputeEffectiveLanguageDirectly() {

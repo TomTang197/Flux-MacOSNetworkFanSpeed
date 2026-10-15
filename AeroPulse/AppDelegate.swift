@@ -11,6 +11,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @MainActor
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        if UserDefaults.standard.bool(forKey: "AeroPulse.RelaunchAfterUpdate") {
+            UserDefaults.standard.removeObject(forKey: "AeroPulse.RelaunchAfterUpdate")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                DashboardWindowManager.shared.showDashboard()
+            }
+        }
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        return .terminateNow
+    }
+
+    @MainActor
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         DashboardWindowManager.shared.showDashboard()
         return true

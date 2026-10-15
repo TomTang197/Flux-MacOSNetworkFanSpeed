@@ -44,6 +44,12 @@ if [[ ! -d "$APP_PATH" ]]; then
   exit 1
 fi
 
+# Ensure localizations are in Contents/Resources
+mkdir -p "$APP_PATH/Contents/Resources/zh-Hans.lproj"
+mkdir -p "$APP_PATH/Contents/Resources/en.lproj"
+cp -R AeroPulse/Resources/zh-Hans.lproj/* "$APP_PATH/Contents/Resources/zh-Hans.lproj/" 2>/dev/null || true
+cp -R AeroPulse/Resources/en.lproj/* "$APP_PATH/Contents/Resources/en.lproj/" 2>/dev/null || true
+
 # 4. Ad-hoc codesign
 echo "==> Signing application bundle..."
 codesign --force --deep --sign - "$APP_PATH"
