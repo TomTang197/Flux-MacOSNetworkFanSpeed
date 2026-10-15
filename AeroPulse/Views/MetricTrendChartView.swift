@@ -112,14 +112,33 @@ struct MetricTrendChartView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 7) {
             headerRow
             subHeaderRow
             chartArea
-                .frame(height: 65)
+                .frame(height: 74)
         }
-        .padding(10)
-        .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .padding(12)
+        .background {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(NSColor.controlBackgroundColor).opacity(0.65))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.18),
+                            tintColor.opacity(0.12),
+                            Color.primary.opacity(0.06)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.8
+                )
+        }
+        .shadow(color: Color.black.opacity(0.04), radius: 3, x: 0, y: 1.5)
         .onAppear {
             if selectedRangeRaw == "1m" || selectedRangeRaw == "15m" {
                 selectedRangeRaw = TrendTimeRange.fiveMinutes.rawValue
@@ -130,84 +149,149 @@ struct MetricTrendChartView: View {
 
     private var headerRow: some View {
         HStack(alignment: .center) {
-            HStack(alignment: .firstTextBaseline, spacing: 5) {
-                Text(title)
-                    .font(.system(size: 11.5, weight: .semibold))
-                    .foregroundStyle(.secondary)
+            HStack(spacing: 12) {
+                // Primary series legend & current value
+                HStack(spacing: 5) {
+                    Circle()
+                        .fill(tintColor)
+                        .frame(width: 6, height: 6)
+                        .shadow(color: tintColor.opacity(0.45), radius: 2)
 
-                if let latest = primaryFiltered.last?.value ?? points.last?.value {
-                    Text(String(format: "%.0f %@", latest, unit))
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundStyle(tintColor)
+                    Text(title)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+
+                    if let latest = primaryFiltered.last?.value ?? points.last?.value {
+                        Text(formatValue(latest))
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(tintColor)
+                    }
                 }
 
+                // Secondary series legend & current value
                 if let secLatest = secondaryFiltered.last?.value ?? secondaryPoints?.last?.value,
                    let secTitle = secondaryTitle {
-                    Text("· \(secTitle)")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
-                    Text(String(format: "%.0f %@", secLatest, unit))
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundStyle(secondaryColor)
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(secondaryColor)
+                            .frame(width: 6, height: 6)
+                            .shadow(color: secondaryColor.opacity(0.45), radius: 2)
+
+                        Text(secTitle)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.secondary)
+
+                        Text(formatValue(secLatest))
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(secondaryColor)
+                    }
                 }
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
             timeRangeSelector
         }
     }
 
     private var subHeaderRow: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             if let minVal = combinedValues.min(), let maxVal = combinedValues.max() {
                 if selectedRange.isLongTerm {
                     let avg = combinedValues.reduce(0, +) / Double(max(1, combinedValues.count))
-                    Text("\(AppStrings.trendAvg): \(Int(avg))\(unit)")
-                    Text("·")
-                    Text("\(AppStrings.trendMin): \(Int(minVal))\(unit)")
-                    Text("·")
-                    Text("\(AppStrings.trendMax): \(Int(maxVal))\(unit)")
+                    statBadge(icon: "equal", label: AppStrings.trendAvg, value: formatCompactValue(avg), color: .secondary)
+                    statBadge(icon: "arrow.down", label: AppStrings.trendMin, value: formatCompactValue(minVal), color: .blue)
+                    statBadge(icon: "arrow.up", label: AppStrings.trendMax, value: formatCompactValue(maxVal), color: .orange)
                 } else {
-                    Text("\(AppStrings.trendMin): \(Int(minVal))\(unit)")
-                    Text("·")
-                    Text("\(AppStrings.trendMax): \(Int(maxVal))\(unit)")
+                    statBadge(icon: "arrow.down", label: AppStrings.trendMin, value: formatCompactValue(minVal), color: .blue)
+                    statBadge(icon: "arrow.up", label: AppStrings.trendMax, value: formatCompactValue(maxVal), color: .orange)
                 }
             } else {
-                Text(AppStrings.tr(en: "Waiting for telemetry…", zh: "等待遥测数据…"))
+                HStack(spacing: 4) {
+                    Image(systemName: "chart.xyaxis.line")
+                        .font(.system(size: 9))
+                    Text(AppStrings.tr(en: "Collecting telemetry…", zh: "等待遥测数据…"))
+                }
+                .foregroundStyle(.secondary.opacity(0.8))
             }
+
             Spacer()
+
             Text(selectedRange.localizedTitle)
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(.secondary.opacity(0.7))
+                .font(.system(size: 9, weight: .bold, design: .rounded))
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1.5)
+                .background(Color.primary.opacity(0.05), in: Capsule())
+                .foregroundStyle(.secondary.opacity(0.8))
         }
-        .font(.system(size: 9.5, weight: .medium, design: .monospaced))
-        .foregroundStyle(.secondary.opacity(0.85))
+    }
+
+    private func statBadge(icon: String, label: String, value: String, color: Color) -> some View {
+        HStack(spacing: 2.5) {
+            Image(systemName: icon)
+                .font(.system(size: 7.5, weight: .bold))
+                .foregroundStyle(color)
+            Text(value)
+                .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 5)
+        .padding(.vertical, 1.5)
+        .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 4, style: .continuous))
+    }
+
+    private func formatValue(_ val: Double) -> String {
+        if unit == "°C" {
+            return String(format: "%.0f°C", val)
+        } else {
+            return String(format: "%.0f %@", val, unit)
+        }
+    }
+
+    private func formatCompactValue(_ val: Double) -> String {
+        if unit == "°C" {
+            return "\(Int(val))°C"
+        } else {
+            return "\(Int(val))\(unit)"
+        }
     }
 
     private var timeRangeSelector: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: 2) {
             ForEach(TrendTimeRange.allCases) { range in
+                let isSelected = selectedRange == range
                 Button {
                     selectedRangeRaw = range.rawValue
                 } label: {
                     Text(range.localizedTitle)
-                        .font(.system(size: 9.5, weight: selectedRange == range ? .bold : .medium))
-                        .padding(.horizontal, 5)
+                        .font(.system(size: 9.5, weight: isSelected ? .bold : .medium, design: .rounded))
+                        .padding(.horizontal, 6)
                         .padding(.vertical, 2.5)
-                        .background(
-                            selectedRange == range
-                                ? Color.primary.opacity(0.12)
-                                : Color.clear,
-                            in: RoundedRectangle(cornerRadius: 4, style: .continuous)
-                        )
-                        .foregroundStyle(selectedRange == range ? .primary : .secondary)
+                        .background {
+                            if isSelected {
+                                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                    .fill(Color(NSColor.selectedControlColor).opacity(0.20))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                            .strokeBorder(tintColor.opacity(0.38), lineWidth: 0.8)
+                                    }
+                                    .shadow(color: tintColor.opacity(0.12), radius: 2, y: 1)
+                            }
+                        }
+                        .foregroundStyle(isSelected ? Color.primary : Color.secondary.opacity(0.85))
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(2)
-        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+        .background {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Color.primary.opacity(0.04))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
+                }
+        }
     }
 
     private var chartArea: some View {
@@ -227,15 +311,28 @@ struct MetricTrendChartView: View {
                     let w = size.width
                     let h = size.height
 
-                    // Dotted center baseline guide
-                    var gridPath = Path()
-                    gridPath.move(to: CGPoint(x: 0, y: h * 0.5))
-                    gridPath.addLine(to: CGPoint(x: w, y: h * 0.5))
-                    context.stroke(
-                        gridPath,
-                        with: .color(.secondary.opacity(0.15)),
-                        style: StrokeStyle(lineWidth: 0.5, dash: [4, 4])
-                    )
+                    // Horizontal reference grid lines at 33% and 66%
+                    for frac in [0.33, 0.66] {
+                        var gridPath = Path()
+                        gridPath.move(to: CGPoint(x: 0, y: h * frac))
+                        gridPath.addLine(to: CGPoint(x: w, y: h * frac))
+                        context.stroke(
+                            gridPath,
+                            with: .color(.secondary.opacity(0.10)),
+                            style: StrokeStyle(lineWidth: 0.5, dash: [3, 4])
+                        )
+                    }
+
+                    // Y-axis top & bottom scale values (subtle, right aligned)
+                    let topLabel = Text(formatCompactValue(bounds.upper))
+                        .font(.system(size: 7.5, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary.opacity(0.35))
+                    context.draw(topLabel, at: CGPoint(x: w - 2, y: 6), anchor: .topTrailing)
+
+                    let btmLabel = Text(formatCompactValue(bounds.lower))
+                        .font(.system(size: 7.5, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary.opacity(0.35))
+                    context.draw(btmLabel, at: CGPoint(x: w - 2, y: h - 6), anchor: .bottomTrailing)
 
                     func computePoint(pt: ChartDataPoint) -> CGPoint {
                         let elapsed = max(0, min(effectiveDuration, currentNow.timeIntervalSince(pt.timestamp)))
@@ -248,13 +345,13 @@ struct MetricTrendChartView: View {
                     // Render secondary curve (e.g. GPU)
                     if secondary.count > 1 {
                         let coords = secondary.map(computePoint)
-                        renderSeries(coords: coords, color: secondaryColor, in: context, width: w, height: h, fillAlpha: 0.10)
+                        renderSeries(coords: coords, color: secondaryColor, in: context, width: w, height: h, fillAlpha: 0.12)
                     }
 
                     // Render primary curve (e.g. CPU or Fan RPM)
                     if primary.count > 1 {
                         let coords = primary.map(computePoint)
-                        renderSeries(coords: coords, color: tintColor, in: context, width: w, height: h, fillAlpha: 0.20)
+                        renderSeries(coords: coords, color: tintColor, in: context, width: w, height: h, fillAlpha: 0.22)
                     }
 
                     // Hover inspection crosshair and tooltip
@@ -285,26 +382,28 @@ struct MetricTrendChartView: View {
                                 vGuide.addLine(to: CGPoint(x: snapX, y: h))
                                 context.stroke(
                                     vGuide,
-                                    with: .color(.primary.opacity(0.40)),
+                                    with: .color(.primary.opacity(0.38)),
                                     style: StrokeStyle(lineWidth: 1.0, dash: [3, 3])
                                 )
 
                                 // Secondary dot snap
                                 if let secPt = closestSec {
                                     let coord = computePoint(pt: secPt)
-                                    let r: CGFloat = 3.5
-                                    let rect = CGRect(x: coord.x - r, y: coord.y - r, width: r * 2, height: r * 2)
-                                    context.fill(Path(ellipseIn: rect), with: .color(secondaryColor))
-                                    context.stroke(Path(ellipseIn: rect), with: .color(.white), style: StrokeStyle(lineWidth: 1.2))
+                                    let rHalo: CGFloat = 5.5
+                                    let rCore: CGFloat = 3.2
+                                    context.fill(Path(ellipseIn: CGRect(x: coord.x - rHalo, y: coord.y - rHalo, width: rHalo * 2, height: rHalo * 2)), with: .color(secondaryColor.opacity(0.25)))
+                                    context.fill(Path(ellipseIn: CGRect(x: coord.x - rCore, y: coord.y - rCore, width: rCore * 2, height: rCore * 2)), with: .color(secondaryColor))
+                                    context.stroke(Path(ellipseIn: CGRect(x: coord.x - rCore, y: coord.y - rCore, width: rCore * 2, height: rCore * 2)), with: .color(.white), style: StrokeStyle(lineWidth: 1.2))
                                 }
 
                                 // Primary dot snap
                                 if let priPt = closestPri {
                                     let coord = computePoint(pt: priPt)
-                                    let r: CGFloat = 3.5
-                                    let rect = CGRect(x: coord.x - r, y: coord.y - r, width: r * 2, height: r * 2)
-                                    context.fill(Path(ellipseIn: rect), with: .color(tintColor))
-                                    context.stroke(Path(ellipseIn: rect), with: .color(.white), style: StrokeStyle(lineWidth: 1.2))
+                                    let rHalo: CGFloat = 5.5
+                                    let rCore: CGFloat = 3.2
+                                    context.fill(Path(ellipseIn: CGRect(x: coord.x - rHalo, y: coord.y - rHalo, width: rHalo * 2, height: rHalo * 2)), with: .color(tintColor.opacity(0.25)))
+                                    context.fill(Path(ellipseIn: CGRect(x: coord.x - rCore, y: coord.y - rCore, width: rCore * 2, height: rCore * 2)), with: .color(tintColor))
+                                    context.stroke(Path(ellipseIn: CGRect(x: coord.x - rCore, y: coord.y - rCore, width: rCore * 2, height: rCore * 2)), with: .color(.white), style: StrokeStyle(lineWidth: 1.2))
                                 }
 
                                 // Floating HUD Tooltip
@@ -322,24 +421,25 @@ struct MetricTrendChartView: View {
                                 var parts: [String] = [timeStr]
                                 if let pri = closestPri {
                                     if selectedRange.isLongTerm, let minV = pri.minValue, let maxV = pri.maxValue {
-                                        parts.append(String(format: "%.0f %@ (%.0f~%.0f)", pri.value, unit, minV, maxV))
+                                        parts.append(unit == "°C" ? String(format: "%.0f°C (%.0f~%.0f)", pri.value, minV, maxV) : String(format: "%.0f %@ (%.0f~%.0f)", pri.value, unit, minV, maxV))
                                     } else {
-                                        parts.append(String(format: "%.0f %@", pri.value, unit))
+                                        parts.append(formatValue(pri.value))
                                     }
                                 }
                                 if let sec = closestSec, let secTitle = secondaryTitle {
                                     if selectedRange.isLongTerm, let minV = sec.minValue, let maxV = sec.maxValue {
-                                        parts.append(String(format: "%@: %.0f %@ (%.0f~%.0f)", secTitle, sec.value, unit, minV, maxV))
+                                        parts.append(unit == "°C" ? String(format: "%@: %.0f°C (%.0f~%.0f)", secTitle, sec.value, minV, maxV) : String(format: "%@: %.0f %@ (%.0f~%.0f)", secTitle, sec.value, unit, minV, maxV))
                                     } else {
-                                        parts.append(String(format: "%@: %.0f %@", secTitle, sec.value, unit))
+                                        parts.append(String(format: "%@: %@", secTitle, formatValue(sec.value)))
                                     }
                                 }
                                 let tooltipString = parts.joined(separator: " · ")
 
-                                let badgeWidth: CGFloat = CGFloat(tooltipString.count * 6 + 18)
-                                let badgeHeight: CGFloat = 18
+                                let badgeWidth: CGFloat = CGFloat(Double(tooltipString.count) * 6.2 + 20.0)
+                                let badgeHeight: CGFloat = 20
                                 let badgeX = min(w - badgeWidth / 2 - 4, max(badgeWidth / 2 + 4, snapX))
-                                let badgeY: CGFloat = 11
+                                let priY = closestPri.map { computePoint(pt: $0).y } ?? (h * 0.5)
+                                let badgeY: CGFloat = priY < 32 ? min(h - 12, priY + 22) : 12
 
                                 let badgeRect = CGRect(
                                     x: badgeX - badgeWidth / 2,
@@ -348,12 +448,12 @@ struct MetricTrendChartView: View {
                                     height: badgeHeight
                                 )
                                 context.fill(
-                                    Path(roundedRect: badgeRect, cornerRadius: 4),
-                                    with: .color(Color(nsColor: .windowBackgroundColor).opacity(0.92))
+                                    Path(roundedRect: badgeRect, cornerRadius: 5),
+                                    with: .color(Color(nsColor: .windowBackgroundColor).opacity(0.95))
                                 )
                                 context.stroke(
-                                    Path(roundedRect: badgeRect, cornerRadius: 4),
-                                    with: .color(.secondary.opacity(0.35)),
+                                    Path(roundedRect: badgeRect, cornerRadius: 5),
+                                    with: .color(.primary.opacity(0.18)),
                                     style: StrokeStyle(lineWidth: 0.8)
                                 )
 
@@ -366,12 +466,12 @@ struct MetricTrendChartView: View {
                     }
                 }
             } else {
-                HStack(spacing: 6) {
-                    ProgressView()
-                        .controlSize(.small)
-                        .scaleEffect(0.7)
-                    Text(AppStrings.tr(en: "Collecting trend telemetry…", zh: "正在采集走势数据…"))
-                        .font(.system(size: 11))
+                HStack(spacing: 8) {
+                    Image(systemName: "waveform.path.ecg")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(tintColor.opacity(0.7))
+                    Text(AppStrings.tr(en: "Collecting telemetry…", zh: "正在采集走势数据…"))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -424,12 +524,16 @@ struct MetricTrendChartView: View {
         context.stroke(
             linePath,
             with: .color(color),
-            style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round)
+            style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round)
         )
 
         if let last = coords.last {
+            let haloRect = CGRect(x: last.x - 4, y: last.y - 4, width: 8, height: 8)
+            context.fill(Path(ellipseIn: haloRect), with: .color(color.opacity(0.25)))
+
             let dotRect = CGRect(x: last.x - 2.5, y: last.y - 2.5, width: 5, height: 5)
             context.fill(Path(ellipseIn: dotRect), with: .color(color))
+            context.stroke(Path(ellipseIn: dotRect), with: .color(.white), style: StrokeStyle(lineWidth: 0.8))
         }
     }
 }
