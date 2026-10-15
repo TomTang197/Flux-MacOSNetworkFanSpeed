@@ -878,11 +878,13 @@ final class FanViewModel: ObservableObject {
                 if let cpuTemp = ThermalSensorProcessing.primaryCPUTemperature(from: sampledSensors) {
                     self.cpuHistoryBuffer.append(value: cpuTemp, timestamp: now)
                     self.cpuTemperatureHistory = self.cpuHistoryBuffer.points
+                    TelemetryHistoryStore.shared.record(metricKey: "cpu_temp", value: cpuTemp, timestamp: now)
                 }
 
                 if let gpuTemp = ThermalSensorProcessing.primaryGPUTemperature(from: sampledSensors) {
                     self.gpuHistoryBuffer.append(value: gpuTemp, timestamp: now)
                     self.gpuTemperatureHistory = self.gpuHistoryBuffer.points
+                    TelemetryHistoryStore.shared.record(metricKey: "gpu_temp", value: gpuTemp, timestamp: now)
                 }
 
                 var updatedFanRPMHistory: [Int: [MetricHistoryPoint]] = [:]
@@ -891,6 +893,7 @@ final class FanViewModel: ObservableObject {
                     buffer.append(value: Double(fan.currentRPM), timestamp: now)
                     self.fanRPMHistoryBuffers[fan.id] = buffer
                     updatedFanRPMHistory[fan.id] = buffer.points
+                    TelemetryHistoryStore.shared.record(metricKey: "fan_rpm_\(fan.id)", value: Double(fan.currentRPM), timestamp: now)
                 }
                 self.fanRPMHistory = updatedFanRPMHistory
 
