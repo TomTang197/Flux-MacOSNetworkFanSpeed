@@ -58,4 +58,30 @@ final class RollingHistoryBufferTests: XCTestCase {
         XCTAssertEqual(buffer.count, 0)
         XCTAssertNil(buffer.latest)
     }
+
+    func testPointsWithinDurationFiltering() {
+        var buffer = RollingHistoryBuffer(capacity: 100)
+        let now = Date(timeIntervalSinceReferenceDate: 1000)
+
+        buffer.append(value: 10.0, timestamp: now.addingTimeInterval(-400))
+        buffer.append(value: 20.0, timestamp: now.addingTimeInterval(-200))
+        buffer.append(value: 30.0, timestamp: now.addingTimeInterval(-50))
+        buffer.append(value: 40.0, timestamp: now)
+
+        let within1m = buffer.points(within: 60, from: now)
+        XCTAssertEqual(within1m.map(\.value), [30.0, 40.0])
+
+        let within5m = buffer.points(within: 300, from: now)
+        XCTAssertEqual(within5m.map(\.value), [20.0, 30.0, 40.0])
+
+        let within10m = buffer.points(within: 600, from: now)
+        XCTAssertEqual(within10m.map(\.value), [10.0, 20.0, 30.0, 40.0])
+    }
+
+    func testTrendTimeRangeDurations() {
+        XCTAssertEqual(TrendTimeRange.oneMinute.duration, 60)
+        XCTAssertEqual(TrendTimeRange.fiveMinutes.duration, 300)
+        XCTAssertEqual(TrendTimeRange.fifteenMinutes.duration, 900)
+        XCTAssertEqual(TrendTimeRange.thirtyMinutes.duration, 1800)
+    }
 }

@@ -67,7 +67,8 @@ struct FanControlCard: View {
 
                 if isDashboard { controlStatus }
 
-                if isDashboard, let firstFan = sortedFans.first, let history = fanViewModel.fanRPMHistory[firstFan.id], history.count > 1 {
+                if isDashboard, let firstFan = sortedFans.first {
+                    let history = fanViewModel.fanRPMHistory[firstFan.id] ?? []
                     let secondFan = sortedFans.count > 1 ? sortedFans[1] : nil
                     let secondHistory = secondFan.flatMap { fanViewModel.fanRPMHistory[$0.id] }
                     MetricTrendChartView(

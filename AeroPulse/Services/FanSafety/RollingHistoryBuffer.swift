@@ -1,5 +1,23 @@
 import Foundation
 
+public enum TrendTimeRange: String, CaseIterable, Identifiable, Equatable {
+    case oneMinute = "1m"
+    case fiveMinutes = "5m"
+    case fifteenMinutes = "15m"
+    case thirtyMinutes = "30m"
+
+    public var id: String { rawValue }
+
+    public var duration: TimeInterval {
+        switch self {
+        case .oneMinute: return 60
+        case .fiveMinutes: return 300
+        case .fifteenMinutes: return 900
+        case .thirtyMinutes: return 1800
+        }
+    }
+}
+
 public struct MetricHistoryPoint: Identifiable, Equatable {
     public let id: UUID
     public let timestamp: Date
@@ -16,7 +34,7 @@ public struct RollingHistoryBuffer: Equatable {
     public let capacity: Int
     private var storage: [MetricHistoryPoint] = []
 
-    public init(capacity: Int = 60) {
+    public init(capacity: Int = 1000) {
         self.capacity = max(2, capacity)
         self.storage.reserveCapacity(self.capacity)
     }
@@ -46,6 +64,14 @@ public struct RollingHistoryBuffer: Equatable {
             if point.value > maxVal { maxVal = point.value }
         }
         return minVal...maxVal
+    }
+
+    public func points(within duration: TimeInterval, from now: Date = Date()) -> [MetricHistoryPoint] {
+        let cutoff = now.addingTimeInterval(-duration)
+        guard let firstIdx = storage.firstIndex(where: { $0.timestamp >= cutoff }) else {
+            return []
+        }
+        return Array(storage[firstIdx...])
     }
 
     public mutating func append(value: Double, timestamp: Date = Date()) {

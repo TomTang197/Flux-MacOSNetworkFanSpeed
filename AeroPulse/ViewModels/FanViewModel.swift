@@ -55,8 +55,8 @@ final class FanViewModel: ObservableObject {
     @Published private(set) var gpuTemperatureHistory: [MetricHistoryPoint] = []
     @Published private(set) var fanRPMHistory: [Int: [MetricHistoryPoint]] = [:]
 
-    private var cpuHistoryBuffer = RollingHistoryBuffer(capacity: 60)
-    private var gpuHistoryBuffer = RollingHistoryBuffer(capacity: 60)
+    private var cpuHistoryBuffer = RollingHistoryBuffer(capacity: 1000)
+    private var gpuHistoryBuffer = RollingHistoryBuffer(capacity: 1000)
     private var fanRPMHistoryBuffers: [Int: RollingHistoryBuffer] = [:]
 
     private let monitor = FanMonitor()
@@ -887,7 +887,7 @@ final class FanViewModel: ObservableObject {
 
                 var updatedFanRPMHistory: [Int: [MetricHistoryPoint]] = [:]
                 for fan in sampledFans {
-                    var buffer = self.fanRPMHistoryBuffers[fan.id] ?? RollingHistoryBuffer(capacity: 60)
+                    var buffer = self.fanRPMHistoryBuffers[fan.id] ?? RollingHistoryBuffer(capacity: 1000)
                     buffer.append(value: Double(fan.currentRPM), timestamp: now)
                     self.fanRPMHistoryBuffers[fan.id] = buffer
                     updatedFanRPMHistory[fan.id] = buffer.points
