@@ -67,6 +67,20 @@ struct FanControlCard: View {
 
                 if isDashboard { controlStatus }
 
+                if isDashboard, let firstFan = sortedFans.first, let history = fanViewModel.fanRPMHistory[firstFan.id], history.count > 1 {
+                    let secondFan = sortedFans.count > 1 ? sortedFans[1] : nil
+                    let secondHistory = secondFan.flatMap { fanViewModel.fanRPMHistory[$0.id] }
+                    MetricTrendChartView(
+                        title: sortedFans.count > 1 ? "\(firstFan.name)" : AppStrings.fanRPMTrend,
+                        points: history,
+                        unit: AppStrings.rpmUnit,
+                        tintColor: .teal,
+                        secondaryPoints: secondHistory,
+                        secondaryColor: .cyan,
+                        secondaryTitle: secondFan?.name
+                    )
+                }
+
                 // Fan list with RPM gauges
                 VStack(spacing: 8) {
                     ForEach(sortedFans) { fan in
