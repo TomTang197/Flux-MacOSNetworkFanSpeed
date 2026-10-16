@@ -160,46 +160,59 @@ struct FanControlCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
+        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
+        }
     }
 
     @ViewBuilder
     private var transitionBadge: some View {
         if let remaining = fanViewModel.modeSwitchTransitionRemainingSeconds, let mode = fanViewModel.transitioningMode {
-            HStack(spacing: 3) {
+            HStack(spacing: 4) {
                 Image(systemName: "arrow.triangle.2.circlepath")
-                    .font(.system(size: 9))
+                    .font(.system(size: 9, weight: .semibold))
                 Text(AppStrings.tr(en: "\(mode.localizedTitle) in \(remaining)s", zh: "切换中 \(remaining)s"))
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
             }
             .foregroundStyle(.blue)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
             .background(Color.blue.opacity(0.12), in: Capsule())
+            .overlay {
+                Capsule().strokeBorder(Color.blue.opacity(0.24), lineWidth: 0.5)
+            }
         } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
-            HStack(spacing: 3) {
+            HStack(spacing: 4) {
                 Image(systemName: "clock")
-                    .font(.system(size: 9))
+                    .font(.system(size: 9, weight: .semibold))
                 Text(AppStrings.tr(en: "Auto in \(remaining)s", zh: "\(remaining)s 后恢复自动"))
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
             }
             .foregroundStyle(.orange)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
             .background(Color.orange.opacity(0.12), in: Capsule())
+            .overlay {
+                Capsule().strokeBorder(Color.orange.opacity(0.24), lineWidth: 0.5)
+            }
         } else if fanViewModel.currentMode == .custom, let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
             let pending = fanViewModel.pendingRuleDownshiftSpeedPercentage ?? 0
             let pendingStr = pending == 0 ? AppStrings.tr(en: "min", zh: "最低") : "\(pending)%"
-            HStack(spacing: 3) {
+            HStack(spacing: 4) {
                 Image(systemName: "hourglass")
-                    .font(.system(size: 9))
+                    .font(.system(size: 9, weight: .semibold))
                 Text(AppStrings.tr(en: "↓ \(remaining)s (\(pendingStr))", zh: "↓ \(remaining)s (切至 \(pendingStr))"))
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
             }
             .foregroundStyle(.orange)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
             .background(Color.orange.opacity(0.12), in: Capsule())
+            .overlay {
+                Capsule().strokeBorder(Color.orange.opacity(0.24), lineWidth: 0.5)
+            }
         }
     }
 
@@ -693,13 +706,15 @@ private struct FanSpeedRowView: View {
                     .minimumScaleFactor(0.8)
                 Spacer()
                 Text("\(fan.currentRPM) \(AppStrings.rpmUnit)")
-                    .font(.system(size: isDashboard ? 12 : 11, weight: .bold, design: .monospaced))
+                    .font(.system(size: isDashboard ? 12.5 : 11, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(utilization > 0.85 ? Color.orange : Color.primary)
                     .frame(minWidth: 96, alignment: .trailing)
             }
 
             ProgressView(value: utilization)
                 .progressViewStyle(.linear)
-                .tint(.indigo.opacity(0.92))
+                .tint(utilization > 0.85 ? .orange : .indigo)
 
             HStack {
                 Text("\(fan.minRPM) \(AppStrings.min)")
@@ -732,12 +747,16 @@ private struct FanSpeedRowView: View {
                 .padding(.top, 2)
             }
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 11)
         .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 9)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(Color.primary.opacity(0.045))
         )
+        .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
+        }
         .onAppear {
             localSliderValue = Double(targetRPM > 0 ? targetRPM : fan.currentRPM)
         }

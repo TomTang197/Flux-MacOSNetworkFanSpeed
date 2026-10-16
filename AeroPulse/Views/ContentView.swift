@@ -40,35 +40,48 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text(AppStrings.appName).font(.system(size: 18, weight: .semibold))
+                HStack(spacing: 8) {
+                    Image(systemName: "wind")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(LinearGradient(colors: [.blue, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    Text(AppStrings.appName)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                }
                 Spacer()
                 DashboardConnectionStatus(fanViewModel: fanViewModel)
                 Button { showsSettings = true } label: {
                     Label(AppStrings.settings, systemImage: "gearshape")
                 }
                 .buttonStyle(.bordered)
+                .controlSize(.regular)
                 .help(AppStrings.settingsHelp)
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            Divider()
+            .padding(.vertical, 10)
+            Rectangle()
+                .fill(Color.primary.opacity(0.07))
+                .frame(height: 1)
 
             GeometryReader { proxy in
                 let usableWidth = max(0, proxy.size.width - 2)
                 HStack(alignment: .top, spacing: 0) {
                     ScrollView(.vertical) {
                         DashboardOverviewView(networkViewModel: networkViewModel)
-                            .padding(20)
+                            .padding(16)
                     }
                     .frame(width: usableWidth * 0.27)
-                    Divider()
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.07))
+                        .frame(width: 1)
                     ThermalDetailView(
                         fanViewModel: fanViewModel,
                         isEmbedded: true,
                         layoutWidth: usableWidth * 0.38
                     )
                     .frame(width: usableWidth * 0.38, height: proxy.size.height)
-                    Divider()
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.07))
+                        .frame(width: 1)
                     ScrollView(.vertical) {
                         FanControlCard(fanViewModel: fanViewModel, isDashboard: true)
                             .padding(16)
@@ -209,8 +222,10 @@ private struct DashboardConnectionStatus: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Circle().fill(connected ? Color.secondary : .orange)
-                .frame(width: 6, height: 6)
+            Circle()
+                .fill(connected ? Color.green : Color.orange)
+                .frame(width: 7, height: 7)
+                .shadow(color: (connected ? Color.green : Color.orange).opacity(0.35), radius: 2)
             Text(connected ? AppStrings.hardwareConnected : AppStrings.hardwareDisconnected)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.secondary)
@@ -219,8 +234,16 @@ private struct DashboardConnectionStatus: View {
                     service.reconnect()
                     connected = service.isConnected
                 }
-                    .controlSize(.small)
+                .controlSize(.mini)
+                .buttonStyle(.borderedProminent)
             }
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4)
+        .background(Color.primary.opacity(0.04), in: Capsule())
+        .overlay {
+            Capsule()
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
         }
         .onReceive(fanViewModel.$fans) { _ in connected = service.isConnected }
     }

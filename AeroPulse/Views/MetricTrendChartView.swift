@@ -41,6 +41,7 @@ struct MetricTrendChartView: View {
 
     @AppStorage("AeroPulse.SelectedTrendTimeRange") private var selectedRangeRaw: String = TrendTimeRange.fiveMinutes.rawValue
     @State private var hoverLocation: CGPoint? = nil
+    @Namespace private var pillNamespace
 
     private static let timeFormatter: DateFormatter = {
         let df = DateFormatter()
@@ -144,7 +145,6 @@ struct MetricTrendChartView: View {
                 selectedRangeRaw = TrendTimeRange.fiveMinutes.rawValue
             }
         }
-        .transaction { $0.animation = nil }
     }
 
     private var headerRow: some View {
@@ -278,21 +278,24 @@ struct MetricTrendChartView: View {
             ForEach(TrendTimeRange.allCases) { range in
                 let isSelected = selectedRange == range
                 Button {
-                    selectedRangeRaw = range.rawValue
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
+                        selectedRangeRaw = range.rawValue
+                    }
                 } label: {
                     Text(range.localizedTitle)
                         .font(.system(size: 9.5, weight: isSelected ? .bold : .medium, design: .rounded))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2.5)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
                         .background {
                             if isSelected {
                                 RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                    .fill(Color(NSColor.selectedControlColor).opacity(0.20))
+                                    .fill(tintColor.opacity(0.18))
                                     .overlay {
                                         RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                            .strokeBorder(tintColor.opacity(0.38), lineWidth: 0.8)
+                                            .strokeBorder(tintColor.opacity(0.35), lineWidth: 0.8)
                                     }
                                     .shadow(color: tintColor.opacity(0.12), radius: 2, y: 1)
+                                    .matchedGeometryEffect(id: "selectedRangePill", in: pillNamespace)
                             }
                         }
                         .foregroundStyle(isSelected ? Color.primary : Color.secondary.opacity(0.85))

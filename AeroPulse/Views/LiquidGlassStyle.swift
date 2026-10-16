@@ -46,17 +46,17 @@ private struct LiquidGlassCardModifier: ViewModifier {
         content
             .background {
                 ZStack {
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(
-                            Color(NSColor.controlBackgroundColor)
-                                .opacity(shouldReduceEffects ? 0.94 : 0.72)
-                        )
+                    if shouldReduceEffects {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(Color(NSColor.controlBackgroundColor).opacity(0.96))
+                    } else {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(.regularMaterial)
 
-                    if !shouldReduceEffects {
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.12),
-                                tint.opacity(0.08),
+                                Color.white.opacity(0.14),
+                                tint.opacity(0.06),
                                 Color.clear,
                             ],
                             startPoint: .topLeading,
@@ -71,27 +71,27 @@ private struct LiquidGlassCardModifier: ViewModifier {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .strokeBorder(
                         shouldReduceEffects
-                            ? AnyShapeStyle(Color.primary.opacity(0.10))
+                            ? AnyShapeStyle(Color.primary.opacity(0.08))
                             : AnyShapeStyle(
                                 LinearGradient(
                                     colors: [
                                         Color.white.opacity(0.25),
-                                        tint.opacity(0.18),
-                                        Color.clear,
+                                        tint.opacity(0.16),
+                                        Color.primary.opacity(0.06),
                                     ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             ),
-                        lineWidth: 1
+                        lineWidth: 0.8
                     )
                     .allowsHitTesting(false)
             }
             .shadow(
-                color: Color.black.opacity(shouldReduceEffects ? 0 : shadowOpacity * 0.4),
-                radius: shouldReduceEffects ? 0 : 3,
+                color: Color.black.opacity(shouldReduceEffects ? 0 : shadowOpacity * 0.35),
+                radius: shouldReduceEffects ? 0 : 5,
                 x: 0,
-                y: shouldReduceEffects ? 0 : 1.5
+                y: shouldReduceEffects ? 0 : 2
             )
     }
 }
