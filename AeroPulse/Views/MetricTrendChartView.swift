@@ -104,8 +104,26 @@ struct MetricTrendChartView: View {
         primaryFiltered.map(\.value) + secondaryFiltered.map(\.value)
     }
 
+    private var statMinVal: Double? {
+        if selectedRange.isLongTerm {
+            let mins = (primaryFiltered + secondaryFiltered).compactMap(\.minValue)
+            if let m = mins.min() { return m }
+        }
+        return combinedValues.min()
+    }
+
+    private var statMaxVal: Double? {
+        if selectedRange.isLongTerm {
+            let maxs = (primaryFiltered + secondaryFiltered).compactMap(\.maxValue)
+            if let m = maxs.max() { return m }
+        }
+        return combinedValues.max()
+    }
+
     private var rangeBounds: (lower: Double, upper: Double) {
-        guard let minVal = combinedValues.min(), let maxVal = combinedValues.max() else {
+        let allMins = (selectedRange.isLongTerm ? (primaryFiltered + secondaryFiltered).compactMap(\.minValue) : []) + combinedValues
+        let allMaxs = (selectedRange.isLongTerm ? (primaryFiltered + secondaryFiltered).compactMap(\.maxValue) : []) + combinedValues
+        guard let minVal = allMins.min(), let maxVal = allMaxs.max() else {
             return (0, 100)
         }
         let span = max(4.0, maxVal - minVal)
@@ -213,7 +231,7 @@ struct MetricTrendChartView: View {
 
     private var subHeaderRow: some View {
         HStack(spacing: 6) {
-            if let minVal = combinedValues.min(), let maxVal = combinedValues.max() {
+            if let minVal = statMinVal, let maxVal = statMaxVal {
                 if selectedRange.isLongTerm {
                     let avg = combinedValues.reduce(0, +) / Double(max(1, combinedValues.count))
                     statBadge(icon: "equal", label: AppStrings.trendAvg, value: formatCompactValue(avg), color: .secondary)
@@ -365,13 +383,31 @@ struct MetricTrendChartView: View {
                     // Render secondary curve (e.g. GPU)
                     if secondary.count > 1 {
                         let coords = secondary.map(computePoint)
-                        renderSeries(coords: coords, color: secondaryColor, in: context, width: w, height: h, fillAlpha: 0.12)
+                        renderSeries(
+                            points: secondary,
+                            coords: coords,
+                            color: secondaryColor,
+                            in: context,
+                            width: w,
+                            height: h,
+                            bounds: bounds,
+                            fillAlpha: 0.12
+                        )
                     }
 
                     // Render primary curve (e.g. CPU or Fan RPM)
                     if primary.count > 1 {
                         let coords = primary.map(computePoint)
-                        renderSeries(coords: coords, color: tintColor, in: context, width: w, height: h, fillAlpha: 0.22)
+                        renderSeries(
+                            points: primary,
+                            coords: coords,
+                            color: tintColor,
+                            in: context,
+                            width: w,
+                            height: h,
+                            bounds: bounds,
+                            fillAlpha: 0.22
+                        )
                     }
 
                     // Hover inspection crosshair and tooltip
@@ -509,14 +545,47 @@ struct MetricTrendChartView: View {
     }
 
     private func renderSeries(
+        points: [ChartDataPoint],
         coords: [CGPoint],
         color: Color,
         in context: GraphicsContext,
         width: CGFloat,
         height: CGFloat,
+        bounds: (lower: Double, upper: Double),
         fillAlpha: Double
     ) {
         guard let first = coords.first else { return }
+
+        // Render min-max range envelope band for long-term rollups
+        if selectedRange.isLongTerm, points.count == coords.count {
+            var topCoords: [CGPoint] = []
+            var btmCoords: [CGPoint] = []
+
+            for (idx, pt) in points.enumerated() {
+                let x = coords[idx].x
+                if let maxV = pt.maxValue, let minV = pt.minValue {
+                    let normMax = (maxV - bounds.lower) / max(0.1, bounds.upper - bounds.lower)
+                    let yTop = max(2.0, min(height - 2.0, height * (1.0 - CGFloat(normMax))))
+                    let normMin = (minV - bounds.lower) / max(0.1, bounds.upper - bounds.lower)
+                    let yBtm = max(2.0, min(height - 2.0, height * (1.0 - CGFloat(normMin))))
+                    topCoords.append(CGPoint(x: x, y: yTop))
+                    btmCoords.append(CGPoint(x: x, y: yBtm))
+                }
+            }
+
+            if topCoords.count > 1 && btmCoords.count > 1 {
+                var bandPath = Path()
+                bandPath.move(to: topCoords[0])
+                for pt in topCoords.dropFirst() {
+                    bandPath.addLine(to: pt)
+                }
+                for pt in btmCoords.reversed() {
+                    bandPath.addLine(to: pt)
+                }
+                bandPath.closeSubpath()
+                context.fill(bandPath, with: .color(color.opacity(0.10)))
+            }
+        }
 
         var linePath = Path()
         linePath.move(to: first)
