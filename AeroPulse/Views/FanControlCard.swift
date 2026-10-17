@@ -48,24 +48,19 @@ struct FanControlCard: View {
                 Picker(AppStrings.tr(en: "Mode", zh: "模式"), selection: Binding(
                     get: { fanViewModel.currentMode },
                     set: { newMode in
-                        DispatchQueue.main.async {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                             fanViewModel.setFanMode(newMode, isUserInitiated: true)
                         }
                     }
                 )) {
                     ForEach(FanMode.allCases) { mode in
-                        let isTransitioning = fanViewModel.transitioningMode == mode && fanViewModel.modeSwitchTransitionRemainingSeconds != nil
-                        if isTransitioning, let remaining = fanViewModel.modeSwitchTransitionRemainingSeconds {
-                            Text("\(mode.localizedTitle) (\(remaining)s)").tag(mode)
-                        } else {
-                            Text(mode.localizedTitle).tag(mode)
-                        }
+                        Text(mode.localizedTitle).tag(mode)
                     }
                 }
                 .pickerStyle(.segmented)
                 .controlSize(isDashboard ? .regular : .small)
 
-                if isDashboard { controlStatus }
+                ambientStatusBar
 
                 if isDashboard, let firstFan = sortedFans.first {
                     let history = fanViewModel.fanRPMHistory[firstFan.id] ?? []
@@ -148,121 +143,149 @@ struct FanControlCard: View {
                 )
             }
         }
-    }
-
-    private var controlStatus: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack {
-                Text(statusTitle).font(.system(size: 13, weight: .semibold))
-                Spacer()
-                transitionBadge
-            }
-            Text(statusDetail)
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
-        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: fanViewModel.currentMode)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: fanViewModel.modeSwitchTransitionRemainingSeconds != nil)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: fanViewModel.isScheduleOverridden)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: fanViewModel.isGameModeUserOverridden)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: fanViewModel.gameModeCooldownRemainingSeconds != nil)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: fanViewModel.ruleDownshiftRemainingSeconds != nil)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: fanViewModel.isGameModeLinkageEnabled)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: fanViewModel.fanScheduleConfig.isEnabled)
     }
 
     @ViewBuilder
-    private var transitionBadge: some View {
+    private var ambientStatusBar: some View {
         if let remaining = fanViewModel.modeSwitchTransitionRemainingSeconds, let mode = fanViewModel.transitioningMode {
-            HStack(spacing: 4) {
-                Image(systemName: "arrow.triangle.2.circlepath")
-                    .font(.system(size: 9, weight: .semibold))
-                Text(AppStrings.tr(en: "\(mode.localizedTitle) in \(remaining)s", zh: "切换中 \(remaining)s"))
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+            HStack(spacing: 6) {
+                ProgressView()
+                    .controlSize(.mini)
+                    .scaleEffect(0.65)
+                Text(AppStrings.tr(
+                    en: "Applying \(mode.localizedTitle) · Fan speed ramping (\(remaining)s)",
+                    zh: "正在应用「\(mode.localizedTitle)」· 风扇响应中（\(remaining)s）"
+                ))
+                .font(.system(size: isDashboard ? 11.5 : 10, weight: .medium))
+                Spacer()
             }
             .foregroundStyle(.blue)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(Color.blue.opacity(0.12), in: Capsule())
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(Color.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
             .overlay {
-                Capsule().strokeBorder(Color.blue.opacity(0.24), lineWidth: 0.5)
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .strokeBorder(Color.blue.opacity(0.18), lineWidth: 0.5)
             }
+            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+        } else if fanViewModel.isGameModeActive && fanViewModel.isGameModeUserOverridden {
+            HStack(spacing: 6) {
+                Image(systemName: "hand.raised.fill")
+                    .font(.system(size: 9.5))
+                Text(AppStrings.tr(en: "Manual override active during Game Mode", zh: "游戏模式期间已手动接管"))
+                    .font(.system(size: isDashboard ? 11.5 : 10, weight: .medium))
+                Spacer()
+                Button(AppStrings.tr(en: "Resume", zh: "恢复联动")) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        fanViewModel.resumeGameModeLinkage()
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
+            }
+            .foregroundStyle(.orange)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4.5)
+            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .strokeBorder(Color.orange.opacity(0.2), lineWidth: 0.5)
+            }
+            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+        } else if fanViewModel.isScheduleOverridden {
+            HStack(spacing: 6) {
+                Image(systemName: "hand.raised.fill")
+                    .font(.system(size: 9.5))
+                Text(AppStrings.tr(en: "Schedule overridden · Resumes at next boundary", zh: "计划时段内已手动接管 · 下个计划点自动恢复"))
+                    .font(.system(size: isDashboard ? 11.5 : 10, weight: .medium))
+                Spacer()
+                Button(AppStrings.tr(en: "Resume", zh: "恢复计划")) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        fanViewModel.resetScheduleOverride()
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
+            }
+            .foregroundStyle(.orange)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4.5)
+            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .strokeBorder(Color.orange.opacity(0.2), lineWidth: 0.5)
+            }
+            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
         } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
-            HStack(spacing: 4) {
-                Image(systemName: "clock")
-                    .font(.system(size: 9, weight: .semibold))
-                Text(AppStrings.tr(en: "Auto in \(remaining)s", zh: "\(remaining)s 后恢复自动"))
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+            HStack(spacing: 6) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 10, weight: .semibold))
+                Text(AppStrings.tr(en: "Game closed · Auto in \(remaining)s", zh: "游戏已退出 · \(remaining) 秒后恢复系统自动"))
+                    .font(.system(size: isDashboard ? 11.5 : 10, weight: .medium))
+                Spacer()
             }
             .foregroundStyle(.orange)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(Color.orange.opacity(0.12), in: Capsule())
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
             .overlay {
-                Capsule().strokeBorder(Color.orange.opacity(0.24), lineWidth: 0.5)
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .strokeBorder(Color.orange.opacity(0.18), lineWidth: 0.5)
             }
+            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
         } else if fanViewModel.currentMode == .custom, let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
+            let current = fanViewModel.activeRule?.speedPercentage ?? 0
             let pending = fanViewModel.pendingRuleDownshiftSpeedPercentage ?? 0
-            let pendingStr = pending == 0 ? AppStrings.tr(en: "min", zh: "最低") : "\(pending)%"
-            HStack(spacing: 4) {
+            let pendingStr = pending == 0 ? AppStrings.tr(en: "hardware minimum speed", zh: "硬件最低转速") : "\(pending)%"
+            HStack(spacing: 6) {
                 Image(systemName: "hourglass")
-                    .font(.system(size: 9, weight: .semibold))
-                Text(AppStrings.tr(en: "↓ \(remaining)s (\(pendingStr))", zh: "↓ \(remaining)s (切至 \(pendingStr))"))
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .font(.system(size: 10, weight: .semibold))
+                Text(AppStrings.tr(
+                    en: "Downshift holding current speed · \(pendingStr) in \(remaining)s",
+                    zh: "降速缓冲生效中：维持 \(current)% · \(remaining) 秒后切至 \(pendingStr)"
+                ))
+                .font(.system(size: isDashboard ? 11.5 : 10, weight: .medium))
+                Spacer()
             }
             .foregroundStyle(.orange)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(Color.orange.opacity(0.12), in: Capsule())
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
             .overlay {
-                Capsule().strokeBorder(Color.orange.opacity(0.24), lineWidth: 0.5)
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .strokeBorder(Color.orange.opacity(0.18), lineWidth: 0.5)
             }
+            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+        } else if isDashboard {
+            HStack(spacing: 5) {
+                Text(quietModeSummary)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary.opacity(0.85))
+                Spacer()
+            }
+            .padding(.horizontal, 2)
+            .padding(.top, 1)
         }
     }
 
-    private var statusTitle: String {
-        switch fanViewModel.currentMode {
-        case .auto: return AppStrings.tr(en: "System automatic control", zh: "系统自动控制")
-        case .fullBlast: return AppStrings.tr(en: "Maximum speed selected", zh: "已选择全速模式")
-        case .manual: return AppStrings.tr(en: "Manual targets selected", zh: "已选择手动目标转速")
-        case .custom: return AppStrings.tr(en: "Temperature rules selected", zh: "已选择温控规则")
-        }
-    }
-
-    private var statusDetail: String {
-        if let remaining = fanViewModel.modeSwitchTransitionRemainingSeconds, let mode = fanViewModel.transitioningMode {
-            return AppStrings.tr(
-                en: "Mode switch requested. Transitioning to \(mode.localizedTitle), hardware fan speed is ramping (countdown: \(remaining)s)...",
-                zh: "已请求切换模式。正在切换至「\(mode.localizedTitle)」，风扇转速响应与生效过渡中（倒计时 \(remaining) 秒）..."
-            )
-        }
+    private var quietModeSummary: String {
         switch fanViewModel.currentMode {
         case .auto:
-            if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
-                return AppStrings.tr(
-                    en: "Game closed. Cooldown timer active: returning to auto control in \(remaining)s.",
-                    zh: "游戏已退出。冷却倒计时生效中：\(remaining) 秒后恢复系统自动控制。"
-                )
-            }
-            return AppStrings.tr(en: "macOS manages fan speed. Live readings are shown below.", zh: "macOS 自动管理风扇转速。下方展示实时数据。")
+            return AppStrings.tr(en: "macOS automatically manages fan speed based on thermal sensors.", zh: "macOS 系统根据各传感器温度自动调节风扇转速。")
         case .fullBlast:
-            return AppStrings.tr(en: "Requests each fan’s maximum speed. Compare the live RPM below.", zh: "请求风扇以最大转速运行。可对比下方实时转速。")
+            return AppStrings.tr(en: "All fans forced to maximum RPM for peak cooling.", zh: "所有风扇强制以最大转速运转，全力散热。")
         case .manual:
-            return AppStrings.tr(en: "Adjust the target for each fan below. Live RPM may take time to reach the target.", zh: "在下方调整每个风扇的目标转速。实时转速可能需要几秒响应。")
+            return AppStrings.tr(en: "Fixed target RPM per fan.", zh: "由下方滑块为各风扇指定固定目标转速。")
         case .custom:
-            if let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
-                let current = fanViewModel.activeRule?.speedPercentage ?? 0
-                let pending = fanViewModel.pendingRuleDownshiftSpeedPercentage ?? 0
-                let pendingStr = pending == 0 ? AppStrings.tr(en: "hardware minimum speed", zh: "硬件最低转速") : "\(pending)%"
-                return AppStrings.tr(
-                    en: "Rule input: \(fanViewModel.controlAverageTemp). Downshift delay active: holding \(current)% for \(remaining) more seconds before transitioning to \(pendingStr).",
-                    zh: "规则依据输入：\(fanViewModel.controlAverageTemp)。降速平滑缓冲生效中：维持 \(current)%，倒计时 \(remaining) 秒后平滑切换至 \(pendingStr)。"
-                )
-            }
-            return AppStrings.tr(
-                en: "Rule input: \(fanViewModel.controlAverageTemp), the higher CPU / GPU average. Live RPM is shown below.",
-                zh: "规则依据输入：\(fanViewModel.controlAverageTemp)，取 CPU / GPU 的较高均值。实时转速显示如下。"
-            )
+            return AppStrings.tr(en: "Dynamic curves based on control temperature (\(fanViewModel.controlAverageTemp)).", zh: "依据硬件温度动态调速（控制基准均温：\(fanViewModel.controlAverageTemp)）。")
         }
     }
 
@@ -290,14 +313,8 @@ struct FanControlCard: View {
                 .toggleStyle(.switch)
                 .controlSize(.mini)
                 .font(.system(size: isDashboard ? 11 : 9.5, weight: .semibold))
-                .fixedSize()
 
-                ruleDownshiftStatus
-                    .font(.system(size: isDashboard ? 11 : 9, weight: .semibold, design: .monospaced))
-                    .lineLimit(1)
-                    // Keep the status in the control row without changing its height.
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .frame(height: 18)
+                Spacer()
 
                 if fanViewModel.isRuleDownshiftDelayEnabled {
                     Stepper(
@@ -313,7 +330,6 @@ struct FanControlCard: View {
                             .frame(minWidth: 28, alignment: .trailing)
                     }
                     .controlSize(.mini)
-                    .fixedSize()
                 }
             }
             .padding(.horizontal, 8)
@@ -403,46 +419,6 @@ struct FanControlCard: View {
         }
     }
 
-    @ViewBuilder
-    private var ruleDownshiftStatus: some View {
-        if let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
-            let pending = fanViewModel.pendingRuleDownshiftSpeedPercentage ?? 0
-            let pendingStr = pending == 0 ? AppStrings.tr(en: "min", zh: "最低") : "\(pending)%"
-            let detail = AppStrings.tr(
-                en: "Holding current speed · Downshift to \(pendingStr) in \(remaining)s",
-                zh: "维持当前转速 · \(remaining)秒后降速至 \(pendingStr)"
-            )
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 3) {
-                    Image(systemName: "hourglass")
-                        .font(.system(size: 8.5))
-                    Text(AppStrings.tr(en: "Downshift in \(remaining)s (\(pendingStr))", zh: "\(remaining)s 后切至 \(pendingStr)"))
-                }
-                .fixedSize()
-                HStack(spacing: 2) {
-                    Image(systemName: "hourglass")
-                        .font(.system(size: 8))
-                    Text("↓ \(remaining)s (\(pendingStr))")
-                }
-                .fixedSize()
-                Text("↓ \(remaining)s")
-                    .fixedSize()
-            }
-            .foregroundStyle(.orange)
-            .help(detail)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(detail)
-        } else if fanViewModel.isRulesAtMinimum {
-            Text(AppStrings.tr(en: "Minimum speed", zh: "已达最低转速"))
-                .foregroundStyle(.green)
-                .help(AppStrings.rulesActiveHardwareMin)
-                .accessibilityLabel(AppStrings.rulesActiveHardwareMin)
-        } else {
-            Color.clear
-                .accessibilityHidden(true)
-        }
-    }
-
     private var gameModeSection: some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(spacing: 6) {
@@ -528,24 +504,6 @@ struct FanControlCard: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
                 .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.035)))
-
-                if fanViewModel.isGameModeActive {
-                    HStack(spacing: 5) {
-                        Circle().fill(Color.purple).frame(width: 5, height: 5)
-                        Text(AppStrings.gameModeActiveStatus)
-                            .font(.system(size: isDashboard ? 11 : 8.5, weight: .semibold, design: .monospaced))
-                            .foregroundColor(.purple)
-                        Spacer()
-                    }
-                } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
-                    HStack(spacing: 5) {
-                        Circle().fill(Color.orange).frame(width: 5, height: 5)
-                        Text("\(AppStrings.gameModeCooldownStatusPrefix) \(remaining)s")
-                            .font(.system(size: isDashboard ? 11 : 8.5, weight: .semibold, design: .monospaced))
-                            .foregroundColor(.orange)
-                        Spacer()
-                    }
-                }
             }
         }
     }
@@ -740,24 +698,6 @@ struct FanControlCard: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.035)))
-
-                if fanViewModel.isScheduleOverridden {
-                    HStack(spacing: 5) {
-                        Circle().fill(Color.orange).frame(width: 5, height: 5)
-                        Text(AppStrings.tr(en: "Manual override active. Will resume schedule at next boundary.", zh: "手动接管生效中。将在下一个定时切换点自动恢复。"))
-                            .font(.system(size: isDashboard ? 11 : 8.5, weight: .semibold, design: .monospaced))
-                            .foregroundColor(.orange)
-                        Spacer()
-                    }
-                } else if fanViewModel.isScheduleActive {
-                    HStack(spacing: 5) {
-                        Circle().fill(Color.teal).frame(width: 5, height: 5)
-                        Text(AppStrings.tr(en: "Scheduled mode active (\(fanViewModel.fanScheduleConfig.scheduledMode.localizedTitle))", zh: "定时计划模式生效中 (\(fanViewModel.fanScheduleConfig.scheduledMode.localizedTitle))"))
-                            .font(.system(size: isDashboard ? 11 : 8.5, weight: .semibold, design: .monospaced))
-                            .foregroundColor(.teal)
-                        Spacer()
-                    }
-                }
             }
         }
     }
@@ -961,8 +901,10 @@ private struct FanSpeedRowView: View {
                 }
                 .controlSize(.small)
                 .padding(.top, 2)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: isManual)
         .padding(.horizontal, 11)
         .padding(.vertical, 8)
         .background(

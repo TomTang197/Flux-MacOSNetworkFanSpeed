@@ -211,22 +211,14 @@ struct MenuBarFanSection: View {
                         fanViewModel.setFanMode(mode, isUserInitiated: true)
                     }
                 } label: {
-                    let isTransitioning = fanViewModel.transitioningMode == mode && fanViewModel.modeSwitchTransitionRemainingSeconds != nil
-                    HStack(spacing: 3) {
-                        Text(mode.localizedTitle)
-                            .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
-                        if isTransitioning, let remaining = fanViewModel.modeSwitchTransitionRemainingSeconds {
-                            Text("\(remaining)s")
-                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color.blue)
-                        }
-                    }
-                    .foregroundStyle(isSelected ? .primary : (hoveredMode == mode ? .primary : .secondary))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 5)
-                    .contentShape(Rectangle())
+                    Text(mode.localizedTitle)
+                        .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
+                        .foregroundStyle(isSelected ? .primary : (hoveredMode == mode ? .primary : .secondary))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 5)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .onHover { isHovered in
@@ -300,7 +292,11 @@ struct MenuBarFanSection: View {
         } else if fanViewModel.isGameModeActive && fanViewModel.isGameModeUserOverridden {
             badgePill(AppStrings.tr(en: "Overridden", zh: "已接管"), icon: "hand.raised", color: .orange)
         } else if fanViewModel.isGameModeActive {
-            badgePill(AppStrings.tr(en: "Game Mode", zh: "游戏模式"), icon: "gamecontroller", color: .green)
+            badgePill(AppStrings.tr(en: "Game Mode", zh: "游戏模式"), icon: "gamecontroller", color: .purple)
+        } else if fanViewModel.isScheduleOverridden {
+            badgePill(AppStrings.tr(en: "Overridden", zh: "计划已接管"), icon: "hand.raised", color: .orange)
+        } else if fanViewModel.isScheduleActive {
+            badgePill(AppStrings.tr(en: "Schedule", zh: "定时计划"), icon: "calendar.badge.clock", color: .teal)
         } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
             badgePill("\(remaining)s", icon: "clock", color: .orange)
         } else if fanViewModel.currentMode == .custom, let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
@@ -355,6 +351,36 @@ struct MenuBarFanSection: View {
                 icon: "info.circle",
                 color: .orange
             )
+        } else if fanViewModel.isGameModeActive && fanViewModel.isGameModeUserOverridden {
+            HStack(spacing: 6) {
+                Label(
+                    AppStrings.tr(en: "Game active · Manual override", zh: "游戏运行中 · 当前已手动接管"),
+                    systemImage: "hand.raised"
+                )
+                .font(.system(size: 11))
+                .foregroundStyle(.orange)
+                Spacer()
+                Button(AppStrings.tr(en: "Resume", zh: "恢复联动")) {
+                    fanViewModel.resumeGameModeLinkage()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
+            }
+        } else if fanViewModel.isScheduleOverridden {
+            HStack(spacing: 6) {
+                Label(
+                    AppStrings.tr(en: "Schedule active · Manual override", zh: "定时计划时段 · 当前已手动接管"),
+                    systemImage: "hand.raised"
+                )
+                .font(.system(size: 11))
+                .foregroundStyle(.orange)
+                Spacer()
+                Button(AppStrings.tr(en: "Resume", zh: "恢复计划")) {
+                    fanViewModel.resetScheduleOverride()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
+            }
         } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
             statusLine(
                 AppStrings.tr(en: "Game ended · Auto in \(remaining)s", zh: "游戏已退出 · \(remaining) 秒后切回自动"),
