@@ -116,6 +116,10 @@ struct FanControlCard: View {
                 Divider().opacity(0.3)
                 gameModeSection
 
+                // Scheduled Fan Mode Section
+                Divider().opacity(0.3)
+                scheduleSection
+
                 if !fanViewModel.helperInstalled {
                     HStack(spacing: 6) {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -539,6 +543,218 @@ struct FanControlCard: View {
                         Text("\(AppStrings.gameModeCooldownStatusPrefix) \(remaining)s")
                             .font(.system(size: isDashboard ? 11 : 8.5, weight: .semibold, design: .monospaced))
                             .foregroundColor(.orange)
+                        Spacer()
+                    }
+                }
+            }
+        }
+    }
+
+    private var startDateBinding: Binding<Date> {
+        Binding(
+            get: {
+                let cal = Calendar.current
+                var comps = cal.dateComponents([.year, .month, .day], from: Date())
+                comps.hour = fanViewModel.fanScheduleConfig.startHour
+                comps.minute = fanViewModel.fanScheduleConfig.startMinute
+                return cal.date(from: comps) ?? Date()
+            },
+            set: { newDate in
+                let cal = Calendar.current
+                let h = cal.component(.hour, from: newDate)
+                let m = cal.component(.minute, from: newDate)
+                var config = fanViewModel.fanScheduleConfig
+                config.startHour = h
+                config.startMinute = m
+                fanViewModel.fanScheduleConfig = config
+            }
+        )
+    }
+
+    private var endDateBinding: Binding<Date> {
+        Binding(
+            get: {
+                let cal = Calendar.current
+                var comps = cal.dateComponents([.year, .month, .day], from: Date())
+                comps.hour = fanViewModel.fanScheduleConfig.endHour
+                comps.minute = fanViewModel.fanScheduleConfig.endMinute
+                return cal.date(from: comps) ?? Date()
+            },
+            set: { newDate in
+                let cal = Calendar.current
+                let h = cal.component(.hour, from: newDate)
+                let m = cal.component(.minute, from: newDate)
+                var config = fanViewModel.fanScheduleConfig
+                config.endHour = h
+                config.endMinute = m
+                fanViewModel.fanScheduleConfig = config
+            }
+        )
+    }
+
+    private var scheduleSection: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                Image(systemName: AppImages.schedule)
+                    .font(.system(size: isDashboard ? 11 : 10, weight: .bold))
+                    .foregroundColor(.teal)
+                Text(isDashboard ? AppStrings.scheduleSectionTitle : AppStrings.scheduleSectionTitle.uppercased())
+                    .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold))
+                    .foregroundColor(.secondary)
+                    .tracking(0.6)
+                Spacer()
+
+                if fanViewModel.fanScheduleConfig.isEnabled {
+                    if fanViewModel.isScheduleOverridden {
+                        HStack(spacing: 6) {
+                            HStack(spacing: 4) {
+                                Circle().fill(Color.orange).frame(width: 5, height: 5)
+                                Text(AppStrings.scheduleOverriddenBadge)
+                                    .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.orange)
+                            }
+                            Button(AppStrings.tr(en: "Resume", zh: "恢复计划")) {
+                                fanViewModel.resetScheduleOverride()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.mini)
+                        }
+                    } else if fanViewModel.isScheduleActive {
+                        HStack(spacing: 4) {
+                            Circle().fill(Color.teal).frame(width: 5, height: 5)
+                            Text("\(AppStrings.scheduleActiveBadge) · \(fanViewModel.fanScheduleConfig.scheduledMode.localizedTitle)")
+                                .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold, design: .monospaced))
+                                .foregroundColor(.teal)
+                        }
+                    } else {
+                        Text(String(format: "%02d:%02d-%02d:%02d", fanViewModel.fanScheduleConfig.startHour, fanViewModel.fanScheduleConfig.startMinute, fanViewModel.fanScheduleConfig.endHour, fanViewModel.fanScheduleConfig.endMinute))
+                            .font(.system(size: isDashboard ? 11 : 8.5, weight: .medium, design: .monospaced))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+
+            HStack(spacing: 8) {
+                Toggle(
+                    AppStrings.scheduleDesc,
+                    isOn: $fanViewModel.fanScheduleConfig.isEnabled
+                )
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .font(.system(size: isDashboard ? 11 : 9.5, weight: .semibold))
+
+                Spacer()
+            }
+
+            if fanViewModel.fanScheduleConfig.isEnabled {
+                let startOffset = fanViewModel.fanScheduleConfig.startHour * 60 + fanViewModel.fanScheduleConfig.startMinute
+                let endOffset = fanViewModel.fanScheduleConfig.endHour * 60 + fanViewModel.fanScheduleConfig.endMinute
+                let isCrossMidnight = startOffset > endOffset
+                let durationMinutes = endOffset >= startOffset ? (endOffset - startOffset) : (24 * 60 - startOffset + endOffset)
+                let durationHours = durationMinutes / 60
+                let durationMins = durationMinutes % 60
+                let durationString = durationMins == 0 ? "\(durationHours)h" : "\(durationHours)h \(durationMins)m"
+
+                VStack(spacing: 6) {
+                    HStack(spacing: 12) {
+                        HStack(spacing: 4) {
+                            Text(AppStrings.scheduleStartTime)
+                                .font(.system(size: isDashboard ? 11 : 9, weight: .medium))
+                                .foregroundColor(.secondary)
+                            DatePicker("", selection: startDateBinding, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                                .datePickerStyle(.compact)
+                                .controlSize(.mini)
+                        }
+
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.secondary.opacity(0.6))
+
+                        HStack(spacing: 4) {
+                            Text(AppStrings.scheduleEndTime)
+                                .font(.system(size: isDashboard ? 11 : 9, weight: .medium))
+                                .foregroundColor(.secondary)
+                            DatePicker("", selection: endDateBinding, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                                .datePickerStyle(.compact)
+                                .controlSize(.mini)
+                        }
+
+                        Spacer()
+
+                        HStack(spacing: 4) {
+                            if isCrossMidnight {
+                                HStack(spacing: 2) {
+                                    Image(systemName: "moon.fill")
+                                        .font(.system(size: 8))
+                                    Text(AppStrings.crossMidnightTag)
+                                        .font(.system(size: isDashboard ? 10 : 8.5, weight: .semibold))
+                                }
+                                .foregroundColor(.indigo)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.indigo.opacity(0.12), in: Capsule())
+                            }
+
+                            Text("(\(durationString))")
+                                .font(.system(size: isDashboard ? 10 : 8.5, weight: .medium, design: .monospaced))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Divider().opacity(0.2)
+
+                    HStack(spacing: 12) {
+                        HStack(spacing: 4) {
+                            Text(AppStrings.scheduledModeLabel)
+                                .font(.system(size: isDashboard ? 11 : 9, weight: .medium))
+                                .foregroundColor(.secondary)
+                            Picker("", selection: $fanViewModel.fanScheduleConfig.scheduledMode) {
+                                ForEach(ScheduledFanTarget.allCases) { target in
+                                    Text(target.localizedTitle).tag(target)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .controlSize(.mini)
+                        }
+
+                        Spacer()
+
+                        HStack(spacing: 4) {
+                            Text(AppStrings.defaultModeLabel)
+                                .font(.system(size: isDashboard ? 11 : 9, weight: .medium))
+                                .foregroundColor(.secondary)
+                            Picker("", selection: $fanViewModel.fanScheduleConfig.defaultMode) {
+                                ForEach(ScheduledFanTarget.allCases) { target in
+                                    Text(target.localizedTitle).tag(target)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .controlSize(.mini)
+                        }
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.035)))
+
+                if fanViewModel.isScheduleOverridden {
+                    HStack(spacing: 5) {
+                        Circle().fill(Color.orange).frame(width: 5, height: 5)
+                        Text(AppStrings.tr(en: "Manual override active. Will resume schedule at next boundary.", zh: "手动接管生效中。将在下一个定时切换点自动恢复。"))
+                            .font(.system(size: isDashboard ? 11 : 8.5, weight: .semibold, design: .monospaced))
+                            .foregroundColor(.orange)
+                        Spacer()
+                    }
+                } else if fanViewModel.isScheduleActive {
+                    HStack(spacing: 5) {
+                        Circle().fill(Color.teal).frame(width: 5, height: 5)
+                        Text(AppStrings.tr(en: "Scheduled mode active (\(fanViewModel.fanScheduleConfig.scheduledMode.localizedTitle))", zh: "定时计划模式生效中 (\(fanViewModel.fanScheduleConfig.scheduledMode.localizedTitle))"))
+                            .font(.system(size: isDashboard ? 11 : 8.5, weight: .semibold, design: .monospaced))
+                            .foregroundColor(.teal)
                         Spacer()
                     }
                 }
