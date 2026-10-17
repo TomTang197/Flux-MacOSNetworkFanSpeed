@@ -189,6 +189,16 @@ struct AppStrings {
     static var trendMax: String { tr(en: "Max", zh: "最高") }
     static var temperatureTrend: String { tr(en: "Temperature Trend", zh: "温度走势") }
     static var fanRPMTrend: String { tr(en: "Fan Speed Trend", zh: "风扇转速走势") }
+
+    static var scheduleSectionTitle: String { tr(en: "Mode Schedule", zh: "模式定时计划") }
+    static var scheduleDesc: String { tr(en: "Automatically switch fan modes on a daily schedule.", zh: "在每日设定时段自动切换风扇模式。") }
+    static var scheduleStartTime: String { tr(en: "Start", zh: "开始时间") }
+    static var scheduleEndTime: String { tr(en: "End", zh: "结束时间") }
+    static var scheduledModeLabel: String { tr(en: "In-Schedule Mode", zh: "时段内模式") }
+    static var defaultModeLabel: String { tr(en: "Out-of-Schedule Mode", zh: "时段外模式") }
+    static var scheduleActiveBadge: String { tr(en: "Scheduled Active", zh: "计划生效中") }
+    static var scheduleOverriddenBadge: String { tr(en: "Temporary Override", zh: "已临时手动接管") }
+    static var crossMidnightTag: String { tr(en: "Overnight", zh: "跨午夜") }
 }
 
 struct AppImages {
@@ -218,4 +228,5 @@ struct AppImages {
     static let close = "xmark.circle.fill"
     static let bug = "exclamationmark.bubble.fill"
     static let gameController = "gamecontroller.fill"
+    static let schedule = "clock.badge.checkmark"
 }
