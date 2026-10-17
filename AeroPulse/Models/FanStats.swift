@@ -54,6 +54,21 @@ enum FanMode: String, CaseIterable, Identifiable, Equatable {
     }
 }
 
+extension ScheduledFanTarget {
+    var localizedTitle: String {
+        fanMode.localizedTitle
+    }
+    var fanMode: FanMode {
+        FanMode(rawValue: rawValue) ?? .auto
+    }
+}
+
+extension FanMode {
+    var scheduledTarget: ScheduledFanTarget {
+        ScheduledFanTarget(rawValue: rawValue) ?? .auto
+    }
+}
+
 struct FanThresholdRule: Identifiable, Codable, Equatable {
     var id: UUID
     var temperature: Double

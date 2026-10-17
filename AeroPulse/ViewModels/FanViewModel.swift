@@ -55,6 +55,34 @@ final class FanViewModel: ObservableObject {
     @Published private(set) var gpuTemperatureHistory: [MetricHistoryPoint] = []
     @Published private(set) var fanRPMHistory: [Int: [MetricHistoryPoint]] = [:]
 
+    private static let fanScheduleConfigStorageKey = "AeroPulse.FanScheduleConfig"
+    private static func loadInitialFanScheduleConfig() -> FanScheduleConfig {
+        if let data = UserDefaults.standard.data(forKey: fanScheduleConfigStorageKey),
+           let config = try? JSONDecoder().decode(FanScheduleConfig.self, from: data) {
+            return config
+        }
+        return FanScheduleConfig(
+            isEnabled: false,
+            startHour: 23,
+            startMinute: 0,
+            endHour: 8,
+            endMinute: 0,
+            scheduledMode: .auto,
+            defaultMode: .custom
+        )
+    }
+
+    @Published var fanScheduleConfig: FanScheduleConfig = FanViewModel.loadInitialFanScheduleConfig() {
+        didSet {
+            saveFanScheduleConfig()
+            evaluateFanSchedule()
+        }
+    }
+    @Published private(set) var isScheduleActive: Bool = false
+    @Published private(set) var isScheduleOverridden: Bool = false
+
+    private var schedulePolicy = FanSchedulePolicy()
+
     private var cpuHistoryBuffer = RollingHistoryBuffer(capacity: 1000)
     private var gpuHistoryBuffer = RollingHistoryBuffer(capacity: 1000)
     private var fanRPMHistoryBuffers: [Int: RollingHistoryBuffer] = [:]
@@ -94,6 +122,7 @@ final class FanViewModel: ObservableObject {
         loadSavedFanMode()
         setupGameModeObservation()
         observeSafetyLifecycleEvents()
+        evaluateFanSchedule()
         DispatchQueue.main.async { [weak self] in
             self?.startMonitoring()
             self?.refreshHelperStatus()
@@ -211,6 +240,33 @@ final class FanViewModel: ObservableObject {
         SMCService.shared.reconnect()
         refreshHelperStatus()
         restartTimer()
+
+        // Reconcile fan schedule after sleep/wake
+        if fanScheduleConfig.isEnabled {
+            let calendar = Calendar.current
+            let now = Date()
+            let hour = calendar.component(.hour, from: now)
+            let minute = calendar.component(.minute, from: now)
+            let wakeAction = schedulePolicy.reconcileWake(
+                hour: hour,
+                minute: minute,
+                config: fanScheduleConfig,
+                currentMode: currentMode.scheduledTarget
+            )
+            let activeNow = schedulePolicy.isTimeInSchedule(hour: hour, minute: minute, config: fanScheduleConfig)
+            if isScheduleActive != activeNow {
+                isScheduleActive = activeNow
+            }
+            if isScheduleOverridden != schedulePolicy.isUserOverridden {
+                isScheduleOverridden = schedulePolicy.isUserOverridden
+            }
+            if case .switchMode(let target) = wakeAction {
+                if !(isGameModeActive && isGameModeLinkageEnabled) {
+                    setFanMode(target.fanMode, isUserInitiated: false)
+                }
+            }
+        }
+
         // Wait 1.0s for SMC bus and hardware drivers to finish wake initialization before first read
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             self?.refreshData()
@@ -594,6 +650,8 @@ final class FanViewModel: ObservableObject {
                 gameModeCooldownRemainingSeconds = nil
                 stopCooldownTimer()
             }
+            schedulePolicy.handleUserManualOverride()
+            isScheduleOverridden = schedulePolicy.isUserOverridden
         }
 
         // If switching to .auto and helper is not installed, the hardware is ALREADY in default system auto control.
@@ -656,6 +714,8 @@ final class FanViewModel: ObservableObject {
             gameModeCooldownRemainingSeconds = nil
             stopCooldownTimer()
         }
+        schedulePolicy.handleUserManualOverride()
+        isScheduleOverridden = schedulePolicy.isUserOverridden
 
         guard helperInstalled else {
             installHelper { [weak self] success in
@@ -915,6 +975,8 @@ final class FanViewModel: ObservableObject {
                     self.applyThresholdRules()
                 }
 
+                self.evaluateFanSchedule()
+
                 if sampledFans.isEmpty && sampledSensors.isEmpty {
                     self.emptySampleCounter += 1
                     if self.emptySampleCounter >= 3 {
@@ -933,5 +995,58 @@ final class FanViewModel: ObservableObject {
                 self.isSamplingData = false
             }
         }
+    }
+
+    // MARK: - Fan Schedule Evaluation & Actions
+
+    func saveFanScheduleConfig() {
+        if let data = try? JSONEncoder().encode(fanScheduleConfig) {
+            UserDefaults.standard.set(data, forKey: Self.fanScheduleConfigStorageKey)
+        }
+    }
+
+    func evaluateFanSchedule() {
+        guard fanScheduleConfig.isEnabled else {
+            if isScheduleActive {
+                isScheduleActive = false
+            }
+            if isScheduleOverridden {
+                isScheduleOverridden = false
+            }
+            return
+        }
+
+        let calendar = Calendar.current
+        let now = Date()
+        let hour = calendar.component(.hour, from: now)
+        let minute = calendar.component(.minute, from: now)
+
+        let action = schedulePolicy.evaluate(
+            hour: hour,
+            minute: minute,
+            config: fanScheduleConfig,
+            currentMode: currentMode.scheduledTarget
+        )
+
+        let activeNow = schedulePolicy.isTimeInSchedule(hour: hour, minute: minute, config: fanScheduleConfig)
+        if isScheduleActive != activeNow {
+            isScheduleActive = activeNow
+        }
+        if isScheduleOverridden != schedulePolicy.isUserOverridden {
+            isScheduleOverridden = schedulePolicy.isUserOverridden
+        }
+
+        if case .switchMode(let target) = action {
+            if isGameModeActive && isGameModeLinkageEnabled {
+                return
+            }
+            setFanMode(target.fanMode, isUserInitiated: false)
+        }
+    }
+
+    func resetScheduleOverride() {
+        schedulePolicy.resetOverride()
+        isScheduleOverridden = false
+        evaluateFanSchedule()
     }
 }
