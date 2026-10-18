@@ -13,6 +13,11 @@ struct MenuBarView: View {
     @ObservedObject var networkViewModel: NetworkViewModel
     @ObservedObject var fanViewModel: FanViewModel
     @Environment(\.openWindow) private var openWindow
+    @ObservedObject private var updaterViewModel = SparkleUpdaterViewModel.shared
+
+    private var hasUpdateIcon: Bool {
+        updaterViewModel.isUpdateAvailable && updaterViewModel.showUpdateInMenuBar
+    }
 
     var body: some View {
         let _ = DashboardWindowManager.shared.registerOpenWindowAction(openWindow)
@@ -20,22 +25,30 @@ struct MenuBarView: View {
             let singleMetricRows = enabledMetricRows()
 
             if singleMetricRows.count == 1, let row = singleMetricRows.first {
-                let cacheKey = "single:\(row.metric.rawValue):\(row.symbol):\(row.value)"
+                let cacheKey = "single:\(row.metric.rawValue):\(row.symbol):\(row.value):upd:\(hasUpdateIcon)"
                 let image = MenuBarImageCache.shared.image(for: cacheKey) {
-                    renderSingleMetricImage(row)
+                    renderSingleMetricImage(row, showUpdateIcon: hasUpdateIcon)
                 }
                 Image(nsImage: image)
             } else {
                 let columns = groupedColumns()
 
                 if columns.isEmpty {
-                    Image(systemName: AppImages.rocket)
+                    if hasUpdateIcon {
+                        let cacheKey = "empty:rocket:upd:true"
+                        let image = MenuBarImageCache.shared.image(for: cacheKey) {
+                            renderEmptyMetricsImage(showUpdateIcon: true)
+                        }
+                        Image(nsImage: image)
+                    } else {
+                        Image(systemName: AppImages.rocket)
+                    }
                 } else {
                     let cacheKey = columns.map {
                         "\($0.kind)-\($0.top?.metric.rawValue ?? ""):\($0.top?.value ?? "")|\($0.bottom?.metric.rawValue ?? ""):\($0.bottom?.value ?? "")"
-                    }.joined(separator: ";")
+                    }.joined(separator: ";") + ":upd:\(hasUpdateIcon)"
                     let combinedImage = MenuBarImageCache.shared.image(for: cacheKey) {
-                        renderGroupedMetricsImage(columns)
+                        renderGroupedMetricsImage(columns, showUpdateIcon: hasUpdateIcon)
                     }
                     Image(nsImage: combinedImage)
                 }
@@ -195,7 +208,7 @@ struct MenuBarView: View {
         ]
     }()
 
-    private func renderGroupedMetricsImage(_ columns: [MetricColumn]) -> NSImage {
+    private func renderGroupedMetricsImage(_ columns: [MetricColumn], showUpdateIcon: Bool = false) -> NSImage {
         let iconConfig = Self.iconConfigGrouped
         let valueFont = Self.valueFontGrouped
 
@@ -210,6 +223,7 @@ struct MenuBarView: View {
         let columnWidthSingleRegular: CGFloat = 66
         let columnWidthSingleCompact: CGFloat = 56
         let dividerSpacing: CGFloat = 6
+        let updateIconWidth: CGFloat = 16
         
         // Calculate total width based on mix of column types
         var totalWidth: CGFloat = 0
@@ -225,6 +239,12 @@ struct MenuBarView: View {
             if idx < columns.count - 1 {
                 totalWidth += dividerSpacing
             }
+        }
+        if showUpdateIcon {
+            if !columns.isEmpty {
+                totalWidth += dividerSpacing
+            }
+            totalWidth += updateIconWidth
         }
 
         let finalImage = NSImage(size: NSSize(width: totalWidth, height: height))
@@ -253,7 +273,7 @@ struct MenuBarView: View {
                 drawRow(column.top, xOrigin: currentX, columnWidth: colWidth, yOrigin: centerY, rowHeight: rowHeight, iconConfig: iconConfig, valueFont: valueFont)
             }
 
-            if index < columns.count - 1 {
+            if index < columns.count - 1 || showUpdateIcon {
                 let dividerX = currentX + colWidth + dividerSpacing / 2
                 let path = NSBezierPath()
                 path.move(to: NSPoint(x: dividerX, y: verticalPadding + 2))
@@ -266,12 +286,25 @@ struct MenuBarView: View {
             currentX += colWidth + dividerSpacing
         }
 
+        if showUpdateIcon {
+            let updateIcon = configuredSymbolImage(named: "arrow.triangle.2.circlepath", config: iconConfig)
+            let iconX = currentX + floor((updateIconWidth - updateIcon.size.width) / 2)
+            let iconY = floor((height - updateIcon.size.height) / 2)
+            let iconRect = NSRect(
+                x: iconX,
+                y: iconY,
+                width: updateIcon.size.width,
+                height: updateIcon.size.height
+            )
+            updateIcon.draw(in: iconRect, from: .zero, operation: .sourceOver, fraction: 1)
+        }
+
         finalImage.unlockFocus()
         finalImage.isTemplate = true
         return finalImage
     }
 
-    private func renderSingleMetricImage(_ row: MetricRow) -> NSImage {
+    private func renderSingleMetricImage(_ row: MetricRow, showUpdateIcon: Bool = false) -> NSImage {
         let iconConfig = Self.iconConfigSingle
         let textAttributes = Self.textAttributesSingle
 
@@ -281,7 +314,10 @@ struct MenuBarView: View {
         let iconSlotWidth: CGFloat = 15
         let iconTextSpacing: CGFloat = 2
         let icon = configuredSymbolImage(named: row.symbol, config: iconConfig)
-        let width = singleMetricWidth(for: row.metric)
+        let metricWidth = singleMetricWidth(for: row.metric)
+        let updateIconWidth: CGFloat = 16
+        let dividerSpacing: CGFloat = 6
+        let width = showUpdateIcon ? (metricWidth + dividerSpacing + updateIconWidth) : metricWidth
 
         let finalImage = NSImage(size: NSSize(width: width, height: height))
         finalImage.lockFocus()
@@ -297,7 +333,7 @@ struct MenuBarView: View {
         drawMetricIcon(icon, metric: row.metric, in: iconRect)
 
         let textX = leadingPadding + iconSlotWidth + iconTextSpacing
-        let textWidth = max(0, width - textX - trailingPadding)
+        let textWidth = max(0, metricWidth - textX - trailingPadding)
         let measuredTextSize = measuredTextSize(for: row.value, attributes: textAttributes)
         let textY = floor(yCenter(for: measuredTextSize.height, in: height))
         let textRect = NSRect(
@@ -310,6 +346,73 @@ struct MenuBarView: View {
             in: textRect,
             withAttributes: textAttributes
         )
+
+        if showUpdateIcon {
+            let dividerX = metricWidth + dividerSpacing / 2
+            let path = NSBezierPath()
+            path.move(to: NSPoint(x: dividerX, y: 3))
+            path.line(to: NSPoint(x: dividerX, y: height - 3))
+            NSColor.labelColor.withAlphaComponent(0.2).setStroke()
+            path.lineWidth = 1
+            path.stroke()
+
+            let updateIcon = configuredSymbolImage(named: "arrow.triangle.2.circlepath", config: Self.iconConfigGrouped)
+            let iconX = metricWidth + dividerSpacing + floor((updateIconWidth - updateIcon.size.width) / 2)
+            let iconY = floor((height - updateIcon.size.height) / 2)
+            let iconRect = NSRect(
+                x: iconX,
+                y: iconY,
+                width: updateIcon.size.width,
+                height: updateIcon.size.height
+            )
+            updateIcon.draw(in: iconRect, from: .zero, operation: .sourceOver, fraction: 1)
+        }
+
+        finalImage.unlockFocus()
+        finalImage.isTemplate = true
+        return finalImage
+    }
+
+    private func renderEmptyMetricsImage(showUpdateIcon: Bool = false) -> NSImage {
+        guard showUpdateIcon else {
+            return configuredSymbolImage(named: AppImages.rocket, config: Self.iconConfigSingle)
+        }
+        let height: CGFloat = 24
+        let rocketWidth: CGFloat = 20
+        let updateIconWidth: CGFloat = 16
+        let dividerSpacing: CGFloat = 6
+        let width = rocketWidth + dividerSpacing + updateIconWidth
+
+        let finalImage = NSImage(size: NSSize(width: width, height: height))
+        finalImage.lockFocus()
+
+        let rocketIcon = configuredSymbolImage(named: AppImages.rocket, config: Self.iconConfigSingle)
+        let rocketRect = NSRect(
+            x: floor((rocketWidth - rocketIcon.size.width) / 2),
+            y: floor((height - rocketIcon.size.height) / 2),
+            width: rocketIcon.size.width,
+            height: rocketIcon.size.height
+        )
+        rocketIcon.draw(in: rocketRect, from: .zero, operation: .sourceOver, fraction: 1)
+
+        let dividerX = rocketWidth + dividerSpacing / 2
+        let path = NSBezierPath()
+        path.move(to: NSPoint(x: dividerX, y: 3))
+        path.line(to: NSPoint(x: dividerX, y: height - 3))
+        NSColor.labelColor.withAlphaComponent(0.2).setStroke()
+        path.lineWidth = 1
+        path.stroke()
+
+        let updateIcon = configuredSymbolImage(named: "arrow.triangle.2.circlepath", config: Self.iconConfigGrouped)
+        let iconX = rocketWidth + dividerSpacing + floor((updateIconWidth - updateIcon.size.width) / 2)
+        let iconY = floor((height - updateIcon.size.height) / 2)
+        let iconRect = NSRect(
+            x: iconX,
+            y: iconY,
+            width: updateIcon.size.width,
+            height: updateIcon.size.height
+        )
+        updateIcon.draw(in: iconRect, from: .zero, operation: .sourceOver, fraction: 1)
 
         finalImage.unlockFocus()
         finalImage.isTemplate = true

@@ -519,22 +519,57 @@ private struct UpdateSettingsCard: View {
                 Spacer()
             }
 
+            if updaterViewModel.isUpdateAvailable, let newVersion = updaterViewModel.availableUpdateVersion {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(Color.orange)
+                        .frame(width: 7, height: 7)
+                    Text("\(AppStrings.newVersionAvailable): \(newVersion)")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.primary)
+                }
+                .padding(.vertical, 2)
+            }
+
             Toggle(
                 AppStrings.autoCheckForUpdates,
                 isOn: $updaterViewModel.automaticallyChecksForUpdates
             )
             .font(.system(size: 11, weight: .medium))
 
+            Toggle(
+                AppStrings.showUpdateInMenuBar,
+                isOn: $updaterViewModel.showUpdateInMenuBar
+            )
+            .font(.system(size: 11, weight: .medium))
+
             Button {
                 updaterViewModel.checkForUpdates()
             } label: {
-                Text(AppStrings.checkForUpdates)
-                    .font(.system(size: 10, weight: .semibold))
-                    .frame(maxWidth: .infinity, minHeight: 24)
+                HStack(spacing: 4) {
+                    if updaterViewModel.isUpdateAvailable {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                        Text("\(AppStrings.updateNow)\(updaterViewModel.availableUpdateVersion.map { " (\($0))" } ?? "")")
+                    } else {
+                        Text(AppStrings.checkForUpdates)
+                    }
+                }
+                .font(.system(size: 10, weight: .semibold))
+                .frame(maxWidth: .infinity, minHeight: 24)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.small)
             .disabled(!updaterViewModel.canCheckForUpdates)
+
+            Button {
+                updaterViewModel.toggleDebugSimulatedUpdate()
+            } label: {
+                Text(updaterViewModel.isUpdateAvailable ? "退出模拟测试 (重置状态)" : "🧪 模拟检测到更新 (测试UI)")
+                    .font(.system(size: 10, weight: .medium))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
         }
     }
 }

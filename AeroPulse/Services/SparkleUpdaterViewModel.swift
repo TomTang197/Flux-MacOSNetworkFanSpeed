@@ -9,17 +9,29 @@ final class SparkleUpdaterViewModel: NSObject, ObservableObject, SPUUpdaterDeleg
     static let shared = SparkleUpdaterViewModel()
 
     @Published var canCheckForUpdates = false
+    @Published var isUpdateAvailable = false
+    @Published var availableUpdateVersion: String? = nil
+    @Published var showUpdateInMenuBar: Bool {
+        didSet {
+            UserDefaults.standard.set(showUpdateInMenuBar, forKey: Self.showUpdateInMenuBarKey)
+        }
+    }
+
     @Published var automaticallyChecksForUpdates: Bool = true {
         didSet {
             updaterController.updater.automaticallyChecksForUpdates = automaticallyChecksForUpdates
         }
     }
 
+    private static let showUpdateInMenuBarKey = "AeroPulse.ShowUpdateInMenuBar"
     private var updaterController: SPUStandardUpdaterController!
     private var cancellables = Set<AnyCancellable>()
     private var hasInstalledUpdate = false
 
     override private init() {
+        let savedShowUpdate = UserDefaults.standard.object(forKey: Self.showUpdateInMenuBarKey) as? Bool ?? true
+        self.showUpdateInMenuBar = savedShowUpdate
+
         super.init()
 
         let controller = SPUStandardUpdaterController(
@@ -58,7 +70,63 @@ final class SparkleUpdaterViewModel: NSObject, ObservableObject, SPUUpdaterDeleg
         updaterController.checkForUpdates(nil)
     }
 
+    func startBackgroundCheck() {
+        guard let controller = updaterController else { return }
+        guard !controller.updater.sessionInProgress else { return }
+        controller.updater.checkForUpdateInformation()
+    }
+
+    func toggleDebugSimulatedUpdate() {
+        if isUpdateAvailable {
+            isUpdateAvailable = false
+            availableUpdateVersion = nil
+        } else {
+            isUpdateAvailable = true
+            availableUpdateVersion = "v1.4.0"
+        }
+    }
+
     // MARK: - SPUUpdaterDelegate
+
+    nonisolated func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+        let rawVersion = item.displayVersionString
+        let formatted = rawVersion.hasPrefix("v") || rawVersion.hasPrefix("V") ? rawVersion : "v\(rawVersion)"
+        Task { @MainActor in
+            self.isUpdateAvailable = true
+            self.availableUpdateVersion = formatted
+        }
+    }
+
+    nonisolated func updaterDidNotFindUpdate(_ updater: SPUUpdater) {
+        Task { @MainActor in
+            self.isUpdateAvailable = false
+            self.availableUpdateVersion = nil
+        }
+    }
+
+    nonisolated func updaterDidNotFindUpdate(_ updater: SPUUpdater, error: Error) {
+        Task { @MainActor in
+            self.isUpdateAvailable = false
+            self.availableUpdateVersion = nil
+        }
+    }
+
+    nonisolated func updater(_ updater: SPUUpdater, didFinishUpdateCycleFor updateCheck: SPUUpdateCheck, error: (any Error)?) {
+    }
+
+    nonisolated func updater(
+        _ updater: SPUUpdater,
+        userDidMake choice: SPUUserUpdateChoice,
+        forUpdate updateItem: SUAppcastItem,
+        state: SPUUserUpdateState
+    ) {
+        Task { @MainActor in
+            if choice == .skip {
+                self.isUpdateAvailable = false
+                self.availableUpdateVersion = nil
+            }
+        }
+    }
 
     nonisolated func updaterShouldRelaunchApplication(_ updater: SPUUpdater) -> Bool {
         return true
@@ -82,6 +150,8 @@ final class SparkleUpdaterViewModel: NSObject, ObservableObject, SPUUpdaterDeleg
         UserDefaults.standard.set(true, forKey: "AeroPulse.RelaunchAfterUpdate")
         Task { @MainActor in
             self.hasInstalledUpdate = true
+            self.isUpdateAvailable = false
+            self.availableUpdateVersion = nil
         }
     }
 

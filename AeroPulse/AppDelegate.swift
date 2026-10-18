@@ -12,6 +12,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Initialize updater early so Sparkle background checks run
+        _ = SparkleUpdaterViewModel.shared
+
+        // Trigger probing check after network has a moment to stabilize
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            SparkleUpdaterViewModel.shared.startBackgroundCheck()
+        }
+
         if UserDefaults.standard.bool(forKey: "AeroPulse.RelaunchAfterUpdate") {
             UserDefaults.standard.removeObject(forKey: "AeroPulse.RelaunchAfterUpdate")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {

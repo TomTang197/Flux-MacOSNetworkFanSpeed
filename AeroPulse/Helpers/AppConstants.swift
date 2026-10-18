@@ -183,6 +183,9 @@ struct AppStrings {
     static var checkForUpdates: String { tr(en: "Check for Updates…", zh: "检查更新…") }
     static var autoCheckForUpdates: String { tr(en: "Automatically check for updates", zh: "自动检查更新") }
     static var currentVersionPrefix: String { tr(en: "Current Version: ", zh: "当前版本：") }
+    static var newVersionAvailable: String { tr(en: "New Version Available", zh: "发现新版本") }
+    static var updateNow: String { tr(en: "Update Now", zh: "立即更新") }
+    static var showUpdateInMenuBar: String { tr(en: "Show update icon in status bar", zh: "在状态栏显示更新图标") }
 
     static var trendMin: String { tr(en: "Min", zh: "最低") }
     static var trendAvg: String { tr(en: "Avg", zh: "均值") }

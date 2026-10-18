@@ -11,6 +11,7 @@ struct MenuBarDashboardView: View {
     @ObservedObject var fanViewModel: FanViewModel
     @ObservedObject var launchAtLoginManager: LaunchAtLoginManager
     @ObservedObject private var languageManager = LanguageManager.shared
+    @ObservedObject private var updaterViewModel = SparkleUpdaterViewModel.shared
     @Environment(\.openWindow) private var openWindow
     @Environment(\.openSettings) private var openSettings
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -29,6 +30,9 @@ struct MenuBarDashboardView: View {
 
             ScrollView {
                 VStack(spacing: 8) {
+                    if updaterViewModel.isUpdateAvailable {
+                        updateBanner
+                    }
                     MenuBarFanSection(fanViewModel: fanViewModel)
                     networkSection
                     systemSection
@@ -94,6 +98,19 @@ struct MenuBarDashboardView: View {
             .background(Color.secondary.opacity(0.08), in: Capsule())
 
             Menu {
+                if updaterViewModel.isUpdateAvailable {
+                    Button {
+                        updaterViewModel.checkForUpdates()
+                    } label: {
+                        Label(
+                            "\(AppStrings.newVersionAvailable) (\(updaterViewModel.availableUpdateVersion ?? ""))",
+                            systemImage: "arrow.triangle.2.circlepath"
+                        )
+                    }
+
+                    Divider()
+                }
+
                 Toggle(AppStrings.launchAtLogin, isOn: Binding(
                     get: { launchAtLoginManager.isEnabled },
                     set: { newValue in
@@ -470,9 +487,17 @@ struct MenuBarDashboardView: View {
             Button {
                 openSettingsWindow()
             } label: {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 12, weight: .medium))
-                    .frame(width: 24, height: 28)
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 12, weight: .medium))
+                        .frame(width: 24, height: 28)
+                    if updaterViewModel.isUpdateAvailable {
+                        Circle()
+                            .fill(Color.orange)
+                            .frame(width: 6, height: 6)
+                            .offset(x: 2, y: 5)
+                    }
+                }
             }
             .buttonStyle(.bordered)
             .controlSize(.regular)
@@ -491,6 +516,58 @@ struct MenuBarDashboardView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
+    }
+
+    private var updateBanner: some View {
+        HStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.blue, Color.cyan],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 28, height: 28)
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(AppStrings.newVersionAvailable)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.primary)
+                if let version = updaterViewModel.availableUpdateVersion {
+                    Text(version)
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer()
+
+            Button {
+                updaterViewModel.checkForUpdates()
+            } label: {
+                Text(AppStrings.updateNow)
+                    .font(.system(size: 11, weight: .semibold))
+                    .padding(.horizontal, 4)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.blue.opacity(0.12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(Color.blue.opacity(0.28), lineWidth: 1)
+                )
+        )
     }
 
     private var loginStatusText: String {
@@ -516,6 +593,7 @@ struct MenuBarDashboardView: View {
         fanViewModel.startMonitoring()
         fanViewModel.refreshHelperStatus()
         launchAtLoginManager.refreshStatus()
+        SparkleUpdaterViewModel.shared.startBackgroundCheck()
     }
 
     private func openDashboardAndDismiss() {

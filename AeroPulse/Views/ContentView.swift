@@ -12,6 +12,7 @@ struct ContentView: View {
     let fanViewModel: FanViewModel
     let launchAtLoginManager: LaunchAtLoginManager
     @ObservedObject private var languageManager = LanguageManager.shared
+    @ObservedObject private var updaterViewModel = SparkleUpdaterViewModel.shared
     @State private var showsSettings = false
     @StateObject private var windowInteraction = WindowInteractionCoordinator()
     @Environment(\.visualEffectsReduced) private var reduceVisualEffects
@@ -48,6 +49,23 @@ struct ContentView: View {
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                 }
                 Spacer()
+
+                if updaterViewModel.isUpdateAvailable {
+                    Button {
+                        updaterViewModel.checkForUpdates()
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.system(size: 11, weight: .bold))
+                            Text("\(AppStrings.newVersionAvailable)\(updaterViewModel.availableUpdateVersion.map { " (\($0))" } ?? "")")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.blue)
+                    .controlSize(.regular)
+                }
+
                 DashboardConnectionStatus(fanViewModel: fanViewModel)
                 Button { showsSettings = true } label: {
                     Label(AppStrings.settings, systemImage: "gearshape")
