@@ -170,27 +170,7 @@ final class FanViewModel: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            guard let self else { return }
-            let savedMode = UserDefaults.standard.string(forKey: self.fanCurrentModeStorageKey)
-            if self.currentMode == .custom || savedMode == FanMode.custom.rawValue {
-                let recoveryAction = self.wakeResumePolicy.handleTransientLeaseLoss()
-                if recoveryAction == .rearmWaking {
-                    self.currentMode = .auto
-                    self.activeRule = nil
-                    self.isRulesAtMinimum = false
-                    self.resetRuleControlState()
-                    return
-                }
-            }
-
-            if self.wakeResumePolicy.state == .active && self.wakeResumePolicy.targetToResume == nil {
-                self.currentMode = .auto
-                self.activeRule = nil
-                self.isRulesAtMinimum = false
-                self.resetRuleControlState()
-                self.gameModeCooldownRemainingSeconds = nil
-                self.gameModeCooldownTimer?.cancel()
-            }
+            self?.handleFanControlLeaseLost()
         }
         defaultNotificationObservers.append(leaseObserver)
 
@@ -211,6 +191,29 @@ final class FanViewModel: ObservableObject {
             self?.handleSystemDidWake()
         }
         workspaceNotificationObservers.append(wakeObserver)
+    }
+
+    private func handleFanControlLeaseLost() {
+        let savedMode = UserDefaults.standard.string(forKey: fanCurrentModeStorageKey)
+        if currentMode == .custom || savedMode == FanMode.custom.rawValue {
+            let recoveryAction = wakeResumePolicy.handleTransientLeaseLoss()
+            if recoveryAction == .rearmWaking {
+                currentMode = .auto
+                activeRule = nil
+                isRulesAtMinimum = false
+                resetRuleControlState()
+                return
+            }
+        }
+
+        if wakeResumePolicy.state == .active && wakeResumePolicy.targetToResume == nil {
+            currentMode = .auto
+            activeRule = nil
+            isRulesAtMinimum = false
+            resetRuleControlState()
+            gameModeCooldownRemainingSeconds = nil
+            gameModeCooldownTimer?.cancel()
+        }
     }
 
     private func handleSystemWillSleep() {

@@ -36,6 +36,7 @@ struct AppStrings {
     static var languageCurrentSystemPrefix: String { tr(en: "Current system language:", zh: "当前系统语言：") }
 
     static var systemMonitor: String { tr(en: "System Monitor", zh: "系统监控") }
+    static var systemMonitorSubtitle: String { tr(en: "Live telemetry and fan RPM", zh: "实时系统遥测与风扇转速") }
 
     static var download: String { tr(en: "Download", zh: "下载") }
     static var upload: String { tr(en: "Upload", zh: "上传") }
@@ -71,6 +72,7 @@ struct AppStrings {
     static var launchAtLoginRefresh: String { tr(en: "Refresh", zh: "刷新") }
     static var launchAtLoginErrorPrefix: String { tr(en: "Error:", zh: "错误：") }
     static var refreshRate: String { tr(en: "Sampling Frequency", zh: "采样刷新频率") }
+    static var samplingInterval: String { tr(en: "Sampling", zh: "采样间隔") }
     static var reduceVisualEffects: String { tr(en: "Reduce Visual Effects", zh: "减少视觉效果") }
     static var reduceVisualEffectsDescription: String {
         tr(
@@ -186,6 +188,8 @@ struct AppStrings {
     static var newVersionAvailable: String { tr(en: "New Version Available", zh: "发现新版本") }
     static var updateNow: String { tr(en: "Update Now", zh: "立即更新") }
     static var showUpdateInMenuBar: String { tr(en: "Show update icon in status bar", zh: "在状态栏显示更新图标") }
+    static var simulateUpdateButton: String { tr(en: "🧪 Simulate Update Found (UI Test)", zh: "🧪 模拟检测到更新 (测试UI)") }
+    static var resetSimulatedUpdateButton: String { tr(en: "Exit Simulation (Reset State)", zh: "退出模拟测试 (重置状态)") }
 
     static var trendMin: String { tr(en: "Min", zh: "最低") }
     static var trendAvg: String { tr(en: "Avg", zh: "均值") }

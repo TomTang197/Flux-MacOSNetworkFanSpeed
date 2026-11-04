@@ -14,6 +14,23 @@ final class LaunchAtLoginManager: ObservableObject {
     @Published private(set) var statusIsWarning: Bool = false
     @Published private(set) var lastError: String?
 
+    var localizedStatusText: String {
+        switch statusText {
+        case "Enabled":
+            return AppStrings.tr(en: "Enabled", zh: "已启用")
+        case "Disabled":
+            return AppStrings.tr(en: "Disabled", zh: "已关闭")
+        case "Waiting for approval in System Settings":
+            return AppStrings.tr(en: "Waiting for approval in System Settings", zh: "等待在系统设置中批准")
+        case "App service not found":
+            return AppStrings.tr(en: "App service not found", zh: "未找到应用服务")
+        case "Not configured":
+            return AppStrings.tr(en: "Not configured", zh: "尚未配置")
+        default:
+            return AppStrings.tr(en: "Unknown status", zh: "未知状态")
+        }
+    }
+
     init() {
         // Querying SMAppService status on every app launch can trigger noisy
         // system permission logs on newer macOS builds. We only refresh on demand.

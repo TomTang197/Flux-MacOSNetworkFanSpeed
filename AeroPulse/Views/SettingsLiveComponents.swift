@@ -71,13 +71,18 @@ struct MenuBarMetricsSettingsCard: View {
     var body: some View {
         SettingsCard(title: AppStrings.menuBarMetrics, symbol: AppImages.checklist, tint: .cyan) {
             let metrics = MetricType.allCases
-            LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
-                spacing: 8
-            ) {
-                ForEach(Array(metrics.enumerated()), id: \.element.id) { index, metric in
-                    metricChip(metric)
-                        .gridCellColumns(metrics.count.isMultiple(of: 2) || index != metrics.count - 1 ? 1 : 2)
+            let pairedCount = metrics.count - (metrics.count % 2)
+            VStack(spacing: 8) {
+                LazyVGrid(
+                    columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
+                    spacing: 8
+                ) {
+                    ForEach(metrics.prefix(pairedCount)) { metric in
+                        metricChip(metric)
+                    }
+                }
+                if !metrics.count.isMultiple(of: 2), let lastMetric = metrics.last {
+                    metricChip(lastMetric)
                 }
             }
         }
@@ -163,7 +168,7 @@ struct LaunchAtLoginSettingsCard: View {
                 Circle()
                     .fill(launchAtLoginManager.statusIsWarning ? Color.orange : Color.green)
                     .frame(width: 7, height: 7)
-                Text(launchAtLoginManager.statusText)
+                Text(launchAtLoginManager.localizedStatusText)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(launchAtLoginManager.statusIsWarning ? .orange : .secondary)
                 Spacer()
@@ -187,7 +192,7 @@ struct RefreshRateSettingsCard: View {
     var body: some View {
         SettingsCard(title: AppStrings.refreshRate, symbol: AppImages.refresh, tint: .mint) {
             HStack {
-                Text("Sampling")
+                Text(AppStrings.samplingInterval)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.secondary)
                 Spacer()

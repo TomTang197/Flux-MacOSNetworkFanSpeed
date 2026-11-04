@@ -175,7 +175,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(AppStrings.systemMonitor)
                     .font(.system(size: 15, weight: .bold))
-                Text("Live telemetry and fan RPM")
+                Text(AppStrings.systemMonitorSubtitle)
                     .font(.system(size: 10, weight: .medium))
                     .foregroundColor(.secondary)
             }
@@ -561,15 +561,21 @@ private struct UpdateSettingsCard: View {
             .controlSize(.small)
             .disabled(!updaterViewModel.canCheckForUpdates)
 
+            #if DEBUG
             Button {
                 updaterViewModel.toggleDebugSimulatedUpdate()
             } label: {
-                Text(updaterViewModel.isUpdateAvailable ? "退出模拟测试 (重置状态)" : "🧪 模拟检测到更新 (测试UI)")
-                    .font(.system(size: 10, weight: .medium))
-                    .frame(maxWidth: .infinity)
+                Text(
+                    updaterViewModel.isUpdateAvailable
+                        ? AppStrings.resetSimulatedUpdateButton
+                        : AppStrings.simulateUpdateButton
+                )
+                .font(.system(size: 10, weight: .medium))
+                .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
+            #endif
         }
     }
 }

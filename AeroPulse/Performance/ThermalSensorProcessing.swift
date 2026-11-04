@@ -151,7 +151,7 @@ enum ThermalSensorProcessing {
     private static func averageTemperatureSample(
         from sensors: [SensorInfo]
     ) -> SensorTemperatureSample? {
-        let usableSensors = sensors.filter(isUsableTemperature)
+        let usableSensors = sensors.filter { isUsableTemperature($0) }
         let nonHotspotSensors = usableSensors.filter { !isHotspotSensor($0) }
         let validSensors = nonHotspotSensors.isEmpty ? usableSensors : nonHotspotSensors
         guard !validSensors.isEmpty,
