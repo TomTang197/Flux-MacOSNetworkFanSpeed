@@ -27,90 +27,67 @@ struct DashboardMetricCard: View, Equatable {
             && lhs.showInfoButton == rhs.showInfoButton
     }
 
-    private var cardCornerRadius: CGFloat {
-        compact ? 16 : 20
-    }
-
     private var cardPadding: CGFloat {
-        compact ? 13 : 18
+        compact ? 12 : 16
     }
 
     private var minimumCardHeight: CGFloat {
-        compact ? 118 : 158
-    }
-
-    private var iconFont: Font {
-        .system(size: compact ? 13 : 15, weight: .semibold)
-    }
-
-    private var titleFont: Font {
-        .system(size: compact ? 9 : 10, weight: .black)
-    }
-
-    private var valueFont: Font {
-        .system(size: compact ? 21 : 30, weight: .bold, design: .monospaced)
-    }
-
-    private var subtitleFont: Font {
-        .system(size: compact ? 10 : 11, weight: .semibold)
+        compact ? 116 : 152
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: compact ? 9 : 12) {
-            HStack {
+        VStack(alignment: .leading, spacing: compact ? 8 : 12) {
+            HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .foregroundColor(color)
-                    .font(iconFont)
-                Spacer()
-                Text(title.uppercased())
-                    .font(titleFont)
-                    .foregroundColor(.secondary)
-                    .tracking(0.9)
+                    .foregroundStyle(AeroPulseTheme.textMuted)
+                    .font(.system(size: 14, weight: .regular))
+                    .frame(width: 16, height: 16)
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(AeroPulseTheme.textSecondary)
                     .lineLimit(1)
+                Spacer()
             }
 
             HStack(alignment: .bottom, spacing: 8) {
-                VStack(alignment: .leading, spacing: compact ? 4 : 6) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(value)
-                        .font(valueFont)
+                        .font(.system(size: compact ? 20 : 28, weight: .medium))
+                        .monospacedDigit()
+                        .foregroundStyle(AeroPulseTheme.textPrimary)
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
 
                     if let subtitle, !subtitle.isEmpty {
                         Text(subtitle)
-                            .font(subtitleFont)
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 11, weight: .regular))
+                            .foregroundStyle(AeroPulseTheme.textMuted)
                             .lineLimit(2)
                             .minimumScaleFactor(0.8)
                     } else {
                         Text(" ")
-                            .font(subtitleFont)
+                            .font(.system(size: 11, weight: .regular))
                             .hidden()
                     }
                 }
 
-                Spacer(minLength: 2)
+                Spacer(minLength: 4)
 
                 if showInfoButton {
                     Button {
                         action?()
                     } label: {
                         Image(systemName: AppImages.info)
-                            .font(.system(size: 14))
-                            .foregroundColor(color.opacity(0.8))
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundStyle(AeroPulseTheme.textMuted)
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .buttonStyle(.plain)
                     .help(AppStrings.viewThermalDetails)
                 }
             }
         }
         .padding(cardPadding)
         .frame(maxWidth: .infinity, minHeight: minimumCardHeight, alignment: .topLeading)
-        .liquidGlassCard(
-            cornerRadius: cardCornerRadius,
-            tint: color,
-            style: .regular,
-            shadowOpacity: compact ? 0.1 : 0.14
-        )
+        .aeroPulseCard()
     }
 }

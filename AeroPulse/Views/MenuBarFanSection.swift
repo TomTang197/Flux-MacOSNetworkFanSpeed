@@ -8,54 +8,39 @@ struct MenuBarFanSection: View {
     @Namespace private var animationNamespace
     @State private var hoveredMode: FanMode? = nil
 
+    private var sectionAnimation: Animation? {
+        (reduceMotion || reduceVisualEffects) ? nil : AeroPulseTheme.motionPanel
+    }
+
     var body: some View {
         MenuBarSection {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 Image(systemName: AppImages.fan)
-                    .foregroundStyle(.teal)
-                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AeroPulseTheme.textMuted)
+                    .font(.system(size: 13, weight: .regular))
+                    .frame(width: 16, height: 16)
                     .accessibilityHidden(true)
-                Text(AppStrings.tr(en: "Fans & Temperature", zh: "风扇与温度"))
-                    .font(.system(size: 12, weight: .semibold))
+                Text(AppStrings.tr(en: "Fans & temperature", zh: "风扇与温度"))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
                 Spacer()
-                statusBadge
+                statusIndicator
             }
             .accessibilityAddTraits(.isHeader)
 
-            HStack(alignment: .top, spacing: 10) {
-                VStack(alignment: .leading, spacing: 3) {
-                    MenuBarReadout(
-                        title: AppStrings.tr(en: "Current speed", zh: "当前转速"),
-                        value: fanViewModel.fans.isEmpty ? "— RPM" : fanViewModel.primaryFanRPM,
-                        icon: AppImages.fan,
-                        iconColor: .teal,
-                        size: 21
-                    )
-                    .equatable()
+            HStack(alignment: .top, spacing: 12) {
+                MenuBarReadout(
+                    title: AppStrings.tr(en: "Current speed", zh: "当前转速"),
+                    value: fanViewModel.fans.isEmpty ? "— RPM" : fanViewModel.primaryFanRPM,
+                    size: 20
+                )
+                .equatable()
 
-                    if let primaryFan = fanViewModel.fans.first,
-                       let history = fanViewModel.fanRPMHistory[primaryFan.id],
-                       history.count > 1 {
-                        MiniSparklineView(points: history, tintColor: .teal, width: 68, height: 16)
-                            .padding(.top, 2)
-                    }
-                }
+                Spacer(minLength: 8)
 
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 5) {
-                    temperatureRow(
-                        title: "CPU",
-                        value: fanViewModel.primaryTemp,
-                        dotColor: .orange,
-                        history: fanViewModel.cpuTemperatureHistory
-                    )
-                    temperatureRow(
-                        title: "GPU",
-                        value: fanViewModel.primaryGPUTemp,
-                        dotColor: .purple,
-                        history: fanViewModel.gpuTemperatureHistory
-                    )
+                VStack(alignment: .trailing, spacing: 4) {
+                    temperatureRow(title: "CPU", value: fanViewModel.primaryTemp)
+                    temperatureRow(title: "GPU", value: fanViewModel.primaryGPUTemp)
                 }
                 .help(AppStrings.tr(en: "Average CPU and GPU sensor temperatures", zh: "CPU 与 GPU 传感器平均温度"))
             }
@@ -77,9 +62,10 @@ struct MenuBarFanSection: View {
                         Toggle(AppStrings.syncAllFans, isOn: $fanViewModel.syncAllFans)
                             .toggleStyle(.switch)
                             .controlSize(.mini)
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.system(size: 11, weight: .regular))
+                            .foregroundStyle(AeroPulseTheme.textSecondary)
                     }
-                    .padding(.top, 2)
+                    .padding(.top, 4)
                 }
             } else if fanViewModel.currentMode == .custom {
                 smartRulesInfo
@@ -87,137 +73,132 @@ struct MenuBarFanSection: View {
 
             noticeBanner
         }
-        .animation(reduceMotion || reduceVisualEffects ? nil : .spring(response: 0.32, dampingFraction: 0.82), value: fanViewModel.currentMode)
+        .animation(sectionAnimation, value: fanViewModel.currentMode)
     }
 
-    private func temperatureRow(
-        title: String,
-        value: String,
-        dotColor: Color,
-        history: [MetricHistoryPoint]
-    ) -> some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(dotColor)
-                .frame(width: 5, height: 5)
+    private func temperatureColor(for formattedValue: String) -> Color {
+        let numeric = formattedValue
+            .replacingOccurrences(of: "°C", with: "")
+            .replacingOccurrences(of: "°", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let temp = Double(numeric), temp.isFinite else { return AeroPulseTheme.textPrimary }
+        if temp >= 80 { return AeroPulseTheme.negative }
+        if temp >= 60 { return AeroPulseTheme.warning }
+        return AeroPulseTheme.textPrimary
+    }
+
+    private func temperatureRow(title: String, value: String) -> some View {
+        let valueTone = temperatureColor(for: value)
+        return HStack(spacing: 8) {
             Text(title)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 12, weight: .regular))
+                .foregroundStyle(AeroPulseTheme.textSecondary)
             Text(value)
-                .font(.system(size: 12.5, weight: .semibold))
+                .font(.system(size: 13, weight: .medium, design: .monospaced))
                 .monospacedDigit()
-                .frame(minWidth: 40, alignment: .trailing)
-            if history.count > 1 {
-                MiniSparklineView(points: history, tintColor: dotColor)
-            }
+                .foregroundStyle(valueTone)
+                .frame(minWidth: 48, alignment: .trailing)
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2.5)
-        .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: AeroPulseTheme.innerRadius, style: .continuous)
+                .fill(AeroPulseTheme.raisedSurface)
+        )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(AppStrings.tr(en: "\(title) average temperature", zh: "\(title) 平均温度"))
         .accessibilityValue(value)
     }
 
     private var smartRulesInfo: some View {
-        VStack(spacing: 4) {
-            HStack {
-                Text(AppStrings.tr(en: "Control Avg", zh: "控制基准均温"))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
+        VStack(spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(AppStrings.tr(en: "Control average", zh: "控制基准均温"))
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textSecondary)
                 Spacer()
                 Text(fanViewModel.controlAverageTemp)
-                    .font(.system(size: 11.5, weight: .bold, design: .monospaced))
-                    .foregroundColor(.orange)
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
             }
+
             if let rule = fanViewModel.activeRule {
-                HStack {
-                    Text(AppStrings.tr(en: "Active Tier", zh: "当前档位"))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline) {
+                    Text(AppStrings.tr(en: "Active tier", zh: "当前档位"))
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textSecondary)
                     Spacer()
-                    Text("≥\(Int(rule.temperature))°C → \(rule.speedPercentage)%")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .foregroundColor(.teal)
+                    Text("≥ \(Int(rule.temperature))°C → \(rule.speedPercentage)%")
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .monospacedDigit()
+                        .foregroundStyle(AeroPulseTheme.accentInk)
                 }
             } else if fanViewModel.isRulesAtMinimum {
-                HStack {
-                    Text(AppStrings.tr(en: "Active Tier", zh: "当前档位"))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline) {
+                    Text(AppStrings.tr(en: "Active tier", zh: "当前档位"))
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textSecondary)
                     Spacer()
-                    Text(AppStrings.tr(en: "Hardware Minimum", zh: "硬件最低转速"))
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.secondary)
+                    Text(AppStrings.tr(en: "Hardware minimum", zh: "硬件最低转速"))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(AeroPulseTheme.textMuted)
                 }
             }
-            if let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
-                let current = fanViewModel.activeRule?.speedPercentage ?? 0
-                let pending = fanViewModel.pendingRuleDownshiftSpeedPercentage ?? 0
-                let pendingStr = pending == 0 ? AppStrings.tr(en: "min", zh: "最低") : "\(pending)%"
-                HStack(spacing: 4) {
-                    Image(systemName: "hourglass")
-                        .font(.system(size: 10))
-                    Text(AppStrings.tr(
-                        en: "Holding \(current)% · Target \(pendingStr) in \(remaining)s",
-                        zh: "平滑缓冲中：维持 \(current)% · \(remaining)s 后降至 \(pendingStr)"
-                    ))
-                    .font(.system(size: 10.5, weight: .medium))
-                    Spacer()
-                    Text("↓ \(remaining)s")
-                        .font(.system(size: 10.5, weight: .bold, design: .monospaced))
-                }
-                .foregroundStyle(.orange)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3.5)
-                .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
-            }
+
             Button {
                 DashboardWindowManager.shared.showDashboard()
             } label: {
-                HStack(spacing: 4) {
+                HStack(spacing: 8) {
                     Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 10))
-                    Text(AppStrings.tr(en: "Configure Rules in Dashboard…", zh: "在控制台中配置规则…"))
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textMuted)
+                        .frame(width: 16, height: 16)
+                    Text(AppStrings.tr(en: "Configure rules in Dashboard", zh: "在控制台中配置规则"))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(AeroPulseTheme.textPrimary)
                     Spacer()
                     Image(systemName: "arrow.up.right")
-                        .font(.system(size: 9))
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textMuted)
                 }
                 .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: AeroPulseTheme.controlRadius, style: .continuous)
+                        .fill(AeroPulseTheme.raisedSurface)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: AeroPulseTheme.controlRadius, style: .continuous)
+                        .strokeBorder(AeroPulseTheme.hairline, lineWidth: 1)
+                }
             }
             .buttonStyle(.plain)
-            .padding(.top, 1)
         }
-        .padding(.top, 2)
+        .padding(.top, 4)
     }
 
     private var modePicker: some View {
-        HStack(spacing: 0) {
-            ForEach(Array(FanMode.allCases.enumerated()), id: \.element) { index, mode in
+        HStack(spacing: 2) {
+            ForEach(FanMode.allCases, id: \.self) { mode in
                 let isSelected = fanViewModel.currentMode == mode
-                let isPrevSelected = index > 0 && FanMode.allCases[index - 1] == fanViewModel.currentMode
-
-                if index > 0 && !isSelected && !isPrevSelected {
-                    Rectangle()
-                        .fill(Color.primary.opacity(0.12))
-                        .frame(width: 1, height: 12)
-                }
 
                 Button {
-                    withAnimation(reduceMotion || reduceVisualEffects ? nil : .spring(response: 0.32, dampingFraction: 0.82)) {
+                    withAnimation(reduceMotion || reduceVisualEffects ? nil : AeroPulseTheme.motionFast) {
                         fanViewModel.setFanMode(mode, isUserInitiated: true)
                     }
                 } label: {
                     Text(mode.localizedTitle)
-                        .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
-                        .foregroundStyle(isSelected ? .primary : (hoveredMode == mode ? .primary : .secondary))
+                        .font(.system(size: 12, weight: isSelected ? .medium : .regular))
+                        .foregroundStyle(
+                            isSelected
+                                ? AeroPulseTheme.textPrimary
+                                : (hoveredMode == mode ? AeroPulseTheme.textPrimary : AeroPulseTheme.textSecondary)
+                        )
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 5)
+                        .padding(.vertical, 6)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -226,9 +207,12 @@ struct MenuBarFanSection: View {
                 }
                 .background {
                     if isSelected {
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(Color(nsColor: .controlBackgroundColor))
-                            .shadow(color: Color.black.opacity(0.10), radius: 1.5, x: 0, y: 1)
+                        RoundedRectangle(cornerRadius: AeroPulseTheme.innerRadius, style: .continuous)
+                            .fill(AeroPulseTheme.raisedSurface)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: AeroPulseTheme.innerRadius, style: .continuous)
+                                    .strokeBorder(AeroPulseTheme.hairline, lineWidth: 1)
+                            }
                             .matchedGeometryEffect(id: "selected_fan_mode", in: animationNamespace)
                     }
                 }
@@ -236,10 +220,14 @@ struct MenuBarFanSection: View {
                 .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : [.isButton])
             }
         }
-        .padding(2.5)
+        .padding(2)
         .background(
-            RoundedRectangle(cornerRadius: 7.5, style: .continuous)
-                .fill(Color(nsColor: .quaternaryLabelColor).opacity(0.45))
+            RoundedRectangle(cornerRadius: AeroPulseTheme.controlRadius, style: .continuous)
+                .fill(AeroPulseTheme.deepestSurface)
+                .overlay {
+                    RoundedRectangle(cornerRadius: AeroPulseTheme.controlRadius, style: .continuous)
+                        .strokeBorder(AeroPulseTheme.hairline, lineWidth: 1)
+                }
         )
         .frame(maxWidth: .infinity)
         .disabled(fanViewModel.fans.isEmpty || fanViewModel.isInstallingHelper)
@@ -268,65 +256,66 @@ struct MenuBarFanSection: View {
                     step: 50
                 )
                 .controlSize(.regular)
+                .tint(AeroPulseTheme.accentFill)
                 .accessibilityLabel(AppStrings.tr(en: "Target fan speed", zh: "风扇目标转速"))
                 .accessibilityValue("\(target) RPM")
             } else {
                 Text(AppStrings.tr(en: "Speed range unavailable", zh: "转速范围暂不可用"))
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textMuted)
             }
         }
-        .padding(.top, 2)
+        .padding(.top, 4)
     }
 
+    /// Signature status indicator: 6px solid semantic dot + quiet monospaced label, no Capsule pill.
     @ViewBuilder
-    private var statusBadge: some View {
+    private var statusIndicator: some View {
         if let remaining = fanViewModel.modeSwitchTransitionRemainingSeconds, let mode = fanViewModel.transitioningMode {
-            badgePill("\(mode.localizedTitle) \(remaining)s", icon: "arrow.triangle.2.circlepath", color: .blue)
+            statusTag("\(mode.localizedTitle) · \(remaining)s", dotColor: AeroPulseTheme.accentInk)
         } else if fanViewModel.fans.isEmpty {
-            badgePill(AppStrings.tr(en: "Unavailable", zh: "无数据"), icon: "exclamationmark.circle", color: .secondary)
+            statusTag(AppStrings.tr(en: "Unavailable", zh: "无数据"), dotColor: AeroPulseTheme.textMuted)
         } else if fanViewModel.isInstallingHelper {
-            badgePill(AppStrings.tr(en: "Installing…", zh: "安装组件中…"), icon: "clock", color: .orange)
+            statusTag(AppStrings.tr(en: "Installing…", zh: "安装中…"), dotColor: AeroPulseTheme.warning)
         } else if !fanViewModel.helperInstalled {
-            badgePill(AppStrings.tr(en: "Setup required", zh: "待设置"), icon: "info.circle", color: .orange)
+            statusTag(AppStrings.tr(en: "Setup required", zh: "待设置"), dotColor: AeroPulseTheme.warning)
         } else if fanViewModel.isGameModeActive && fanViewModel.isGameModeUserOverridden {
-            badgePill(AppStrings.tr(en: "Overridden", zh: "已接管"), icon: "hand.raised", color: .orange)
+            statusTag(AppStrings.tr(en: "Overridden", zh: "已接管"), dotColor: AeroPulseTheme.warning)
         } else if fanViewModel.isGameModeActive {
-            badgePill(AppStrings.tr(en: "Game Mode", zh: "游戏模式"), icon: "gamecontroller", color: .purple)
+            statusTag(AppStrings.tr(en: "Game Mode", zh: "游戏模式"), dotColor: AeroPulseTheme.positive)
         } else if fanViewModel.isScheduleOverridden {
-            badgePill(AppStrings.tr(en: "Overridden", zh: "计划已接管"), icon: "hand.raised", color: .orange)
+            statusTag(AppStrings.tr(en: "Overridden", zh: "计划已接管"), dotColor: AeroPulseTheme.warning)
         } else if fanViewModel.isScheduleActive {
-            badgePill(AppStrings.tr(en: "Schedule", zh: "定时计划"), icon: "calendar.badge.clock", color: .teal)
+            statusTag(AppStrings.tr(en: "Scheduled", zh: "定时计划"), dotColor: AeroPulseTheme.positive)
         } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
-            badgePill("\(remaining)s", icon: "clock", color: .orange)
+            statusTag("\(remaining)s", dotColor: AeroPulseTheme.warning)
         } else if fanViewModel.currentMode == .custom, let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
-            badgePill("↓ \(remaining)s", icon: "hourglass", color: .orange)
+            statusTag("↓ \(remaining)s", dotColor: AeroPulseTheme.warning)
         } else if fanViewModel.currentMode == .custom, let rule = fanViewModel.activeRule {
-            badgePill("\(rule.speedPercentage)%", icon: "speedometer", color: .teal)
+            statusTag("\(rule.speedPercentage)%", dotColor: AeroPulseTheme.positive)
         } else {
-            badgePill(modeBadgeText, icon: "checkmark.circle", color: .secondary)
+            statusTag(modeBadgeText, dotColor: AeroPulseTheme.positive)
         }
     }
 
-    private func badgePill(_ text: String, icon: String, color: Color) -> some View {
-        HStack(spacing: 3) {
-            Image(systemName: icon)
-                .font(.system(size: 8.5))
+    private func statusTag(_ text: String, dotColor: Color) -> some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(dotColor)
+                .frame(width: 6, height: 6)
             Text(text)
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: 11, weight: .regular, design: .monospaced))
+                .monospacedDigit()
+                .foregroundStyle(AeroPulseTheme.textMuted)
         }
-        .foregroundStyle(color)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
-        .background(color.opacity(0.08), in: Capsule())
     }
 
     private var modeBadgeText: String {
         switch fanViewModel.currentMode {
-        case .auto: return AppStrings.tr(en: "Auto", zh: "macOS 自动")
-        case .fullBlast: return AppStrings.tr(en: "Full Speed", zh: "全速散热")
+        case .auto: return AppStrings.tr(en: "Auto", zh: "系统自动")
+        case .fullBlast: return AppStrings.tr(en: "Full speed", zh: "全速散热")
         case .manual: return AppStrings.tr(en: "Manual", zh: "手动控制")
-        case .custom: return AppStrings.tr(en: "Smart Rules", zh: "智能温控")
+        case .custom: return AppStrings.tr(en: "Rules", zh: "智能温控")
         }
     }
 
@@ -335,30 +324,28 @@ struct MenuBarFanSection: View {
         if let remaining = fanViewModel.modeSwitchTransitionRemainingSeconds, let mode = fanViewModel.transitioningMode {
             statusLine(
                 AppStrings.tr(
-                    en: "Applying \(mode.localizedTitle) · Hardware ramping in \(remaining)s",
-                    zh: "正在切换至「\(mode.localizedTitle)」· 转速响应过渡中（\(remaining) 秒）"
+                    en: "Applying \(mode.localizedTitle) · Ramping in \(remaining)s",
+                    zh: "正在切换至「\(mode.localizedTitle)」· 过渡中（\(remaining)s）"
                 ),
-                icon: "arrow.triangle.2.circlepath",
-                color: .blue
+                dotColor: AeroPulseTheme.accentInk
             )
         } else if fanViewModel.fans.isEmpty {
-            statusLine(AppStrings.tr(en: "Fan data unavailable", zh: "暂无风扇数据"), icon: "info.circle")
+            statusLine(AppStrings.tr(en: "Fan data unavailable", zh: "暂无风扇数据"), dotColor: AeroPulseTheme.textMuted)
         } else if fanViewModel.isInstallingHelper {
-            statusLine(fanViewModel.helperStatusMessage, icon: "clock", color: .orange)
+            statusLine(fanViewModel.helperStatusMessage, dotColor: AeroPulseTheme.warning)
         } else if !fanViewModel.helperInstalled {
             statusLine(
                 AppStrings.tr(en: "Select a mode to set up fan control", zh: "选择模式以设置风扇控制"),
-                icon: "info.circle",
-                color: .orange
+                dotColor: AeroPulseTheme.warning
             )
         } else if fanViewModel.isGameModeActive && fanViewModel.isGameModeUserOverridden {
-            HStack(spacing: 6) {
-                Label(
-                    AppStrings.tr(en: "Game active · Manual override", zh: "游戏运行中 · 当前已手动接管"),
-                    systemImage: "hand.raised"
-                )
-                .font(.system(size: 11))
-                .foregroundStyle(.orange)
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(AeroPulseTheme.warning)
+                    .frame(width: 6, height: 6)
+                Text(AppStrings.tr(en: "Game active · Manual override", zh: "游戏运行中 · 已手动接管"))
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textSecondary)
                 Spacer()
                 Button(AppStrings.tr(en: "Resume", zh: "恢复联动")) {
                     fanViewModel.resumeGameModeLinkage()
@@ -367,13 +354,13 @@ struct MenuBarFanSection: View {
                 .controlSize(.mini)
             }
         } else if fanViewModel.isScheduleOverridden {
-            HStack(spacing: 6) {
-                Label(
-                    AppStrings.tr(en: "Schedule active · Manual override", zh: "定时计划时段 · 当前已手动接管"),
-                    systemImage: "hand.raised"
-                )
-                .font(.system(size: 11))
-                .foregroundStyle(.orange)
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(AeroPulseTheme.warning)
+                    .frame(width: 6, height: 6)
+                Text(AppStrings.tr(en: "Schedule active · Manual override", zh: "定时计划时段 · 已手动接管"))
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textSecondary)
                 Spacer()
                 Button(AppStrings.tr(en: "Resume", zh: "恢复计划")) {
                     fanViewModel.resetScheduleOverride()
@@ -384,8 +371,7 @@ struct MenuBarFanSection: View {
         } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
             statusLine(
                 AppStrings.tr(en: "Game ended · Auto in \(remaining)s", zh: "游戏已退出 · \(remaining) 秒后切回自动"),
-                icon: "clock",
-                color: .orange
+                dotColor: AeroPulseTheme.warning
             )
         } else if fanViewModel.currentMode == .custom, let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
             let current = fanViewModel.activeRule?.speedPercentage ?? 0
@@ -393,19 +379,24 @@ struct MenuBarFanSection: View {
             let pendingStr = pending == 0 ? AppStrings.tr(en: "min", zh: "最低转速") : "\(pending)%"
             statusLine(
                 AppStrings.tr(
-                    en: "Holding \(current)% · Transitioning to \(pendingStr) in \(remaining)s",
-                    zh: "维持 \(current)% · \(remaining) 秒后降速至 \(pendingStr)"
+                    en: "Holding \(current)% · \(pendingStr) in \(remaining)s",
+                    zh: "维持 \(current)% · \(remaining) 秒后降至 \(pendingStr)"
                 ),
-                icon: "arrow.down.circle",
-                color: .orange
+                dotColor: AeroPulseTheme.warning
             )
         }
     }
 
-    private func statusLine(_ text: String, icon: String, color: Color = .secondary) -> some View {
-        Label(text, systemImage: icon)
-            .font(.system(size: 11))
-            .foregroundStyle(color)
-            .fixedSize(horizontal: false, vertical: true)
+    private func statusLine(_ text: String, dotColor: Color) -> some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(dotColor)
+                .frame(width: 6, height: 6)
+            Text(text)
+                .font(.system(size: 11, weight: .regular))
+                .monospacedDigit()
+                .foregroundStyle(AeroPulseTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }

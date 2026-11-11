@@ -33,9 +33,6 @@ struct SettingsView: View {
         return 1
     }
 
-    private let cardActionButtonMinHeight: CGFloat = 24
-    private let cardActionButtonFont = Font.system(size: 10, weight: .semibold)
-
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if !preferencesOnly { headerSection }
@@ -62,25 +59,24 @@ struct SettingsView: View {
 
                 SettingsCard(
                     title: AppStrings.hardwareConnection,
-                    symbol: AppImages.cpu,
-                    tint: SMCService.shared.isConnected ? .blue : .red
+                    symbol: AppImages.cpu
                 ) {
                     HStack(spacing: 8) {
                         Circle()
-                            .fill(SMCService.shared.isConnected ? Color.blue : Color.red)
-                            .frame(width: 8, height: 8)
+                            .fill(SMCService.shared.isConnected ? AeroPulseTheme.positive : AeroPulseTheme.negative)
+                            .frame(width: 6, height: 6)
                         Text(
                             SMCService.shared.isConnected
                                 ? AppStrings.hardwareConnected : AppStrings.hardwareDisconnected
                         )
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(SMCService.shared.isConnected ? .primary : .red)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(SMCService.shared.isConnected ? AeroPulseTheme.textSecondary : AeroPulseTheme.negative)
                     }
 
                     if !SMCService.shared.isConnected {
                         Text(SMCService.shared.lastError ?? AppStrings.unknownConnectionError)
-                            .font(.system(size: 10))
-                            .foregroundColor(.red.opacity(0.85))
+                            .font(.system(size: 11, weight: .regular))
+                            .foregroundStyle(AeroPulseTheme.negative)
                             .fixedSize(horizontal: false, vertical: true)
 
                         Button {
@@ -89,8 +85,8 @@ struct SettingsView: View {
                             }
                         } label: {
                             Text(AppStrings.retryConnection)
-                                .font(cardActionButtonFont)
-                                .frame(maxWidth: .infinity, minHeight: cardActionButtonMinHeight)
+                                .font(.system(size: 12, weight: .medium))
+                                .frame(maxWidth: .infinity, minHeight: 24)
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
@@ -103,23 +99,21 @@ struct SettingsView: View {
 
                 SettingsCard(
                     title: AppStrings.bugFeedback,
-                    symbol: AppImages.bug,
-                    tint: .orange
+                    symbol: AppImages.bug
                 ) {
-                    HStack {
-                        Text(AppStrings.bugFeedbackDescription)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(.secondary)
-                        Spacer()
-                    }
+                    Text(AppStrings.bugFeedbackDescription)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                    HStack {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(AppStrings.bugFeedbackEmailLabel)
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundStyle(AeroPulseTheme.textMuted)
                         Spacer()
                         Text(AppConfig.bugFeedbackEmail)
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundStyle(AeroPulseTheme.textSecondary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.75)
                     }
@@ -128,10 +122,10 @@ struct SettingsView: View {
                         isShowingBugFeedback = true
                     } label: {
                         Text(AppStrings.bugFeedbackOpen)
-                            .font(cardActionButtonFont)
-                            .frame(maxWidth: .infinity, minHeight: cardActionButtonMinHeight)
+                            .font(.system(size: 12, weight: .medium))
+                            .frame(maxWidth: .infinity, minHeight: 24)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
                     .controlSize(.small)
                 }
             }
@@ -143,20 +137,21 @@ struct SettingsView: View {
                         NSApplication.shared.terminate(nil)
                     }
                 ) {
-                    HStack {
+                    HStack(spacing: 8) {
                         Image(systemName: AppImages.power)
+                            .font(.system(size: 12, weight: .regular))
                         Text(AppStrings.quitApplication)
+                            .font(.system(size: 13, weight: .medium))
                     }
-                    .font(.system(size: 13, weight: .semibold))
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 5)
+                    .padding(.vertical, 4)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.regular)
-                .tint(.red.opacity(0.82))
+                .tint(AeroPulseTheme.negative)
             }
         }
-        .padding(16)
+        .padding(20)
         .frame(width: preferredWidth, alignment: .leading)
         .frame(maxWidth: preferredWidth == nil ? .infinity : preferredWidth, alignment: .leading)
         .onAppear {
@@ -172,12 +167,13 @@ struct SettingsView: View {
 
     private var headerSection: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(AppStrings.systemMonitor)
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
                 Text(AppStrings.systemMonitorSubtitle)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textMuted)
             }
 
             Spacer()
@@ -187,8 +183,9 @@ struct SettingsView: View {
                     openOrFocusDashboard()
                 } label: {
                     Image(systemName: AppImages.window)
-                        .foregroundColor(.blue)
-                        .font(.title3)
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textSecondary)
+                        .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
                 .help(AppStrings.openSystemHub)
@@ -216,72 +213,79 @@ private struct BugFeedbackSheet: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(AppStrings.bugFeedback)
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
                 Spacer()
                 Button {
                     dismiss()
                 } label: {
                     Image(systemName: AppImages.close)
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textMuted)
+                        .frame(width: 24, height: 24)
                 }
                 .buttonStyle(.plain)
             }
 
             HStack(spacing: 8) {
                 Text(AppStrings.bugFeedbackEmailLabel)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textMuted)
                 Text(recipientEmail)
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .foregroundStyle(AeroPulseTheme.textSecondary)
             }
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(AppStrings.bugFeedbackTitle)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(AeroPulseTheme.textSecondary)
                 TextField(AppStrings.bugFeedbackTitlePlaceholder, text: $issueTitle)
                     .textFieldStyle(.roundedBorder)
             }
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(AppStrings.bugFeedbackDetails)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(AeroPulseTheme.textSecondary)
                 TextEditor(text: $issueDetails)
-                    .frame(minHeight: 150)
-                    .padding(6)
+                    .frame(minHeight: 148)
+                    .padding(8)
                     .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.primary.opacity(0.05))
+                        RoundedRectangle(cornerRadius: AeroPulseTheme.controlRadius, style: .continuous)
+                            .fill(AeroPulseTheme.raisedSurface)
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.primary.opacity(0.12), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: AeroPulseTheme.controlRadius, style: .continuous)
+                            .strokeBorder(AeroPulseTheme.hairline, lineWidth: 1)
                     )
                     .overlay(alignment: .topLeading) {
                         if issueDetails.isEmpty {
                             Text(AppStrings.bugFeedbackDetailsPlaceholder)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary.opacity(0.7))
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundStyle(AeroPulseTheme.textMuted)
                                 .padding(.horizontal, 12)
-                                .padding(.vertical, 14)
+                                .padding(.vertical, 12)
                                 .allowsHitTesting(false)
                         }
                     }
             }
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(AppStrings.bugFeedbackContact)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(AeroPulseTheme.textSecondary)
                 TextField(AppStrings.bugFeedbackContactPlaceholder, text: $contact)
                     .textFieldStyle(.roundedBorder)
             }
 
             if let sendError {
                 Text(sendError)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(.red)
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.negative)
             }
 
             HStack(spacing: 8) {
@@ -289,8 +293,7 @@ private struct BugFeedbackSheet: View {
                     dismiss()
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.small)
-                .font(.system(size: 10, weight: .semibold))
+                .controlSize(.regular)
 
                 Spacer()
 
@@ -298,16 +301,19 @@ private struct BugFeedbackSheet: View {
                     sendFeedbackByMail()
                 } label: {
                     Text(AppStrings.bugFeedbackSend)
-                        .font(.system(size: 10, weight: .semibold))
-                        .frame(minWidth: 120, minHeight: 24)
+                        .font(.system(size: 12, weight: .medium))
+                        .frame(minWidth: 112)
                 }
                 .buttonStyle(.borderedProminent)
-                .controlSize(.small)
+                .tint(AeroPulseTheme.accentFill)
+                .controlSize(.regular)
                 .disabled(!canSend)
             }
+            .padding(.top, 4)
         }
-        .padding(18)
+        .padding(20)
         .frame(width: 560, height: 500)
+        .background(AeroPulseTheme.pageBackground)
     }
 
     private func sendFeedbackByMail() {
@@ -357,113 +363,28 @@ private struct BugFeedbackSheet: View {
 struct SettingsCard<Content: View>: View {
     let title: String
     let symbol: String
-    let tint: Color
+    var tint: Color = AeroPulseTheme.accentInk
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Image(systemName: symbol)
-                    .foregroundColor(tint)
-                    .font(.system(size: 12, weight: .semibold))
-                Text(title.uppercased())
-                    .font(.system(size: 9, weight: .black))
-                    .tracking(0.95)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(AeroPulseTheme.textMuted)
+                    .font(.system(size: 13, weight: .regular))
+                    .frame(width: 16, height: 16)
+                Text(title)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
                     .lineLimit(1)
                 Spacer()
             }
 
             content
         }
-        .padding(13)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .liquidGlassCard(
-            cornerRadius: 12,
-            tint: tint,
-            style: .regular,
-            shadowOpacity: 0.08
-        )
-    }
-}
-
-private struct FanBadge: View {
-    let title: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(title.uppercased())
-                .font(.system(size: 8, weight: .black))
-                .foregroundColor(.secondary)
-                .tracking(0.8)
-            Text(value)
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 7)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.primary.opacity(0.06))
-        )
-    }
-}
-
-private struct FanSpeedRow: View, Equatable {
-    let fan: FanInfo
-
-    static func == (lhs: FanSpeedRow, rhs: FanSpeedRow) -> Bool {
-        lhs.fan == rhs.fan
-    }
-
-    private var utilization: Double {
-        guard fan.maxRPM > fan.minRPM else { return 0 }
-        let range = Double(fan.maxRPM - fan.minRPM)
-        let normalized = Double(fan.currentRPM - fan.minRPM) / range
-        return min(max(normalized, 0), 1)
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                Text(fan.name)
-                    .font(.system(size: 11, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                Spacer()
-                Text("\(fan.currentRPM) \(AppStrings.rpmUnit)")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .frame(minWidth: 96, alignment: .trailing)
-            }
-
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.primary.opacity(0.08))
-                    Capsule()
-                        .fill(Color.indigo.opacity(0.92))
-                        .frame(width: max(0, min(geo.size.width * CGFloat(utilization), geo.size.width)))
-                }
-            }
-            .frame(height: 4)
-
-            HStack {
-                Text("\(fan.minRPM) MIN")
-                Spacer()
-                Text("\(fan.maxRPM) MAX")
-            }
-            .font(.system(size: 9, weight: .semibold, design: .monospaced))
-            .foregroundColor(.secondary)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 9)
-                .fill(Color.primary.opacity(0.045))
-        )
+        .aeroPulseCard()
     }
 }
 
@@ -471,33 +392,35 @@ struct StatRow: View, Equatable {
     let icon: String
     let label: String
     let value: String
-    let color: Color
+    var color: Color = AeroPulseTheme.textMuted
 
     static func == (lhs: StatRow, rhs: StatRow) -> Bool {
         lhs.icon == rhs.icon
             && lhs.label == rhs.label
             && lhs.value == rhs.value
-            && lhs.color == rhs.color
     }
 
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: icon)
-                .foregroundColor(color)
-                .font(.system(size: 12, weight: .semibold))
-                .frame(width: 16)
+                .foregroundStyle(AeroPulseTheme.textMuted)
+                .font(.system(size: 12, weight: .regular))
+                .frame(width: 16, height: 16)
             Text(label)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 12, weight: .regular))
+                .foregroundStyle(AeroPulseTheme.textSecondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text(value)
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .monospacedDigit()
+                .foregroundStyle(AeroPulseTheme.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .frame(minWidth: 116, alignment: .trailing)
         }
-        .frame(minHeight: 19)
+        .frame(minHeight: 20)
     }
 }
 
@@ -507,59 +430,73 @@ private struct UpdateSettingsCard: View {
     var body: some View {
         SettingsCard(
             title: AppStrings.softwareUpdate,
-            symbol: "arrow.triangle.2.circlepath.circle.fill",
-            tint: .indigo
+            symbol: "arrow.triangle.2.circlepath"
         ) {
-            HStack {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(AppStrings.currentVersionPrefix)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.secondary)
-                Text(updaterViewModel.appVersionDisplay)
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textSecondary)
                 Spacer()
+                Text(updaterViewModel.appVersionDisplay)
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
             }
 
             if updaterViewModel.isUpdateAvailable, let newVersion = updaterViewModel.availableUpdateVersion {
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
                     Circle()
-                        .fill(Color.orange)
-                        .frame(width: 7, height: 7)
-                    Text("\(AppStrings.newVersionAvailable): \(newVersion)")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.primary)
+                        .fill(AeroPulseTheme.accentInk)
+                        .frame(width: 6, height: 6)
+                    Text("\(AppStrings.newVersionAvailable) · \(newVersion)")
+                        .font(.system(size: 12, weight: .medium))
+                        .monospacedDigit()
+                        .foregroundStyle(AeroPulseTheme.textPrimary)
                 }
-                .padding(.vertical, 2)
             }
 
             Toggle(
                 AppStrings.autoCheckForUpdates,
                 isOn: $updaterViewModel.automaticallyChecksForUpdates
             )
-            .font(.system(size: 11, weight: .medium))
+            .font(.system(size: 12, weight: .regular))
+            .foregroundStyle(AeroPulseTheme.textSecondary)
 
             Toggle(
                 AppStrings.showUpdateInMenuBar,
                 isOn: $updaterViewModel.showUpdateInMenuBar
             )
-            .font(.system(size: 11, weight: .medium))
+            .font(.system(size: 12, weight: .regular))
+            .foregroundStyle(AeroPulseTheme.textSecondary)
 
-            Button {
-                updaterViewModel.checkForUpdates()
-            } label: {
-                HStack(spacing: 4) {
-                    if updaterViewModel.isUpdateAvailable {
+            if updaterViewModel.isUpdateAvailable {
+                Button {
+                    updaterViewModel.checkForUpdates()
+                } label: {
+                    HStack(spacing: 8) {
                         Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 12, weight: .regular))
                         Text("\(AppStrings.updateNow)\(updaterViewModel.availableUpdateVersion.map { " (\($0))" } ?? "")")
-                    } else {
-                        Text(AppStrings.checkForUpdates)
+                            .font(.system(size: 12, weight: .medium))
                     }
+                    .frame(maxWidth: .infinity, minHeight: 24)
                 }
-                .font(.system(size: 10, weight: .semibold))
-                .frame(maxWidth: .infinity, minHeight: 24)
+                .buttonStyle(.borderedProminent)
+                .tint(AeroPulseTheme.accentFill)
+                .controlSize(.small)
+                .disabled(!updaterViewModel.canCheckForUpdates)
+            } else {
+                Button {
+                    updaterViewModel.checkForUpdates()
+                } label: {
+                    Text(AppStrings.checkForUpdates)
+                        .font(.system(size: 12, weight: .medium))
+                        .frame(maxWidth: .infinity, minHeight: 24)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(!updaterViewModel.canCheckForUpdates)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
-            .disabled(!updaterViewModel.canCheckForUpdates)
 
             #if DEBUG
             Button {
@@ -570,7 +507,7 @@ private struct UpdateSettingsCard: View {
                         ? AppStrings.resetSimulatedUpdateButton
                         : AppStrings.simulateUpdateButton
                 )
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: 11, weight: .regular))
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)

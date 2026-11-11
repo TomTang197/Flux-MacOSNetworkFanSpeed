@@ -57,9 +57,9 @@ struct NetworkSpeedMeterApp: App {
                     layoutWidth: 620,
                     preferencesOnly: true
                 )
-                .padding(20)
             }
             .frame(minWidth: 560, idealWidth: 620, minHeight: 500, idealHeight: 580)
+            .background(AeroPulseTheme.pageBackground)
             .environment(\.visualEffectsReduced, reduceVisualEffects)
         }
     }

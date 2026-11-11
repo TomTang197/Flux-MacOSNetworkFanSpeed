@@ -19,14 +19,15 @@ struct MenuBarDashboardView: View {
     @State private var showsNetworkDetails = false
     @State private var showsProcessDetails = false
     @State private var showsStorageDetails = false
-    @State private var panelHeight: CGFloat = 630
+    @State private var panelHeight: CGFloat = 628
 
     var body: some View {
         VStack(spacing: 0) {
             header
 
-            Divider()
-                .opacity(0.35)
+            Rectangle()
+                .fill(AeroPulseTheme.hairline)
+                .frame(height: 1)
 
             ScrollView {
                 VStack(spacing: 8) {
@@ -38,22 +39,22 @@ struct MenuBarDashboardView: View {
                     systemSection
                     storageSection
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
+                .padding(12)
             }
             .scrollBounceBehavior(.basedOnSize)
 
-            Divider()
-                .opacity(0.35)
+            Rectangle()
+                .fill(AeroPulseTheme.hairline)
+                .frame(height: 1)
 
             footer
         }
         .frame(width: 380, height: panelHeight)
         .background {
-            // MenuBarExtra supplies the system material. Use an opaque fallback
-            // when the user asks to reduce effects, rather than nesting glass.
             if reduceTransparency || reduceVisualEffects {
-                Color(nsColor: .windowBackgroundColor)
+                AeroPulseTheme.pageBackground
+            } else {
+                AeroPulseTheme.pageBackground.opacity(0.84)
             }
         }
         .onAppear {
@@ -76,26 +77,26 @@ struct MenuBarDashboardView: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            Image(systemName: "waveform.path.ecg")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.accentColor)
+            Image(systemName: "wind")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(AeroPulseTheme.accentInk)
+                .frame(width: 16, height: 16)
                 .accessibilityHidden(true)
             Text(AppStrings.appName)
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(AeroPulseTheme.textPrimary)
 
             Spacer()
 
+            // Signature live status indicator: 6px solid dot + quiet mono text
             HStack(spacing: 4) {
                 Circle()
-                    .fill(SMCService.shared.isConnected ? Color.green : Color.orange)
+                    .fill(SMCService.shared.isConnected ? AeroPulseTheme.positive : AeroPulseTheme.warning)
                     .frame(width: 6, height: 6)
-                Text(SMCService.shared.isConnected ? AppStrings.tr(en: "Live", zh: "正常") : AppStrings.tr(en: "Offline", zh: "离线"))
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
+                Text(SMCService.shared.isConnected ? AppStrings.tr(en: "Live", zh: "在线") : AppStrings.tr(en: "Offline", zh: "离线"))
+                    .font(.system(size: 11, weight: .regular, design: .monospaced))
+                    .foregroundStyle(AeroPulseTheme.textMuted)
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2.5)
-            .background(Color.secondary.opacity(0.08), in: Capsule())
 
             Menu {
                 if updaterViewModel.isUpdateAvailable {
@@ -146,9 +147,9 @@ struct MenuBarDashboardView: View {
                 .keyboardShortcut("q", modifiers: .command)
             } label: {
                 Image(systemName: "ellipsis.circle")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 22, height: 22)
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textMuted)
+                    .frame(width: 24, height: 24)
             }
             .menuIndicator(.hidden)
             .menuStyle(.borderlessButton)
@@ -157,8 +158,7 @@ struct MenuBarDashboardView: View {
             .help(AppStrings.tr(en: "Refresh, login status and quit", zh: "刷新、登录启动状态与退出"))
         }
         .padding(.horizontal, 16)
-        .padding(.top, 10)
-        .padding(.bottom, 6)
+        .padding(.vertical, 12)
     }
 
     private var networkSection: some View {
@@ -172,31 +172,29 @@ struct MenuBarDashboardView: View {
                 MenuBarReadout(
                     title: AppStrings.download,
                     value: networkViewModel.downloadSpeed,
-                    icon: AppImages.download,
-                    iconColor: .blue
+                    icon: AppImages.download
                 )
                 .equatable()
                 MenuBarReadout(
                     title: AppStrings.upload,
                     value: networkViewModel.uploadSpeed,
-                    icon: AppImages.upload,
-                    iconColor: .green
+                    icon: AppImages.upload
                 )
                 .equatable()
             }
             if showsNetworkDetails {
-                Divider()
+                Rectangle()
+                    .fill(AeroPulseTheme.hairline)
+                    .frame(height: 1)
                 MenuBarValueRow(
                     title: AppStrings.tr(en: "Downloaded", zh: "累计下载"),
                     value: networkViewModel.downloadTotal,
-                    icon: "arrow.down.to.line.compact",
-                    iconColor: .blue
+                    icon: "arrow.down.to.line"
                 )
                 MenuBarValueRow(
                     title: AppStrings.tr(en: "Uploaded", zh: "累计上传"),
                     value: networkViewModel.uploadTotal,
-                    icon: "arrow.up.to.line.compact",
-                    iconColor: .green
+                    icon: "arrow.up.to.line"
                 )
             }
         }
@@ -214,18 +212,14 @@ struct MenuBarDashboardView: View {
                     title: AppStrings.cpu,
                     value: networkViewModel.cpuUsage,
                     icon: AppImages.cpuUsage,
-                    iconColor: .red,
-                    progress: cpuFraction,
-                    progressColors: [Color.orange.opacity(0.9), Color.red]
+                    progress: cpuFraction
                 )
                 .equatable()
                 MenuBarReadout(
                     title: AppStrings.gpu,
                     value: networkViewModel.gpuUsage,
                     icon: AppImages.gpuUsage,
-                    iconColor: .pink,
-                    progress: gpuFraction,
-                    progressColors: [Color.pink.opacity(0.85), Color.purple]
+                    progress: gpuFraction
                 )
                 .equatable()
             }
@@ -233,15 +227,18 @@ struct MenuBarDashboardView: View {
             memorySectionRow
 
             if showsProcessDetails {
-                Divider()
+                Rectangle()
+                    .fill(AeroPulseTheme.hairline)
+                    .frame(height: 1)
                 MenuBarProcessList(title: AppStrings.cpuUsage, lines: networkViewModel.topCPUProcesses)
                     .equatable()
-                Divider()
+                Rectangle()
+                    .fill(AeroPulseTheme.hairline)
+                    .frame(height: 1)
                 MenuBarValueRow(
                     title: AppStrings.tr(en: "Memory usage", zh: "内存使用率"),
                     value: networkViewModel.memoryUsage,
-                    icon: AppImages.memory,
-                    iconColor: .purple
+                    icon: AppImages.memory
                 )
                 MenuBarProcessList(title: AppStrings.memory, lines: networkViewModel.topMemoryProcesses)
                     .equatable()
@@ -249,131 +246,133 @@ struct MenuBarDashboardView: View {
         }
     }
 
+    private func barFill(for fraction: Double) -> Color {
+        if fraction >= 0.92 { return AeroPulseTheme.negative }
+        if fraction >= 0.80 { return AeroPulseTheme.warning }
+        return AeroPulseTheme.accentFill
+    }
+
     private var memorySectionRow: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(alignment: .firstTextBaseline) {
-                HStack(spacing: 4) {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                HStack(spacing: 8) {
                     Image(systemName: AppImages.memory)
-                        .foregroundStyle(.purple)
-                        .font(.system(size: 10))
+                        .foregroundStyle(AeroPulseTheme.textMuted)
+                        .font(.system(size: 12, weight: .regular))
+                        .frame(width: 14, height: 14)
                     Text(AppStrings.memory)
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textSecondary)
                 }
                 Spacer()
                 Text("\(networkViewModel.memoryUsed) / \(networkViewModel.memoryTotal)")
-                    .fontWeight(.medium)
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
                     .monospacedDigit()
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
                 if !networkViewModel.memoryUsage.isEmpty && networkViewModel.memoryUsage != "0%" {
-                    Text("(\(networkViewModel.memoryUsage))")
-                        .foregroundStyle(.secondary)
+                    Text(networkViewModel.memoryUsage)
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
                         .monospacedDigit()
+                        .foregroundStyle(AeroPulseTheme.textMuted)
                 }
             }
-            .font(.system(size: 11))
 
             if let fraction = memoryFraction {
-                Capsule()
-                    .fill(Color.secondary.opacity(0.12))
-                    .frame(height: 4)
-                    .overlay(alignment: .leading) {
-                        GeometryReader { proxy in
-                            Capsule()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.purple.opacity(0.85), Color.indigo],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .frame(width: max(0, min(proxy.size.width, proxy.size.width * fraction)))
-                        }
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(AeroPulseTheme.textPrimary.opacity(0.08))
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(barFill(for: fraction))
+                            .frame(width: max(0, min(proxy.size.width, proxy.size.width * fraction)))
                     }
+                }
+                .frame(height: 4)
             }
         }
-        .padding(.top, 2)
+        .padding(.top, 4)
     }
 
     private var storageSection: some View {
         MenuBarSection {
             MenuBarSectionHeading(
-                title: AppStrings.tr(en: "Storage & Power", zh: "存储与供电"),
+                title: AppStrings.tr(en: "Storage & power", zh: "存储与供电"),
                 detailTitle: AppStrings.tr(en: "Storage and power details", zh: "存储与供电详情"),
                 isExpanded: $showsStorageDetails
             )
 
             HStack(spacing: 8) {
-                HStack(spacing: 4) {
-                    Image(systemName: AppImages.diskRead)
-                        .foregroundStyle(.teal)
-                        .font(.system(size: 10.5))
+                HStack(spacing: 8) {
                     Text(AppStrings.tr(en: "Read", zh: "读取"))
-                        .foregroundStyle(.secondary)
-                    Spacer()
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textSecondary)
+                    Spacer(minLength: 4)
                     Text(networkViewModel.diskReadSpeed)
-                        .fontWeight(.semibold)
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
                         .monospacedDigit()
+                        .foregroundStyle(AeroPulseTheme.textPrimary)
                 }
-                .font(.system(size: 10.5))
-                .padding(.horizontal, 7)
-                .padding(.vertical, 4)
-                .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .padding(8)
+                .background(
+                    RoundedRectangle(cornerRadius: AeroPulseTheme.controlRadius, style: .continuous)
+                        .fill(AeroPulseTheme.raisedSurface)
+                )
 
-                HStack(spacing: 4) {
-                    Image(systemName: AppImages.diskWrite)
-                        .foregroundStyle(.mint)
-                        .font(.system(size: 10.5))
+                HStack(spacing: 8) {
                     Text(AppStrings.tr(en: "Write", zh: "写入"))
-                        .foregroundStyle(.secondary)
-                    Spacer()
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textSecondary)
+                    Spacer(minLength: 4)
                     Text(networkViewModel.diskWriteSpeed)
-                        .fontWeight(.semibold)
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
                         .monospacedDigit()
+                        .foregroundStyle(AeroPulseTheme.textPrimary)
                 }
-                .font(.system(size: 10.5))
-                .padding(.horizontal, 7)
-                .padding(.vertical, 4)
-                .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .padding(8)
+                .background(
+                    RoundedRectangle(cornerRadius: AeroPulseTheme.controlRadius, style: .continuous)
+                        .fill(AeroPulseTheme.raisedSurface)
+                )
             }
 
             diskCapacityRow
 
-            HStack(spacing: 14) {
+            HStack(spacing: 12) {
                 HStack(spacing: 4) {
-                    Image(systemName: AppImages.powerUsage)
-                        .foregroundStyle(.yellow)
-                        .font(.system(size: 10.5))
                     Text(AppStrings.powerUsage)
-                        .foregroundStyle(.secondary)
-                    Spacer()
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textSecondary)
+                    Spacer(minLength: 4)
                     Text(networkViewModel.powerUsage)
-                        .fontWeight(.medium)
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
                         .monospacedDigit()
+                        .foregroundStyle(AeroPulseTheme.textPrimary)
                 }
                 HStack(spacing: 4) {
-                    Image(systemName: AppImages.chargingPower)
-                        .foregroundStyle(.orange)
-                        .font(.system(size: 10.5))
                     Text(AppStrings.chargingPower)
-                        .foregroundStyle(.secondary)
-                    Spacer()
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textSecondary)
+                    Spacer(minLength: 4)
                     Text(networkViewModel.chargingPowerUsage)
-                        .fontWeight(.medium)
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
                         .monospacedDigit()
+                        .foregroundStyle(AeroPulseTheme.textPrimary)
                 }
             }
-            .font(.system(size: 10.5))
-            .padding(.top, 1)
+            .padding(.top, 4)
 
             if showsStorageDetails {
-                Divider()
-                MenuBarValueRow(title: AppStrings.diskCapacity, value: networkViewModel.diskTotalCapacity, icon: "internaldrive", iconColor: .cyan)
-                MenuBarValueRow(title: AppStrings.diskUsed, value: networkViewModel.diskUsedPercent, icon: "chart.pie", iconColor: .teal)
-                MenuBarValueRow(title: AppStrings.tr(en: "Total read", zh: "累计读取"), value: networkViewModel.diskReadTotal, icon: "arrow.down.to.line", iconColor: .teal)
-                MenuBarValueRow(title: AppStrings.tr(en: "Total written", zh: "累计写入"), value: networkViewModel.diskWriteTotal, icon: "arrow.up.to.line", iconColor: .mint)
+                Rectangle()
+                    .fill(AeroPulseTheme.hairline)
+                    .frame(height: 1)
+                MenuBarValueRow(title: AppStrings.diskCapacity, value: networkViewModel.diskTotalCapacity, icon: AppImages.diskRead)
+                MenuBarValueRow(title: AppStrings.diskUsed, value: networkViewModel.diskUsedPercent, icon: AppImages.diskCapacity)
+                MenuBarValueRow(title: AppStrings.tr(en: "Total read", zh: "累计读取"), value: networkViewModel.diskReadTotal, icon: "arrow.down.to.line")
+                MenuBarValueRow(title: AppStrings.tr(en: "Total written", zh: "累计写入"), value: networkViewModel.diskWriteTotal, icon: "arrow.up.to.line")
                 if !networkViewModel.powerSubtitle.isEmpty {
                     Text(networkViewModel.powerSubtitle)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textMuted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -381,47 +380,44 @@ struct MenuBarDashboardView: View {
     }
 
     private var diskCapacityRow: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(alignment: .firstTextBaseline) {
-                HStack(spacing: 4) {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                HStack(spacing: 8) {
                     Image(systemName: AppImages.diskCapacity)
-                        .foregroundStyle(.cyan)
-                        .font(.system(size: 10))
+                        .foregroundStyle(AeroPulseTheme.textMuted)
+                        .font(.system(size: 12, weight: .regular))
+                        .frame(width: 14, height: 14)
                     Text(AppStrings.diskCapacity)
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textSecondary)
                 }
                 Spacer()
                 Text("\(AppStrings.diskFree) \(networkViewModel.diskFreeCapacity)")
-                    .fontWeight(.medium)
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
                     .monospacedDigit()
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
                 if !networkViewModel.diskTotalCapacity.isEmpty && networkViewModel.diskTotalCapacity != "--" {
                     Text("/ \(networkViewModel.diskTotalCapacity)")
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
                         .monospacedDigit()
+                        .foregroundStyle(AeroPulseTheme.textMuted)
                 }
             }
-            .font(.system(size: 11))
 
             if let fraction = diskUsedFraction {
-                Capsule()
-                    .fill(Color.secondary.opacity(0.12))
-                    .frame(height: 4)
-                    .overlay(alignment: .leading) {
-                        GeometryReader { proxy in
-                            Capsule()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.teal, Color.cyan],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .frame(width: max(0, min(proxy.size.width, proxy.size.width * fraction)))
-                        }
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(AeroPulseTheme.textPrimary.opacity(0.08))
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(barFill(for: fraction))
+                            .frame(width: max(0, min(proxy.size.width, proxy.size.width * fraction)))
                     }
+                }
+                .frame(height: 4)
             }
         }
-        .padding(.top, 2)
+        .padding(.top, 4)
     }
 
     private var cpuFraction: Double? {
@@ -469,12 +465,14 @@ struct MenuBarDashboardView: View {
             Button {
                 DispatchQueue.main.async { openDashboardAndDismiss() }
             } label: {
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
                     Image(systemName: AppImages.window)
+                        .font(.system(size: 12, weight: .regular))
                         .accessibilityHidden(true)
                     Text(AppStrings.openSystemHub)
                     Spacer()
                     Image(systemName: "arrow.up.right")
+                        .font(.system(size: 11, weight: .regular))
                         .accessibilityHidden(true)
                 }
                 .font(.system(size: 12, weight: .medium))
@@ -482,6 +480,7 @@ struct MenuBarDashboardView: View {
                 .frame(maxWidth: .infinity, minHeight: 28)
             }
             .buttonStyle(.borderedProminent)
+            .tint(AeroPulseTheme.accentFill)
             .controlSize(.regular)
 
             Button {
@@ -489,13 +488,13 @@ struct MenuBarDashboardView: View {
             } label: {
                 ZStack(alignment: .topTrailing) {
                     Image(systemName: "gearshape")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 12, weight: .regular))
                         .frame(width: 24, height: 28)
                     if updaterViewModel.isUpdateAvailable {
                         Circle()
-                            .fill(Color.orange)
+                            .fill(AeroPulseTheme.accentInk)
                             .frame(width: 6, height: 6)
-                            .offset(x: 2, y: 5)
+                            .offset(x: 2, y: 4)
                     }
                 }
             }
@@ -507,42 +506,32 @@ struct MenuBarDashboardView: View {
                 DispatchQueue.main.async { refreshSnapshot() }
             } label: {
                 Image(systemName: AppImages.refresh)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 12, weight: .regular))
                     .frame(width: 24, height: 28)
             }
             .buttonStyle(.bordered)
             .controlSize(.regular)
             .help(AppStrings.launchAtLoginRefresh)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(12)
     }
 
     private var updateBanner: some View {
-        HStack(spacing: 10) {
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.blue, Color.cyan],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 28, height: 28)
-                Image(systemName: "arrow.triangle.2.circlepath")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.white)
-            }
+        HStack(spacing: 12) {
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.system(size: 14, weight: .regular))
+                .foregroundStyle(AeroPulseTheme.accentInk)
+                .frame(width: 16, height: 16)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(AppStrings.newVersionAvailable)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.primary)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
                 if let version = updaterViewModel.availableUpdateVersion {
                     Text(version)
-                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .monospacedDigit()
+                        .foregroundStyle(AeroPulseTheme.textMuted)
                 }
             }
 
@@ -552,21 +541,21 @@ struct MenuBarDashboardView: View {
                 updaterViewModel.checkForUpdates()
             } label: {
                 Text(AppStrings.updateNow)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 12, weight: .medium))
                     .padding(.horizontal, 4)
             }
             .buttonStyle(.borderedProminent)
+            .tint(AeroPulseTheme.accentFill)
             .controlSize(.small)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.blue.opacity(0.12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(Color.blue.opacity(0.28), lineWidth: 1)
-                )
+            RoundedRectangle(cornerRadius: AeroPulseTheme.cardRadius, style: .continuous)
+                .fill(AeroPulseTheme.cardSurface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AeroPulseTheme.cardRadius, style: .continuous)
+                .strokeBorder(AeroPulseTheme.accentInk.opacity(0.36), lineWidth: 1)
         )
     }
 
@@ -577,7 +566,7 @@ struct MenuBarDashboardView: View {
     private func updatePanelHeight() {
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
         let maxAvailable = (screen?.visibleFrame.height ?? 680) - 36
-        panelHeight = min(630, maxAvailable)
+        panelHeight = min(628, maxAvailable)
     }
 
     private func refreshSnapshot() {

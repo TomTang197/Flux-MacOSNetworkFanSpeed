@@ -11,6 +11,8 @@ struct FanControlCard: View {
     @ObservedObject var fanViewModel: FanViewModel
     var isDashboard: Bool = false
     @ObservedObject private var languageManager = LanguageManager.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.visualEffectsReduced) private var reduceVisualEffects
     @State private var isAddingRule = false
     @State private var newRuleTemp: Double = 65
     @State private var newRulePercentage: Int = 60
@@ -19,28 +21,37 @@ struct FanControlCard: View {
         fanViewModel.fans.sorted { $0.id < $1.id }
     }
 
+    private var panelAnimation: Animation? {
+        (reduceMotion || reduceVisualEffects) ? nil : AeroPulseTheme.motionPanel
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Image(systemName: AppImages.fan)
-                    .foregroundColor(.indigo)
-                    .font(.system(size: 12, weight: .semibold))
-                Text(isDashboard ? AppStrings.fanControl : AppStrings.fanControlUpper)
-                    .font(.system(size: isDashboard ? 14 : 9, weight: .semibold))
-                    .tracking(isDashboard ? 0 : 0.95)
-                    .foregroundColor(isDashboard ? .primary : .secondary)
+                if !isDashboard {
+                    Image(systemName: AppImages.fan)
+                        .foregroundStyle(AeroPulseTheme.textMuted)
+                        .font(.system(size: 13, weight: .regular))
+                        .frame(width: 16, height: 16)
+                }
+                Text(AppStrings.fanControl)
+                    .font(.system(size: isDashboard ? 15 : 13, weight: .medium))
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
+                    .frame(minHeight: isDashboard ? 24 : 20, alignment: .leading)
                 Spacer()
 
                 if !fanViewModel.helperInstalled {
-                    Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.warning)
                         .help(fanViewModel.helperStatusMessage)
                 }
             }
 
             if sortedFans.isEmpty {
                 Text(AppStrings.noData)
-                    .font(.system(size: isDashboard ? 12 : 11, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textMuted)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 8)
             } else {
@@ -48,7 +59,7 @@ struct FanControlCard: View {
                 Picker(AppStrings.tr(en: "Mode", zh: "模式"), selection: Binding(
                     get: { fanViewModel.currentMode },
                     set: { newMode in
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        withAnimation(panelAnimation) {
                             fanViewModel.setFanMode(newMode, isUserInitiated: true)
                         }
                     }
@@ -67,12 +78,10 @@ struct FanControlCard: View {
                     let secondFan = sortedFans.count > 1 ? sortedFans[1] : nil
                     let secondHistory = secondFan.flatMap { fanViewModel.fanRPMHistory[$0.id] }
                     MetricTrendChartView(
-                        title: sortedFans.count > 1 ? "\(firstFan.name)" : AppStrings.fanRPMTrend,
+                        title: sortedFans.count > 1 ? firstFan.name : AppStrings.fanRPMTrend,
                         points: history,
                         unit: AppStrings.rpmUnit,
-                        tintColor: .teal,
                         secondaryPoints: secondHistory,
-                        secondaryColor: .cyan,
                         secondaryTitle: secondFan?.name,
                         metricKey: "fan_rpm_\(firstFan.id)",
                         secondaryMetricKey: secondFan.map { "fan_rpm_\($0.id)" }
@@ -96,210 +105,180 @@ struct FanControlCard: View {
 
                 if sortedFans.count > 1 && fanViewModel.currentMode == .manual {
                     Toggle(AppStrings.syncAllFans, isOn: $fanViewModel.syncAllFans)
-                        .font(.system(size: isDashboard ? 11 : 10, weight: .medium))
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textSecondary)
                         .toggleStyle(.switch)
                         .controlSize(.mini)
                 }
 
                 // Custom Threshold-based Rules Editor
                 if fanViewModel.currentMode == .custom {
-                    Divider().opacity(0.3)
+                    Rectangle()
+                        .fill(AeroPulseTheme.hairline)
+                        .frame(height: 1)
                     rulesSection
                 }
 
                 // Game Mode Auto Linkage Section
-                Divider().opacity(0.3)
+                Rectangle()
+                    .fill(AeroPulseTheme.hairline)
+                    .frame(height: 1)
                 gameModeSection
 
                 // Scheduled Fan Mode Section
-                Divider().opacity(0.3)
+                Rectangle()
+                    .fill(AeroPulseTheme.hairline)
+                    .frame(height: 1)
                 scheduleSection
 
                 if !fanViewModel.helperInstalled {
-                    HStack(spacing: 6) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.orange)
-                            .font(.system(size: 10))
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(AeroPulseTheme.warning)
+                            .frame(width: 6, height: 6)
                         Text(fanViewModel.helperStatusMessage)
-                            .font(.system(size: isDashboard ? 11 : 10, weight: .medium))
-                            .foregroundColor(.orange)
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundStyle(AeroPulseTheme.warning)
                         Spacer()
                         Button(AppStrings.helperInstall) {
                             fanViewModel.installHelper()
                         }
                         .buttonStyle(.bordered)
-                        .controlSize(.mini)
+                        .controlSize(.small)
                     }
                     .padding(.top, 4)
                 }
             }
         }
-        .padding(isDashboard ? 4 : 13)
+        .padding(isDashboard ? 0 : 16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             if !isDashboard {
-                Color.clear.liquidGlassCard(
-                    cornerRadius: 12, tint: .indigo, style: .regular, shadowOpacity: 0.08
-                )
+                Color.clear.aeroPulseCard()
             }
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: fanViewModel.currentMode)
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: fanViewModel.modeSwitchTransitionRemainingSeconds != nil)
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: fanViewModel.isScheduleOverridden)
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: fanViewModel.isGameModeUserOverridden)
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: fanViewModel.gameModeCooldownRemainingSeconds != nil)
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: fanViewModel.ruleDownshiftRemainingSeconds != nil)
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: fanViewModel.isGameModeLinkageEnabled)
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: fanViewModel.fanScheduleConfig.isEnabled)
+        .animation(panelAnimation, value: fanViewModel.currentMode)
+        .animation(panelAnimation, value: fanViewModel.modeSwitchTransitionRemainingSeconds != nil)
+        .animation(panelAnimation, value: fanViewModel.isScheduleOverridden)
+        .animation(panelAnimation, value: fanViewModel.isGameModeUserOverridden)
+        .animation(panelAnimation, value: fanViewModel.gameModeCooldownRemainingSeconds != nil)
+        .animation(panelAnimation, value: fanViewModel.ruleDownshiftRemainingSeconds != nil)
+        .animation(panelAnimation, value: fanViewModel.isGameModeLinkageEnabled)
+        .animation(panelAnimation, value: fanViewModel.fanScheduleConfig.isEnabled)
     }
 
     @ViewBuilder
     private var ambientStatusBar: some View {
         if let remaining = fanViewModel.modeSwitchTransitionRemainingSeconds, let mode = fanViewModel.transitioningMode {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 ProgressView()
                     .controlSize(.mini)
-                    .scaleEffect(0.65)
                 Text(AppStrings.tr(
-                    en: "Applying \(mode.localizedTitle) · Fan speed ramping (\(remaining)s)",
-                    zh: "正在应用「\(mode.localizedTitle)」· 风扇响应中（\(remaining)s）"
+                    en: "Applying \(mode.localizedTitle) · Ramping (\(remaining)s)",
+                    zh: "正在应用「\(mode.localizedTitle)」· 响应过渡中（\(remaining)s）"
                 ))
-                .font(.system(size: isDashboard ? 11.5 : 10, weight: .medium))
+                .font(.system(size: 12, weight: .regular))
+                .monospacedDigit()
+                .foregroundStyle(AeroPulseTheme.textPrimary)
                 Spacer()
             }
-            .foregroundStyle(.blue)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .background(Color.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .strokeBorder(Color.blue.opacity(0.18), lineWidth: 0.5)
-            }
-            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .aeroPulseRaised(cornerRadius: AeroPulseTheme.controlRadius, highlighted: true)
+            .transition(.opacity)
         } else if fanViewModel.isGameModeActive && fanViewModel.isGameModeUserOverridden {
-            HStack(spacing: 6) {
-                Image(systemName: "hand.raised.fill")
-                    .font(.system(size: 9.5))
-                Text(AppStrings.tr(en: "Manual override active during Game Mode", zh: "游戏模式期间已手动接管"))
-                    .font(.system(size: isDashboard ? 11.5 : 10, weight: .medium))
-                Spacer()
-                Button(AppStrings.tr(en: "Resume", zh: "恢复联动")) {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                        fanViewModel.resumeGameModeLinkage()
-                    }
+            warningBanner(
+                text: AppStrings.tr(en: "Manual override active during Game Mode", zh: "游戏模式期间已手动接管"),
+                actionTitle: AppStrings.tr(en: "Resume", zh: "恢复联动")
+            ) {
+                withAnimation(panelAnimation) {
+                    fanViewModel.resumeGameModeLinkage()
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.mini)
             }
-            .foregroundStyle(.orange)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 4.5)
-            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .strokeBorder(Color.orange.opacity(0.2), lineWidth: 0.5)
-            }
-            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
         } else if fanViewModel.isScheduleOverridden {
-            HStack(spacing: 6) {
-                Image(systemName: "hand.raised.fill")
-                    .font(.system(size: 9.5))
-                Text(AppStrings.tr(en: "Schedule overridden · Resumes at next boundary", zh: "计划时段内已手动接管 · 下个计划点自动恢复"))
-                    .font(.system(size: isDashboard ? 11.5 : 10, weight: .medium))
-                Spacer()
-                Button(AppStrings.tr(en: "Resume", zh: "恢复计划")) {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                        fanViewModel.resetScheduleOverride()
-                    }
+            warningBanner(
+                text: AppStrings.tr(en: "Schedule overridden · Resumes at next boundary", zh: "计划时段已手动接管 · 下个节点恢复"),
+                actionTitle: AppStrings.tr(en: "Resume", zh: "恢复计划")
+            ) {
+                withAnimation(panelAnimation) {
+                    fanViewModel.resetScheduleOverride()
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.mini)
             }
-            .foregroundStyle(.orange)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 4.5)
-            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .strokeBorder(Color.orange.opacity(0.2), lineWidth: 0.5)
-            }
-            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
         } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
-            HStack(spacing: 6) {
-                Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: 10, weight: .semibold))
-                Text(AppStrings.tr(en: "Game closed · Auto in \(remaining)s", zh: "游戏已退出 · \(remaining) 秒后恢复系统自动"))
-                    .font(.system(size: isDashboard ? 11.5 : 10, weight: .medium))
-                Spacer()
-            }
-            .foregroundStyle(.orange)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .strokeBorder(Color.orange.opacity(0.18), lineWidth: 0.5)
-            }
-            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+            warningBanner(
+                text: AppStrings.tr(en: "Game closed · Auto in \(remaining)s", zh: "游戏已退出 · \(remaining) 秒后恢复自动")
+            )
         } else if fanViewModel.currentMode == .custom, let remaining = fanViewModel.ruleDownshiftRemainingSeconds {
             let current = fanViewModel.activeRule?.speedPercentage ?? 0
             let pending = fanViewModel.pendingRuleDownshiftSpeedPercentage ?? 0
-            let pendingStr = pending == 0 ? AppStrings.tr(en: "hardware minimum speed", zh: "硬件最低转速") : "\(pending)%"
-            HStack(spacing: 6) {
-                Image(systemName: "hourglass")
-                    .font(.system(size: 10, weight: .semibold))
-                Text(AppStrings.tr(
-                    en: "Downshift holding current speed · \(pendingStr) in \(remaining)s",
-                    zh: "降速缓冲生效中：维持 \(current)% · \(remaining) 秒后切至 \(pendingStr)"
-                ))
-                .font(.system(size: isDashboard ? 11.5 : 10, weight: .medium))
-                Spacer()
-            }
-            .foregroundStyle(.orange)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .strokeBorder(Color.orange.opacity(0.18), lineWidth: 0.5)
-            }
-            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+            let pendingStr = pending == 0 ? AppStrings.tr(en: "hardware minimum", zh: "硬件最低转速") : "\(pending)%"
+            warningBanner(
+                text: AppStrings.tr(
+                    en: "Holding \(current)% · \(pendingStr) in \(remaining)s",
+                    zh: "降速缓冲中：维持 \(current)% · \(remaining) 秒后切至 \(pendingStr)"
+                )
+            )
         } else if isDashboard {
-            HStack(spacing: 5) {
-                Text(quietModeSummary)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary.opacity(0.85))
-                Spacer()
-            }
-            .padding(.horizontal, 2)
-            .padding(.top, 1)
+            Text(quietModeSummary)
+                .font(.system(size: 12, weight: .regular))
+                .foregroundStyle(AeroPulseTheme.textMuted)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private func warningBanner(text: String, actionTitle: String? = nil, action: (() -> Void)? = nil) -> some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(AeroPulseTheme.warning)
+                .frame(width: 6, height: 6)
+            Text(text)
+                .font(.system(size: 12, weight: .regular))
+                .monospacedDigit()
+                .foregroundStyle(AeroPulseTheme.textPrimary)
+            Spacer()
+            if let actionTitle, let action {
+                Button(actionTitle, action: action)
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: AeroPulseTheme.controlRadius, style: .continuous)
+                .fill(AeroPulseTheme.raisedSurface)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: AeroPulseTheme.controlRadius, style: .continuous)
+                .strokeBorder(AeroPulseTheme.warning.opacity(0.32), lineWidth: 1)
+        }
+        .transition(.opacity)
     }
 
     private var quietModeSummary: String {
         switch fanViewModel.currentMode {
         case .auto:
-            return AppStrings.tr(en: "macOS automatically manages fan speed based on thermal sensors.", zh: "macOS 系统根据各传感器温度自动调节风扇转速。")
+            return AppStrings.tr(en: "macOS manages fan speed based on thermal sensors", zh: "macOS 根据各传感器温度自动调节风扇转速")
         case .fullBlast:
-            return AppStrings.tr(en: "All fans forced to maximum RPM for peak cooling.", zh: "所有风扇强制以最大转速运转，全力散热。")
+            return AppStrings.tr(en: "All fans running at maximum RPM", zh: "所有风扇以最大转速运转")
         case .manual:
-            return AppStrings.tr(en: "Fixed target RPM per fan.", zh: "由下方滑块为各风扇指定固定目标转速。")
+            return AppStrings.tr(en: "Fixed target RPM per fan", zh: "为各风扇指定固定目标转速")
         case .custom:
-            return AppStrings.tr(en: "Dynamic curves based on control temperature (\(fanViewModel.controlAverageTemp)).", zh: "依据硬件温度动态调速（控制基准均温：\(fanViewModel.controlAverageTemp)）。")
+            return AppStrings.tr(en: "Dynamic curve tracking control temperature (\(fanViewModel.controlAverageTemp))", zh: "依据控制基准均温动态调速（\(fanViewModel.controlAverageTemp)）")
         }
     }
 
     private var rulesSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(isDashboard ? AppStrings.temperatureRules : AppStrings.temperatureRulesUpper)
-                    .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold))
-                    .foregroundColor(.secondary)
-                    .tracking(0.6)
+            HStack(alignment: .firstTextBaseline) {
+                Text(AppStrings.temperatureRules)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
                 Spacer()
-                Text("\(AppStrings.tr(en: "Control Avg", zh: "控制均温")): \(fanViewModel.controlAverageTemp)")
-                    .font(.system(size: isDashboard ? 11 : 9.5, weight: .bold, design: .monospaced))
-                    .foregroundColor(.orange)
+                Text("\(AppStrings.tr(en: "Control", zh: "控制均温")) \(fanViewModel.controlAverageTemp)")
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(AeroPulseTheme.textSecondary)
             }
 
             HStack(spacing: 8) {
@@ -312,7 +291,8 @@ struct FanControlCard: View {
                 )
                 .toggleStyle(.switch)
                 .controlSize(.mini)
-                .font(.system(size: isDashboard ? 11 : 9.5, weight: .semibold))
+                .font(.system(size: 12, weight: .regular))
+                .foregroundStyle(AeroPulseTheme.textSecondary)
 
                 Spacer()
 
@@ -326,17 +306,19 @@ struct FanControlCard: View {
                         step: 1
                     ) {
                         Text("\(fanViewModel.ruleDownshiftDelaySeconds)s")
-                            .font(.system(size: isDashboard ? 11 : 9.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .monospacedDigit()
+                            .foregroundStyle(AeroPulseTheme.textPrimary)
                             .frame(minWidth: 28, alignment: .trailing)
                     }
                     .controlSize(.mini)
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.035)))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .aeroPulseRaised(cornerRadius: AeroPulseTheme.controlRadius)
 
-            VStack(spacing: 6) {
+            VStack(spacing: 8) {
                 ForEach(fanViewModel.rules) { rule in
                     let isPending = fanViewModel.ruleDownshiftRemainingSeconds != nil &&
                         fanViewModel.pendingRuleDownshiftSpeedPercentage == rule.speedPercentage
@@ -358,29 +340,33 @@ struct FanControlCard: View {
 
             if isAddingRule {
                 VStack(spacing: 8) {
-                    HStack(spacing: 10) {
-                        Text("\(AppStrings.trigger): ≥ \(Int(newRuleTemp))°C")
-                            .font(.system(size: isDashboard ? 11 : 10, weight: .semibold))
-                            .frame(width: 90, alignment: .leading)
+                    HStack(spacing: 12) {
+                        Text("\(AppStrings.trigger) ≥ \(Int(newRuleTemp))°C")
+                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .monospacedDigit()
+                            .foregroundStyle(AeroPulseTheme.textPrimary)
+                            .frame(width: 96, alignment: .leading)
                         Slider(value: $newRuleTemp, in: 35...95, step: 1)
                             .controlSize(.mini)
                     }
-                    HStack(spacing: 10) {
-                        Text("\(AppStrings.speed): \(newRulePercentage)%")
-                            .font(.system(size: isDashboard ? 11 : 10, weight: .semibold))
-                            .frame(width: 90, alignment: .leading)
+                    HStack(spacing: 12) {
+                        Text("\(AppStrings.speed) \(newRulePercentage)%")
+                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .monospacedDigit()
+                            .foregroundStyle(AeroPulseTheme.textPrimary)
+                            .frame(width: 96, alignment: .leading)
                         Slider(value: Binding(
                             get: { Double(newRulePercentage) },
                             set: { newRulePercentage = Int($0) }
                         ), in: 10...100, step: 5)
                             .controlSize(.mini)
                     }
-                    HStack {
+                    HStack(spacing: 8) {
                         Button(AppStrings.cancel) {
                             isAddingRule = false
                         }
                         .buttonStyle(.bordered)
-                        .controlSize(.mini)
+                        .controlSize(.small)
 
                         Spacer()
 
@@ -389,21 +375,22 @@ struct FanControlCard: View {
                             isAddingRule = false
                         }
                         .buttonStyle(.borderedProminent)
-                        .controlSize(.mini)
+                        .tint(AeroPulseTheme.accentFill)
+                        .controlSize(.small)
                     }
                 }
-                .padding(8)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.06)))
+                .padding(12)
+                .aeroPulseRaised(cornerRadius: AeroPulseTheme.controlRadius)
             } else {
                 HStack(spacing: 8) {
                     Button {
                         isAddingRule = true
                     } label: {
-                        Label(AppStrings.addThreshold, systemImage: "plus.circle.fill")
-                            .font(.system(size: isDashboard ? 11 : 10, weight: .semibold))
+                        Label(AppStrings.addThreshold, systemImage: "plus")
+                            .font(.system(size: 12, weight: .medium))
                     }
                     .buttonStyle(.bordered)
-                    .controlSize(.mini)
+                    .controlSize(.small)
 
                     Spacer()
 
@@ -411,34 +398,36 @@ struct FanControlCard: View {
                         fanViewModel.resetDefaultRules()
                     }
                     .buttonStyle(.plain)
-                    .font(.system(size: isDashboard ? 11 : 9, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textMuted)
                 }
-                .padding(.top, 2)
+                .padding(.top, 4)
             }
         }
     }
 
     private var gameModeSection: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
                 Image(systemName: AppImages.gameController)
-                    .font(.system(size: isDashboard ? 11 : 10, weight: .bold))
-                    .foregroundColor(.purple)
-                Text(isDashboard ? AppStrings.gameModeLinkage : AppStrings.gameModeLinkage.uppercased())
-                    .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold))
-                    .foregroundColor(.secondary)
-                    .tracking(0.6)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textMuted)
+                    .frame(width: 16, height: 16)
+                Text(AppStrings.gameModeLinkage)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
                 Spacer()
 
                 if fanViewModel.isGameModeActive {
                     if fanViewModel.isGameModeUserOverridden {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 8) {
                             HStack(spacing: 4) {
-                                Circle().fill(Color.orange).frame(width: 5, height: 5)
+                                Circle()
+                                    .fill(AeroPulseTheme.warning)
+                                    .frame(width: 6, height: 6)
                                 Text(AppStrings.tr(en: "Overridden", zh: "已手动接管"))
-                                    .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.orange)
+                                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(AeroPulseTheme.warning)
                             }
                             Button(AppStrings.tr(en: "Resume", zh: "恢复联动")) {
                                 fanViewModel.resumeGameModeLinkage()
@@ -448,18 +437,23 @@ struct FanControlCard: View {
                         }
                     } else {
                         HStack(spacing: 4) {
-                            Circle().fill(Color.purple).frame(width: 5, height: 5)
+                            Circle()
+                                .fill(AeroPulseTheme.positive)
+                                .frame(width: 6, height: 6)
                             Text(AppStrings.tr(en: "Active · Rules", zh: "生效中 · 规则"))
-                                .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold, design: .monospaced))
-                                .foregroundColor(.purple)
+                                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                .foregroundStyle(AeroPulseTheme.textSecondary)
                         }
                     }
                 } else if let remaining = fanViewModel.gameModeCooldownRemainingSeconds {
                     HStack(spacing: 4) {
-                        Circle().fill(Color.orange).frame(width: 5, height: 5)
-                        Text(AppStrings.tr(en: "Cooldown \(remaining)s", zh: "冷却中 \(remaining)秒"))
-                            .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold, design: .monospaced))
-                            .foregroundColor(.orange)
+                        Circle()
+                            .fill(AeroPulseTheme.warning)
+                            .frame(width: 6, height: 6)
+                        Text(AppStrings.tr(en: "Cooldown \(remaining)s", zh: "冷却中 \(remaining)s"))
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .monospacedDigit()
+                            .foregroundStyle(AeroPulseTheme.warning)
                     }
                 }
             }
@@ -474,7 +468,8 @@ struct FanControlCard: View {
                 )
                 .toggleStyle(.switch)
                 .controlSize(.mini)
-                .font(.system(size: isDashboard ? 11 : 9.5, weight: .semibold))
+                .font(.system(size: 12, weight: .regular))
+                .foregroundStyle(AeroPulseTheme.textSecondary)
 
                 Spacer()
             }
@@ -482,8 +477,8 @@ struct FanControlCard: View {
             if fanViewModel.isGameModeLinkageEnabled {
                 HStack(spacing: 8) {
                     Text(AppStrings.gameModeExitDelay)
-                        .font(.system(size: isDashboard ? 11 : 9, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textSecondary)
 
                     Spacer()
 
@@ -496,14 +491,16 @@ struct FanControlCard: View {
                         step: 5
                     ) {
                         Text("\(fanViewModel.gameModeExitDelaySeconds)s")
-                            .font(.system(size: isDashboard ? 11 : 9.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .monospacedDigit()
+                            .foregroundStyle(AeroPulseTheme.textPrimary)
                             .frame(minWidth: 32, alignment: .trailing)
                     }
                     .controlSize(.mini)
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.035)))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .aeroPulseRaised(cornerRadius: AeroPulseTheme.controlRadius)
             }
         }
     }
@@ -551,25 +548,27 @@ struct FanControlCard: View {
     }
 
     private var scheduleSection: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
                 Image(systemName: AppImages.schedule)
-                    .font(.system(size: isDashboard ? 11 : 10, weight: .bold))
-                    .foregroundColor(.teal)
-                Text(isDashboard ? AppStrings.scheduleSectionTitle : AppStrings.scheduleSectionTitle.uppercased())
-                    .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold))
-                    .foregroundColor(.secondary)
-                    .tracking(0.6)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textMuted)
+                    .frame(width: 16, height: 16)
+                Text(AppStrings.scheduleSectionTitle)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
                 Spacer()
 
                 if fanViewModel.fanScheduleConfig.isEnabled {
                     if fanViewModel.isScheduleOverridden {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 8) {
                             HStack(spacing: 4) {
-                                Circle().fill(Color.orange).frame(width: 5, height: 5)
+                                Circle()
+                                    .fill(AeroPulseTheme.warning)
+                                    .frame(width: 6, height: 6)
                                 Text(AppStrings.scheduleOverriddenBadge)
-                                    .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.orange)
+                                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(AeroPulseTheme.warning)
                             }
                             Button(AppStrings.tr(en: "Resume", zh: "恢复计划")) {
                                 fanViewModel.resetScheduleOverride()
@@ -579,15 +578,18 @@ struct FanControlCard: View {
                         }
                     } else if fanViewModel.isScheduleActive {
                         HStack(spacing: 4) {
-                            Circle().fill(Color.teal).frame(width: 5, height: 5)
+                            Circle()
+                                .fill(AeroPulseTheme.positive)
+                                .frame(width: 6, height: 6)
                             Text("\(AppStrings.scheduleActiveBadge) · \(fanViewModel.fanScheduleConfig.scheduledMode.localizedTitle)")
-                                .font(.system(size: isDashboard ? 11 : 8.5, weight: .bold, design: .monospaced))
-                                .foregroundColor(.teal)
+                                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                .foregroundStyle(AeroPulseTheme.textSecondary)
                         }
                     } else {
-                        Text(String(format: "%02d:%02d-%02d:%02d", fanViewModel.fanScheduleConfig.startHour, fanViewModel.fanScheduleConfig.startMinute, fanViewModel.fanScheduleConfig.endHour, fanViewModel.fanScheduleConfig.endMinute))
-                            .font(.system(size: isDashboard ? 11 : 8.5, weight: .medium, design: .monospaced))
-                            .foregroundColor(.secondary)
+                        Text(String(format: "%02d:%02d–%02d:%02d", fanViewModel.fanScheduleConfig.startHour, fanViewModel.fanScheduleConfig.startMinute, fanViewModel.fanScheduleConfig.endHour, fanViewModel.fanScheduleConfig.endMinute))
+                            .font(.system(size: 11, weight: .regular, design: .monospaced))
+                            .monospacedDigit()
+                            .foregroundStyle(AeroPulseTheme.textMuted)
                     }
                 }
             }
@@ -599,7 +601,8 @@ struct FanControlCard: View {
                 )
                 .toggleStyle(.switch)
                 .controlSize(.mini)
-                .font(.system(size: isDashboard ? 11 : 9.5, weight: .semibold))
+                .font(.system(size: 12, weight: .regular))
+                .foregroundStyle(AeroPulseTheme.textSecondary)
 
                 Spacer()
             }
@@ -613,12 +616,12 @@ struct FanControlCard: View {
                 let durationMins = durationMinutes % 60
                 let durationString = durationMins == 0 ? "\(durationHours)h" : "\(durationHours)h \(durationMins)m"
 
-                VStack(spacing: 6) {
+                VStack(spacing: 8) {
                     HStack(spacing: 12) {
                         HStack(spacing: 4) {
                             Text(AppStrings.scheduleStartTime)
-                                .font(.system(size: isDashboard ? 11 : 9, weight: .medium))
-                                .foregroundColor(.secondary)
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundStyle(AeroPulseTheme.textSecondary)
                             DatePicker("", selection: startDateBinding, displayedComponents: .hourAndMinute)
                                 .labelsHidden()
                                 .datePickerStyle(.compact)
@@ -626,13 +629,13 @@ struct FanControlCard: View {
                         }
 
                         Image(systemName: "arrow.right")
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(.secondary.opacity(0.6))
+                            .font(.system(size: 10, weight: .regular))
+                            .foregroundStyle(AeroPulseTheme.textMuted)
 
                         HStack(spacing: 4) {
                             Text(AppStrings.scheduleEndTime)
-                                .font(.system(size: isDashboard ? 11 : 9, weight: .medium))
-                                .foregroundColor(.secondary)
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundStyle(AeroPulseTheme.textSecondary)
                             DatePicker("", selection: endDateBinding, displayedComponents: .hourAndMinute)
                                 .labelsHidden()
                                 .datePickerStyle(.compact)
@@ -641,33 +644,21 @@ struct FanControlCard: View {
 
                         Spacer()
 
-                        HStack(spacing: 4) {
-                            if isCrossMidnight {
-                                HStack(spacing: 2) {
-                                    Image(systemName: "moon.fill")
-                                        .font(.system(size: 8))
-                                    Text(AppStrings.crossMidnightTag)
-                                        .font(.system(size: isDashboard ? 10 : 8.5, weight: .semibold))
-                                }
-                                .foregroundColor(.indigo)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(Color.indigo.opacity(0.12), in: Capsule())
-                            }
-
-                            Text("(\(durationString))")
-                                .font(.system(size: isDashboard ? 10 : 8.5, weight: .medium, design: .monospaced))
-                                .foregroundColor(.secondary)
-                        }
+                        Text(isCrossMidnight ? "\(AppStrings.crossMidnightTag) · \(durationString)" : durationString)
+                            .font(.system(size: 11, weight: .regular, design: .monospaced))
+                            .monospacedDigit()
+                            .foregroundStyle(AeroPulseTheme.textMuted)
                     }
 
-                    Divider().opacity(0.2)
+                    Rectangle()
+                        .fill(AeroPulseTheme.hairline)
+                        .frame(height: 1)
 
                     HStack(spacing: 12) {
                         HStack(spacing: 4) {
                             Text(AppStrings.scheduledModeLabel)
-                                .font(.system(size: isDashboard ? 11 : 9, weight: .medium))
-                                .foregroundColor(.secondary)
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundStyle(AeroPulseTheme.textSecondary)
                             Picker("", selection: $fanViewModel.fanScheduleConfig.scheduledMode) {
                                 ForEach(ScheduledFanTarget.allCases) { target in
                                     Text(target.localizedTitle).tag(target)
@@ -682,8 +673,8 @@ struct FanControlCard: View {
 
                         HStack(spacing: 4) {
                             Text(AppStrings.defaultModeLabel)
-                                .font(.system(size: isDashboard ? 11 : 9, weight: .medium))
-                                .foregroundColor(.secondary)
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundStyle(AeroPulseTheme.textSecondary)
                             Picker("", selection: $fanViewModel.fanScheduleConfig.defaultMode) {
                                 ForEach(ScheduledFanTarget.allCases) { target in
                                     Text(target.localizedTitle).tag(target)
@@ -695,9 +686,8 @@ struct FanControlCard: View {
                         }
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-                .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.035)))
+                .padding(12)
+                .aeroPulseRaised(cornerRadius: AeroPulseTheme.controlRadius)
             }
         }
     }
@@ -720,51 +710,48 @@ private struct RuleRowView: View {
         guard let first = fans.first else { return "\(rule.speedPercentage)%" }
         let range = Double(first.maxRPM - first.minRPM)
         let rpm = first.minRPM + Int(range * Double(rule.speedPercentage) / 100.0)
-        return "\(rule.speedPercentage)% (\(rpm) RPM)"
+        return "\(rule.speedPercentage)% · \(rpm) RPM"
     }
 
     var body: some View {
-        VStack(spacing: 4) {
+        let statusColor: Color = isActive ? AeroPulseTheme.positive : (isPending ? AeroPulseTheme.warning : AeroPulseTheme.textMuted)
+
+        VStack(spacing: 8) {
             HStack(spacing: 8) {
-                // Active status badge
                 Circle()
-                    .fill(isActive ? Color.green : (isPending ? Color.orange : Color.clear))
+                    .fill(isActive || isPending ? statusColor : Color.clear)
                     .frame(width: 6, height: 6)
-                    .overlay(Circle().stroke(isActive ? Color.green : (isPending ? Color.orange : Color.secondary.opacity(0.3)), lineWidth: 1))
+                    .overlay {
+                        if !isActive && !isPending {
+                            Circle().strokeBorder(AeroPulseTheme.hairline, lineWidth: 1)
+                        }
+                    }
 
                 Text("≥ \(Int(rule.temperature))°C")
-                    .font(.system(size: 10.5, weight: .bold, design: .monospaced))
-                    .foregroundColor(isActive ? .green : (isPending ? .orange : .primary))
-                    .frame(minWidth: 50, alignment: .leading)
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
+                    .frame(minWidth: 52, alignment: .leading)
 
                 Image(systemName: "arrow.right")
-                    .font(.system(size: isDashboard ? 11 : 8, weight: .bold))
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 10, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textMuted)
 
                 Text(estimatedRPMText)
-                    .font(.system(size: isDashboard ? 11 : 10, weight: .semibold, design: .monospaced))
-                    .foregroundColor(isActive ? .green : (isPending ? .orange : .secondary))
+                    .font(.system(size: 12, weight: .regular, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(isActive ? AeroPulseTheme.textPrimary : AeroPulseTheme.textSecondary)
 
                 Spacer()
 
                 if isActive {
                     Text(AppStrings.active)
-                        .font(.system(size: 7.5, weight: .black))
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1.5)
-                        .background(Capsule().fill(Color.green.opacity(0.2)))
-                        .foregroundColor(.green)
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundStyle(AeroPulseTheme.positive)
                 } else if isPending {
-                    HStack(spacing: 2) {
-                        Image(systemName: "hourglass")
-                            .font(.system(size: 6.5))
-                        Text(AppStrings.tr(en: "PENDING", zh: "待生效"))
-                            .font(.system(size: 7.5, weight: .black))
-                    }
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1.5)
-                    .background(Capsule().fill(Color.orange.opacity(0.2)))
-                    .foregroundColor(.orange)
+                    Text(AppStrings.tr(en: "Pending", zh: "待生效"))
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundStyle(AeroPulseTheme.warning)
                 }
 
                 Button {
@@ -773,27 +760,31 @@ private struct RuleRowView: View {
                     isEditing.toggle()
                 } label: {
                     Image(systemName: isEditing ? "chevron.up" : "slider.horizontal.3")
-                        .font(.system(size: 9))
+                        .font(.system(size: 12, weight: .regular))
+                        .frame(width: 20, height: 20)
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(.secondary)
+                .foregroundStyle(AeroPulseTheme.textMuted)
 
                 Button {
                     onDelete()
                 } label: {
                     Image(systemName: "trash")
-                        .font(.system(size: 9))
+                        .font(.system(size: 12, weight: .regular))
+                        .frame(width: 20, height: 20)
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(.red.opacity(0.7))
+                .foregroundStyle(AeroPulseTheme.textMuted)
             }
 
             if isEditing {
-                VStack(spacing: 6) {
-                    HStack(spacing: 6) {
-                        Text("\(AppStrings.tr(en: "Temp", zh: "温度")): \(Int(temp))°C")
-                            .font(.system(size: isDashboard ? 11 : 9, weight: .semibold))
-                            .frame(width: 65, alignment: .leading)
+                VStack(spacing: 8) {
+                    HStack(spacing: 8) {
+                        Text("\(AppStrings.tr(en: "Temp", zh: "温度")) \(Int(temp))°C")
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .monospacedDigit()
+                            .foregroundStyle(AeroPulseTheme.textSecondary)
+                            .frame(width: 80, alignment: .leading)
                         Slider(value: $temp, in: 35...95, step: 1) { editing in
                             if !editing {
                                 onUpdate(FanThresholdRule(id: rule.id, temperature: temp, speedPercentage: percentage))
@@ -801,10 +792,12 @@ private struct RuleRowView: View {
                         }
                         .controlSize(.mini)
                     }
-                    HStack(spacing: 6) {
-                        Text("\(AppStrings.speed): \(percentage)%")
-                            .font(.system(size: isDashboard ? 11 : 9, weight: .semibold))
-                            .frame(width: 65, alignment: .leading)
+                    HStack(spacing: 8) {
+                        Text("\(AppStrings.speed) \(percentage)%")
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .monospacedDigit()
+                            .foregroundStyle(AeroPulseTheme.textSecondary)
+                            .frame(width: 80, alignment: .leading)
                         Slider(value: Binding(
                             get: { Double(percentage) },
                             set: { percentage = Int($0) }
@@ -819,15 +812,20 @@ private struct RuleRowView: View {
                 .padding(.top, 4)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 7)
-                .fill(isActive ? Color.green.opacity(0.08) : (isPending ? Color.orange.opacity(0.06) : Color.primary.opacity(0.035)))
+            RoundedRectangle(cornerRadius: AeroPulseTheme.controlRadius, style: .continuous)
+                .fill(isActive ? AeroPulseTheme.raisedSurface : AeroPulseTheme.cardSurface)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 7)
-                .stroke(isActive ? Color.green.opacity(0.3) : (isPending ? Color.orange.opacity(0.3) : Color.clear), lineWidth: 1)
+            RoundedRectangle(cornerRadius: AeroPulseTheme.controlRadius, style: .continuous)
+                .strokeBorder(
+                    isActive
+                        ? AeroPulseTheme.positive.opacity(0.36)
+                        : (isPending ? AeroPulseTheme.warning.opacity(0.32) : AeroPulseTheme.hairline),
+                    lineWidth: 1
+                )
         )
         .onAppear {
             temp = rule.temperature
@@ -843,6 +841,8 @@ private struct FanSpeedRowView: View {
     let targetRPM: Int
     let onTargetRPMChanged: (Int) -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.visualEffectsReduced) private var reduceVisualEffects
     @State private var localSliderValue: Double = 0
     @State private var isDragging: Bool = false
 
@@ -854,36 +854,47 @@ private struct FanSpeedRowView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
+        let isHighLoad = utilization > 0.85
+
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(fan.name)
-                    .font(.system(size: isDashboard ? 12 : 11, weight: .semibold))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 Spacer()
                 Text("\(fan.currentRPM) \(AppStrings.rpmUnit)")
-                    .font(.system(size: isDashboard ? 12.5 : 11, weight: .bold, design: .rounded))
+                    .font(.system(size: 15, weight: .medium, design: .monospaced))
                     .monospacedDigit()
-                    .foregroundStyle(utilization > 0.85 ? Color.orange : Color.primary)
+                    .foregroundStyle(isHighLoad ? AeroPulseTheme.warning : AeroPulseTheme.textPrimary)
                     .frame(minWidth: 96, alignment: .trailing)
             }
 
-            ProgressView(value: utilization)
-                .progressViewStyle(.linear)
-                .tint(utilization > 0.85 ? .orange : .indigo)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(AeroPulseTheme.textPrimary.opacity(0.08))
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(isHighLoad ? AeroPulseTheme.warning : AeroPulseTheme.accentFill)
+                        .frame(width: max(0, min(geo.size.width * CGFloat(utilization), geo.size.width)))
+                }
+            }
+            .frame(height: 4)
 
             HStack {
                 Text("\(fan.minRPM) \(AppStrings.min)")
                 Spacer()
                 if isManual {
-                    Text("\(AppStrings.target): \(Int(isDragging ? localSliderValue : Double(targetRPM))) \(AppStrings.rpmUnit)")
-                        .foregroundColor(.indigo)
+                    Text("\(AppStrings.target) \(Int(isDragging ? localSliderValue : Double(targetRPM))) \(AppStrings.rpmUnit)")
+                        .foregroundStyle(AeroPulseTheme.accentInk)
                 }
                 Spacer()
                 Text("\(fan.maxRPM) \(AppStrings.max)")
             }
-            .font(.system(size: isDashboard ? 11 : 9, weight: .semibold, design: .monospaced))
-            .foregroundColor(.secondary)
+            .font(.system(size: 11, weight: .regular, design: .monospaced))
+            .monospacedDigit()
+            .foregroundStyle(AeroPulseTheme.textMuted)
 
             if isManual {
                 Slider(
@@ -900,20 +911,25 @@ private struct FanSpeedRowView: View {
                     }
                 }
                 .controlSize(.small)
-                .padding(.top, 2)
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .tint(AeroPulseTheme.accentFill)
+                .transition(.opacity)
             }
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: isManual)
-        .padding(.horizontal, 11)
-        .padding(.vertical, 8)
+        .animation((reduceMotion || reduceVisualEffects) ? nil : AeroPulseTheme.motionPanel, value: isManual)
+        .padding(isDashboard ? 16 : 12)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.primary.opacity(0.045))
+            RoundedRectangle(
+                cornerRadius: isDashboard ? AeroPulseTheme.cardRadius : AeroPulseTheme.controlRadius,
+                style: .continuous
+            )
+            .fill(isDashboard ? AeroPulseTheme.cardSurface : AeroPulseTheme.raisedSurface)
         )
         .overlay {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
+            RoundedRectangle(
+                cornerRadius: isDashboard ? AeroPulseTheme.cardRadius : AeroPulseTheme.controlRadius,
+                style: .continuous
+            )
+            .strokeBorder(AeroPulseTheme.hairline, lineWidth: 1)
         }
         .onAppear {
             localSliderValue = Double(targetRPM > 0 ? targetRPM : fan.currentRPM)

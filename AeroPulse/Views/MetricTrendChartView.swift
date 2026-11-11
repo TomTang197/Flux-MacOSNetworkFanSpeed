@@ -32,14 +32,16 @@ struct MetricTrendChartView: View {
     let title: String
     let points: [MetricHistoryPoint]
     let unit: String
-    let tintColor: Color
+    var tintColor: Color = AeroPulseTheme.accentInk
     var secondaryPoints: [MetricHistoryPoint]? = nil
-    var secondaryColor: Color = .purple
+    var secondaryColor: Color = AeroPulseTheme.textMuted
     var secondaryTitle: String? = nil
     var metricKey: String? = nil
     var secondaryMetricKey: String? = nil
 
     @AppStorage("AeroPulse.SelectedTrendTimeRange") private var selectedRangeRaw: String = TrendTimeRange.fiveMinutes.rawValue
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.visualEffectsReduced) private var reduceVisualEffects
     @State private var hoverLocation: CGPoint? = nil
     @Namespace private var pillNamespace
 
@@ -131,33 +133,14 @@ struct MetricTrendChartView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 8) {
             headerRow
             subHeaderRow
             chartArea
-                .frame(height: 74)
+                .frame(height: 96)
         }
-        .padding(12)
-        .background {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(NSColor.controlBackgroundColor).opacity(0.65))
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.18),
-                            tintColor.opacity(0.12),
-                            Color.primary.opacity(0.06)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.8
-                )
-        }
-        .shadow(color: Color.black.opacity(0.04), radius: 3, x: 0, y: 1.5)
+        .padding(16)
+        .aeroPulseCard()
         .onAppear {
             if selectedRangeRaw == "1m" || selectedRangeRaw == "15m" {
                 selectedRangeRaw = TrendTimeRange.fiveMinutes.rawValue
@@ -167,15 +150,13 @@ struct MetricTrendChartView: View {
 
     private var headerRow: some View {
         ViewThatFits(in: .horizontal) {
-            // Priority 1: Spacious single-line layout
-            HStack(alignment: .center) {
+            HStack(alignment: .center, spacing: 12) {
                 legendGroup
                 Spacer(minLength: 8)
                 timeRangeSelector
             }
 
-            // Priority 2: Responsive two-line layout when width is constrained
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .center) {
                     legendGroup
                     Spacer(minLength: 4)
@@ -189,90 +170,80 @@ struct MetricTrendChartView: View {
     }
 
     private var legendGroup: some View {
-        HStack(spacing: 12) {
-            // Primary series legend & current value
-            HStack(spacing: 5) {
+        HStack(spacing: 16) {
+            // Lead series: Cobalt accent
+            HStack(spacing: 8) {
                 Circle()
-                    .fill(tintColor)
+                    .fill(AeroPulseTheme.accentInk)
                     .frame(width: 6, height: 6)
-                    .shadow(color: tintColor.opacity(0.45), radius: 2)
 
                 Text(title)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textSecondary)
 
                 if let latest = primaryFiltered.last?.value ?? points.last?.value {
                     Text(formatValue(latest))
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(tintColor)
+                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .monospacedDigit()
+                        .foregroundStyle(AeroPulseTheme.textPrimary)
                 }
             }
 
-            // Secondary series legend & current value
+            // Reference series: quiet neutral step
             if let secLatest = secondaryFiltered.last?.value ?? secondaryPoints?.last?.value,
                let secTitle = secondaryTitle {
-                HStack(spacing: 5) {
+                HStack(spacing: 8) {
                     Circle()
-                        .fill(secondaryColor)
+                        .strokeBorder(AeroPulseTheme.textMuted, lineWidth: 1.5)
                         .frame(width: 6, height: 6)
-                        .shadow(color: secondaryColor.opacity(0.45), radius: 2)
 
                     Text(secTitle)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textMuted)
 
                     Text(formatValue(secLatest))
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(secondaryColor)
+                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .monospacedDigit()
+                        .foregroundStyle(AeroPulseTheme.textSecondary)
                 }
             }
         }
     }
 
     private var subHeaderRow: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 12) {
             if let minVal = statMinVal, let maxVal = statMaxVal {
                 if selectedRange.isLongTerm {
                     let avg = combinedValues.reduce(0, +) / Double(max(1, combinedValues.count))
-                    statBadge(icon: "equal", label: AppStrings.trendAvg, value: formatCompactValue(avg), color: .secondary)
-                    statBadge(icon: "arrow.down", label: AppStrings.trendMin, value: formatCompactValue(minVal), color: .blue)
-                    statBadge(icon: "arrow.up", label: AppStrings.trendMax, value: formatCompactValue(maxVal), color: .orange)
-                } else {
-                    statBadge(icon: "arrow.down", label: AppStrings.trendMin, value: formatCompactValue(minVal), color: .blue)
-                    statBadge(icon: "arrow.up", label: AppStrings.trendMax, value: formatCompactValue(maxVal), color: .orange)
+                    statItem(label: AppStrings.trendAvg, value: formatCompactValue(avg))
                 }
+                statItem(label: AppStrings.trendMin, value: formatCompactValue(minVal))
+                statItem(label: AppStrings.trendMax, value: formatCompactValue(maxVal))
             } else {
-                HStack(spacing: 4) {
-                    Image(systemName: "chart.xyaxis.line")
-                        .font(.system(size: 9))
-                    Text(AppStrings.tr(en: "Collecting telemetry…", zh: "等待遥测数据…"))
-                }
-                .foregroundStyle(.secondary.opacity(0.8))
+                Text(AppStrings.tr(en: "Collecting telemetry…", zh: "等待遥测数据…"))
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textMuted)
             }
 
             Spacer(minLength: 4)
 
             Text(selectedRange.localizedTitle)
-                .font(.system(size: 9, weight: .bold, design: .rounded))
-                .padding(.horizontal, 5)
-                .padding(.vertical, 1.5)
-                .background(Color.primary.opacity(0.05), in: Capsule())
-                .foregroundStyle(.secondary.opacity(0.8))
+                .font(.system(size: 11, weight: .regular, design: .monospaced))
+                .monospacedDigit()
+                .foregroundStyle(AeroPulseTheme.textMuted)
         }
     }
 
-    private func statBadge(icon: String, label: String, value: String, color: Color) -> some View {
-        HStack(spacing: 2.5) {
-            Image(systemName: icon)
-                .font(.system(size: 7.5, weight: .bold))
-                .foregroundStyle(color)
+    private func statItem(label: String, value: String) -> some View {
+        HStack(spacing: 4) {
+            Text(label)
+                .font(.system(size: 11, weight: .regular))
+                .foregroundStyle(AeroPulseTheme.textMuted)
             Text(value)
-                .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .monospacedDigit()
+                .foregroundStyle(AeroPulseTheme.textSecondary)
         }
-        .padding(.horizontal, 5)
-        .padding(.vertical, 1.5)
-        .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 4, style: .continuous))
     }
 
     private func formatValue(_ val: Double) -> String {
@@ -287,7 +258,7 @@ struct MetricTrendChartView: View {
         if unit == "°C" {
             return "\(Int(val))°C"
         } else {
-            return "\(Int(val))\(unit)"
+            return "\(Int(val)) \(unit)"
         }
     }
 
@@ -296,38 +267,38 @@ struct MetricTrendChartView: View {
             ForEach(TrendTimeRange.allCases) { range in
                 let isSelected = selectedRange == range
                 Button {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
+                    withAnimation(reduceMotion || reduceVisualEffects ? nil : AeroPulseTheme.motionFast) {
                         selectedRangeRaw = range.rawValue
                     }
                 } label: {
                     Text(range.localizedTitle)
-                        .font(.system(size: 9.5, weight: isSelected ? .bold : .medium, design: .rounded))
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
+                        .font(.system(size: 11, weight: isSelected ? .medium : .regular, design: .monospaced))
+                        .monospacedDigit()
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
                         .background {
                             if isSelected {
-                                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                    .fill(tintColor.opacity(0.18))
+                                RoundedRectangle(cornerRadius: AeroPulseTheme.innerRadius, style: .continuous)
+                                    .fill(AeroPulseTheme.raisedSurface)
                                     .overlay {
-                                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                            .strokeBorder(tintColor.opacity(0.35), lineWidth: 0.8)
+                                        RoundedRectangle(cornerRadius: AeroPulseTheme.innerRadius, style: .continuous)
+                                            .strokeBorder(AeroPulseTheme.hairline, lineWidth: 1)
                                     }
-                                    .shadow(color: tintColor.opacity(0.12), radius: 2, y: 1)
                                     .matchedGeometryEffect(id: "selectedRangePill", in: pillNamespace)
                             }
                         }
-                        .foregroundStyle(isSelected ? Color.primary : Color.secondary.opacity(0.85))
+                        .foregroundStyle(isSelected ? AeroPulseTheme.textPrimary : AeroPulseTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(2)
         .background {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(Color.primary.opacity(0.04))
+            RoundedRectangle(cornerRadius: AeroPulseTheme.controlRadius, style: .continuous)
+                .fill(AeroPulseTheme.deepestSurface)
                 .overlay {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
+                    RoundedRectangle(cornerRadius: AeroPulseTheme.controlRadius, style: .continuous)
+                        .strokeBorder(AeroPulseTheme.hairline, lineWidth: 1)
                 }
         }
     }
@@ -343,70 +314,71 @@ struct MetricTrendChartView: View {
         let availableHistory = max(0, currentNow.timeIntervalSince(oldestDate))
         let effectiveDuration = min(duration, max(60.0, availableHistory))
 
+        let leadColor = AeroPulseTheme.accentInk
+        let refColor = AeroPulseTheme.textMuted
+
         return ZStack {
             if primary.count > 1 || secondary.count > 1 {
                 Canvas { context, size in
                     let w = size.width
                     let h = size.height
 
-                    // Horizontal reference grid lines at 33% and 66%
-                    for frac in [0.33, 0.66] {
+                    // Quiet horizontal hairline grid at 25%, 50%, 75%
+                    for frac in [0.25, 0.50, 0.75] {
                         var gridPath = Path()
                         gridPath.move(to: CGPoint(x: 0, y: h * frac))
                         gridPath.addLine(to: CGPoint(x: w, y: h * frac))
                         context.stroke(
                             gridPath,
-                            with: .color(.secondary.opacity(0.10)),
-                            style: StrokeStyle(lineWidth: 0.5, dash: [3, 4])
+                            with: .color(AeroPulseTheme.hairline),
+                            style: StrokeStyle(lineWidth: 1)
                         )
                     }
 
-                    // Y-axis top & bottom scale values (subtle, right aligned)
+                    // Muted monospaced Y-axis bounds
                     let topLabel = Text(formatCompactValue(bounds.upper))
-                        .font(.system(size: 7.5, weight: .medium, design: .monospaced))
-                        .foregroundColor(.secondary.opacity(0.35))
-                    context.draw(topLabel, at: CGPoint(x: w - 2, y: 6), anchor: .topTrailing)
+                        .font(.system(size: 10, weight: .regular, design: .monospaced))
+                        .foregroundColor(AeroPulseTheme.textMuted)
+                    context.draw(topLabel, at: CGPoint(x: w - 4, y: 4), anchor: .topTrailing)
 
                     let btmLabel = Text(formatCompactValue(bounds.lower))
-                        .font(.system(size: 7.5, weight: .medium, design: .monospaced))
-                        .foregroundColor(.secondary.opacity(0.35))
-                    context.draw(btmLabel, at: CGPoint(x: w - 2, y: h - 6), anchor: .bottomTrailing)
+                        .font(.system(size: 10, weight: .regular, design: .monospaced))
+                        .foregroundColor(AeroPulseTheme.textMuted)
+                    context.draw(btmLabel, at: CGPoint(x: w - 4, y: h - 4), anchor: .bottomTrailing)
 
                     func computePoint(pt: ChartDataPoint) -> CGPoint {
                         let elapsed = max(0, min(effectiveDuration, currentNow.timeIntervalSince(pt.timestamp)))
                         let x = w * (1.0 - CGFloat(elapsed / effectiveDuration))
                         let normY = (pt.value - bounds.lower) / max(0.1, bounds.upper - bounds.lower)
-                        let y = max(2.0, min(h - 2.0, h * (1.0 - CGFloat(normY))))
+                        let y = max(4.0, min(h - 4.0, h * (1.0 - CGFloat(normY))))
                         return CGPoint(x: x, y: y)
                     }
 
-                    // Render secondary curve (e.g. GPU)
+                    // Secondary reference series: quiet neutral line, no area wash
                     if secondary.count > 1 {
                         let coords = secondary.map(computePoint)
                         renderSeries(
                             points: secondary,
                             coords: coords,
-                            color: secondaryColor,
+                            color: refColor,
                             in: context,
-                            width: w,
                             height: h,
                             bounds: bounds,
-                            fillAlpha: 0.12
+                            isLeadSeries: false
                         )
                     }
 
-                    // Render primary curve (e.g. CPU or Fan RPM)
+                    // Primary lead series: Cobalt accent + restrained single-hue fade
                     if primary.count > 1 {
                         let coords = primary.map(computePoint)
                         renderSeries(
                             points: primary,
                             coords: coords,
-                            color: tintColor,
+                            color: leadColor,
                             in: context,
-                            width: w,
                             height: h,
                             bounds: bounds,
-                            fillAlpha: 0.22
+                            isLeadSeries: true
                         )
                     }
 
@@ -430,39 +402,34 @@ struct MetricTrendChartView: View {
                                 closestSec.map { abs(computePoint(pt: $0).x - loc.x) } ?? .infinity
                             )
 
-                            // Only draw crosshair and tooltip if mouse is within 35px of actual data points
-                            if minDistance <= 35 {
-                                // Vertical indicator hairline
+                            if minDistance <= 36 {
                                 var vGuide = Path()
                                 vGuide.move(to: CGPoint(x: snapX, y: 0))
                                 vGuide.addLine(to: CGPoint(x: snapX, y: h))
                                 context.stroke(
                                     vGuide,
-                                    with: .color(.primary.opacity(0.38)),
-                                    style: StrokeStyle(lineWidth: 1.0, dash: [3, 3])
+                                    with: .color(AeroPulseTheme.textMuted.opacity(0.45)),
+                                    style: StrokeStyle(lineWidth: 1, dash: [3, 3])
                                 )
 
-                                // Secondary dot snap
                                 if let secPt = closestSec {
                                     let coord = computePoint(pt: secPt)
-                                    let rHalo: CGFloat = 5.5
-                                    let rCore: CGFloat = 3.2
-                                    context.fill(Path(ellipseIn: CGRect(x: coord.x - rHalo, y: coord.y - rHalo, width: rHalo * 2, height: rHalo * 2)), with: .color(secondaryColor.opacity(0.25)))
-                                    context.fill(Path(ellipseIn: CGRect(x: coord.x - rCore, y: coord.y - rCore, width: rCore * 2, height: rCore * 2)), with: .color(secondaryColor))
-                                    context.stroke(Path(ellipseIn: CGRect(x: coord.x - rCore, y: coord.y - rCore, width: rCore * 2, height: rCore * 2)), with: .color(.white), style: StrokeStyle(lineWidth: 1.2))
+                                    let rCore: CGFloat = 3
+                                    context.fill(
+                                        Path(ellipseIn: CGRect(x: coord.x - rCore, y: coord.y - rCore, width: rCore * 2, height: rCore * 2)),
+                                        with: .color(refColor)
+                                    )
                                 }
 
-                                // Primary dot snap
                                 if let priPt = closestPri {
                                     let coord = computePoint(pt: priPt)
-                                    let rHalo: CGFloat = 5.5
-                                    let rCore: CGFloat = 3.2
-                                    context.fill(Path(ellipseIn: CGRect(x: coord.x - rHalo, y: coord.y - rHalo, width: rHalo * 2, height: rHalo * 2)), with: .color(tintColor.opacity(0.25)))
-                                    context.fill(Path(ellipseIn: CGRect(x: coord.x - rCore, y: coord.y - rCore, width: rCore * 2, height: rCore * 2)), with: .color(tintColor))
-                                    context.stroke(Path(ellipseIn: CGRect(x: coord.x - rCore, y: coord.y - rCore, width: rCore * 2, height: rCore * 2)), with: .color(.white), style: StrokeStyle(lineWidth: 1.2))
+                                    let rCore: CGFloat = 3.5
+                                    context.fill(
+                                        Path(ellipseIn: CGRect(x: coord.x - rCore, y: coord.y - rCore, width: rCore * 2, height: rCore * 2)),
+                                        with: .color(leadColor)
+                                    )
                                 }
 
-                                // Floating HUD Tooltip
                                 let targetTime = closestPri?.timestamp ?? closestSec?.timestamp ?? currentNow
                                 let timeStr: String
                                 switch selectedRange {
@@ -477,25 +444,25 @@ struct MetricTrendChartView: View {
                                 var parts: [String] = [timeStr]
                                 if let pri = closestPri {
                                     if selectedRange.isLongTerm, let minV = pri.minValue, let maxV = pri.maxValue {
-                                        parts.append(unit == "°C" ? String(format: "%.0f°C (%.0f~%.0f)", pri.value, minV, maxV) : String(format: "%.0f %@ (%.0f~%.0f)", pri.value, unit, minV, maxV))
+                                        parts.append(unit == "°C" ? String(format: "%.0f°C (%.0f–%.0f)", pri.value, minV, maxV) : String(format: "%.0f %@ (%.0f–%.0f)", pri.value, unit, minV, maxV))
                                     } else {
                                         parts.append(formatValue(pri.value))
                                     }
                                 }
                                 if let sec = closestSec, let secTitle = secondaryTitle {
                                     if selectedRange.isLongTerm, let minV = sec.minValue, let maxV = sec.maxValue {
-                                        parts.append(unit == "°C" ? String(format: "%@: %.0f°C (%.0f~%.0f)", secTitle, sec.value, minV, maxV) : String(format: "%@: %.0f %@ (%.0f~%.0f)", secTitle, sec.value, unit, minV, maxV))
+                                        parts.append(unit == "°C" ? String(format: "%@ %.0f°C (%.0f–%.0f)", secTitle, sec.value, minV, maxV) : String(format: "%@ %.0f %@ (%.0f–%.0f)", secTitle, sec.value, unit, minV, maxV))
                                     } else {
-                                        parts.append(String(format: "%@: %@", secTitle, formatValue(sec.value)))
+                                        parts.append(String(format: "%@ %@", secTitle, formatValue(sec.value)))
                                     }
                                 }
                                 let tooltipString = parts.joined(separator: " · ")
 
-                                let badgeWidth: CGFloat = CGFloat(Double(tooltipString.count) * 6.2 + 20.0)
-                                let badgeHeight: CGFloat = 20
+                                let badgeWidth: CGFloat = CGFloat(Double(tooltipString.count) * 6.8 + 20.0)
+                                let badgeHeight: CGFloat = 24
                                 let badgeX = min(w - badgeWidth / 2 - 4, max(badgeWidth / 2 + 4, snapX))
                                 let priY = closestPri.map { computePoint(pt: $0).y } ?? (h * 0.5)
-                                let badgeY: CGFloat = priY < 32 ? min(h - 12, priY + 22) : 12
+                                let badgeY: CGFloat = priY < 36 ? min(h - 16, priY + 24) : 14
 
                                 let badgeRect = CGRect(
                                     x: badgeX - badgeWidth / 2,
@@ -504,18 +471,18 @@ struct MetricTrendChartView: View {
                                     height: badgeHeight
                                 )
                                 context.fill(
-                                    Path(roundedRect: badgeRect, cornerRadius: 5),
-                                    with: .color(Color(nsColor: .windowBackgroundColor).opacity(0.95))
+                                    Path(roundedRect: badgeRect, cornerRadius: AeroPulseTheme.innerRadius),
+                                    with: .color(AeroPulseTheme.raisedSurface)
                                 )
                                 context.stroke(
-                                    Path(roundedRect: badgeRect, cornerRadius: 5),
-                                    with: .color(.primary.opacity(0.18)),
-                                    style: StrokeStyle(lineWidth: 0.8)
+                                    Path(roundedRect: badgeRect, cornerRadius: AeroPulseTheme.innerRadius),
+                                    with: .color(AeroPulseTheme.hairline),
+                                    style: StrokeStyle(lineWidth: 1)
                                 )
 
                                 let resolvedText = Text(tooltipString)
-                                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.primary)
+                                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                    .foregroundColor(AeroPulseTheme.textPrimary)
                                 context.draw(resolvedText, at: CGPoint(x: badgeX, y: badgeY), anchor: .center)
                             }
                         }
@@ -524,11 +491,11 @@ struct MetricTrendChartView: View {
             } else {
                 HStack(spacing: 8) {
                     Image(systemName: "waveform.path.ecg")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(tintColor.opacity(0.7))
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textMuted)
                     Text(AppStrings.tr(en: "Collecting telemetry…", zh: "正在采集走势数据…"))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textSecondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -549,15 +516,13 @@ struct MetricTrendChartView: View {
         coords: [CGPoint],
         color: Color,
         in context: GraphicsContext,
-        width: CGFloat,
         height: CGFloat,
         bounds: (lower: Double, upper: Double),
-        fillAlpha: Double
+        isLeadSeries: Bool
     ) {
         guard let first = coords.first else { return }
 
-        // Render min-max range envelope band for long-term rollups
-        if selectedRange.isLongTerm, points.count == coords.count {
+        if selectedRange.isLongTerm, isLeadSeries, points.count == coords.count {
             var topCoords: [CGPoint] = []
             var btmCoords: [CGPoint] = []
 
@@ -565,9 +530,9 @@ struct MetricTrendChartView: View {
                 let x = coords[idx].x
                 if let maxV = pt.maxValue, let minV = pt.minValue {
                     let normMax = (maxV - bounds.lower) / max(0.1, bounds.upper - bounds.lower)
-                    let yTop = max(2.0, min(height - 2.0, height * (1.0 - CGFloat(normMax))))
+                    let yTop = max(4.0, min(height - 4.0, height * (1.0 - CGFloat(normMax))))
                     let normMin = (minV - bounds.lower) / max(0.1, bounds.upper - bounds.lower)
-                    let yBtm = max(2.0, min(height - 2.0, height * (1.0 - CGFloat(normMin))))
+                    let yBtm = max(4.0, min(height - 4.0, height * (1.0 - CGFloat(normMin))))
                     topCoords.append(CGPoint(x: x, y: yTop))
                     btmCoords.append(CGPoint(x: x, y: yBtm))
                 }
@@ -583,7 +548,7 @@ struct MetricTrendChartView: View {
                     bandPath.addLine(to: pt)
                 }
                 bandPath.closeSubpath()
-                context.fill(bandPath, with: .color(color.opacity(0.10)))
+                context.fill(bandPath, with: .color(color.opacity(0.08)))
             }
         }
 
@@ -593,36 +558,37 @@ struct MetricTrendChartView: View {
             linePath.addLine(to: pt)
         }
 
-        // Closed path for subtle gradient under-curve
-        var fillPath = linePath
-        if let last = coords.last {
+        if isLeadSeries, let last = coords.last {
+            var fillPath = linePath
             fillPath.addLine(to: CGPoint(x: last.x, y: height))
             fillPath.addLine(to: CGPoint(x: first.x, y: height))
             fillPath.closeSubpath()
-        }
 
-        context.fill(
-            fillPath,
-            with: .linearGradient(
-                Gradient(colors: [color.opacity(fillAlpha), color.opacity(0.01)]),
-                startPoint: CGPoint(x: 0, y: 0),
-                endPoint: CGPoint(x: 0, y: height)
+            context.fill(
+                fillPath,
+                with: .linearGradient(
+                    Gradient(colors: [color.opacity(0.14), color.opacity(0.0)]),
+                    startPoint: CGPoint(x: 0, y: 0),
+                    endPoint: CGPoint(x: 0, y: height)
+                )
             )
-        )
+        }
 
         context.stroke(
             linePath,
             with: .color(color),
-            style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round)
+            style: StrokeStyle(
+                lineWidth: isLeadSeries ? 1.75 : 1.25,
+                lineCap: .round,
+                lineJoin: .round,
+                dash: isLeadSeries ? [] : [4, 3]
+            )
         )
 
         if let last = coords.last {
-            let haloRect = CGRect(x: last.x - 4, y: last.y - 4, width: 8, height: 8)
-            context.fill(Path(ellipseIn: haloRect), with: .color(color.opacity(0.25)))
-
-            let dotRect = CGRect(x: last.x - 2.5, y: last.y - 2.5, width: 5, height: 5)
+            let radius: CGFloat = isLeadSeries ? 2.5 : 2.0
+            let dotRect = CGRect(x: last.x - radius, y: last.y - radius, width: radius * 2, height: radius * 2)
             context.fill(Path(ellipseIn: dotRect), with: .color(color))
-            context.stroke(Path(ellipseIn: dotRect), with: .color(.white), style: StrokeStyle(lineWidth: 0.8))
         }
     }
 }

@@ -184,8 +184,8 @@ struct MenuBarView: View {
         MetricRow(metric: metric, symbol: symbolForMetric(metric), value: valueForMetric(metric))
     }
 
-    private static let iconConfigGrouped = NSImage.SymbolConfiguration(pointSize: 10, weight: .bold)
-    private static let valueFontGrouped = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .bold)
+    private static let iconConfigGrouped = NSImage.SymbolConfiguration(pointSize: 10, weight: .medium)
+    private static let valueFontGrouped = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .medium)
     private static let textAttributesGrouped: [NSAttributedString.Key: Any] = {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .right
@@ -196,8 +196,8 @@ struct MenuBarView: View {
         ]
     }()
 
-    private static let iconConfigSingle = NSImage.SymbolConfiguration(pointSize: 16, weight: .bold)
-    private static let valueFontSingle = NSFont.monospacedDigitSystemFont(ofSize: 16, weight: .bold)
+    private static let iconConfigSingle = NSImage.SymbolConfiguration(pointSize: 15, weight: .medium)
+    private static let valueFontSingle = NSFont.monospacedDigitSystemFont(ofSize: 15, weight: .medium)
     private static let textAttributesSingle: [NSAttributedString.Key: Any] = {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .right

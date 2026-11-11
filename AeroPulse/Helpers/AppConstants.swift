@@ -81,22 +81,22 @@ struct AppStrings {
         )
     }
     static var privilegedHelper: String { tr(en: "Privileged Helper", zh: "特权辅助程序") }
-    static var helperInstalled: String { tr(en: "Helper installed and service registered.", zh: "辅助工具已安装，后台服务正常运行。") }
-    static var helperMissing: String { tr(en: "Helper not installed.", zh: "尚未安装特权辅助工具。") }
-    static var helperInstalling: String { tr(en: "Requesting administrator permission...", zh: "正在申请管理员权限...") }
-    static var helperInstallSuccess: String { tr(en: "Helper installed successfully.", zh: "特权辅助工具安装成功。") }
+    static var helperInstalled: String { tr(en: "Helper installed and service registered", zh: "辅助工具已安装，后台服务正常运行") }
+    static var helperMissing: String { tr(en: "Helper not installed", zh: "尚未安装特权辅助工具") }
+    static var helperInstalling: String { tr(en: "Requesting administrator permission…", zh: "正在申请管理员权限…") }
+    static var helperInstallSuccess: String { tr(en: "Helper installed", zh: "特权辅助工具安装成功") }
     static var helperInstallFailedPrefix: String { tr(en: "Helper install failed:", zh: "辅助工具安装失败：") }
     static var helperInstall: String { tr(en: "Install Helper", zh: "安装辅助工具") }
     static var helperReinstall: String { tr(en: "Reinstall", zh: "重新安装") }
 
     static var hardwareConnection: String { tr(en: "Hardware Bridge", zh: "硬件连接桥") }
-    static var hardwareConnected: String { tr(en: "SMC Connected", zh: "SMC 硬件连接正常") }
+    static var hardwareConnected: String { tr(en: "SMC Connected", zh: "SMC 连接正常") }
     static var hardwareDisconnected: String { tr(en: "SMC Disconnected", zh: "SMC 连接中断") }
-    static var retryConnection: String { tr(en: "Reconnect Bridge", zh: "重新连接桥接") }
-    static var unknownConnectionError: String { tr(en: "Unable to reach SMC service.", zh: "无法连接至 SMC 服务。") }
+    static var retryConnection: String { tr(en: "Reconnect Bridge", zh: "重新连接") }
+    static var unknownConnectionError: String { tr(en: "Unable to reach SMC service", zh: "无法连接至 SMC 服务") }
 
-    static var thermalSensors: String { tr(en: "Thermal Sensors", zh: "热力传感器") }
-    static var thermalSensorsUpperCase: String { tr(en: "THERMAL SENSORS", zh: "热力传感器") }
+    static var thermalSensors: String { tr(en: "Thermal sensors", zh: "热力传感器") }
+    static var thermalSensorsUpperCase: String { tr(en: "Thermal sensors", zh: "热力传感器") }
     static var sensorsDetected: String { tr(en: "sensors detected", zh: "个传感器已就绪") }
     static var viewThermalDetails: String { tr(en: "View thermal details", zh: "查看传感器详情") }
     static var cpu: String { "CPU" }
@@ -131,21 +131,21 @@ struct AppStrings {
     static var bugFeedbackContactPlaceholder: String { tr(en: "Email / Telegram / WeChat", zh: "邮箱 / 微信 / 其他联系方式") }
     static var bugFeedbackCancel: String { tr(en: "Cancel", zh: "取消") }
     static var bugFeedbackSend: String { tr(en: "Send by Mail", zh: "发送邮件") }
-    static var bugFeedbackOpenMailFailed: String { tr(en: "Unable to open Mail app.", zh: "无法调起系统邮件应用。") }
+    static var bugFeedbackOpenMailFailed: String { tr(en: "Unable to open Mail app", zh: "无法调起系统邮件应用") }
 
-    static var gameModeLinkage: String { tr(en: "Game Mode Linkage", zh: "游戏模式联动") }
+    static var gameModeLinkage: String { tr(en: "Game mode linkage", zh: "游戏模式联动") }
     static var gameModeLinkageDescription: String {
         tr(
             en: "Auto-switch to Rules mode in Game Mode; revert to Auto after exit delay",
             zh: "进入游戏模式自动切换为温控规则；退出后延迟恢复自动模式"
         )
     }
-    static var gameModeExitDelay: String { tr(en: "Exit Delay", zh: "退出恢复延迟") }
-    static var gameModeActiveStatus: String { tr(en: "Game Mode Active · Rules mode", zh: "游戏模式生效中 · 温控规则模式") }
-    static var gameModeCooldownStatusPrefix: String { tr(en: "Game Mode Exited · Reverting to Auto in", zh: "游戏模式已退出 · 将在") }
+    static var gameModeExitDelay: String { tr(en: "Exit delay", zh: "退出恢复延迟") }
+    static var gameModeActiveStatus: String { tr(en: "Game Mode active · Rules mode", zh: "游戏模式生效中 · 温控规则模式") }
+    static var gameModeCooldownStatusPrefix: String { tr(en: "Game Mode exited · Reverting to Auto in", zh: "游戏模式已退出 · 将在") }
     static var gameModeIdleStatus: String { tr(en: "No active game detected", zh: "未检测到运行中的游戏") }
-    static var fanControl: String { tr(en: "Fan Control", zh: "风扇控制") }
-    static var fanControlUpper: String { tr(en: "FAN CONTROL", zh: "风扇控制") }
+    static var fanControl: String { tr(en: "Fan control", zh: "风扇控制") }
+    static var fanControlUpper: String { tr(en: "Fan control", zh: "风扇控制") }
 
     static var settings: String { tr(en: "Settings", zh: "设置") }
     static var settingsHelp: String { tr(en: "App preferences and hardware setup", zh: "偏好设置与硬件配置") }
@@ -161,79 +161,79 @@ struct AppStrings {
     static var power: String { tr(en: "Power", zh: "功耗") }
     static var battery: String { tr(en: "Battery", zh: "电池") }
 
-    static var fanMode: String { tr(en: "Fan Mode", zh: "风扇模式") }
-    static var fanModeUpper: String { tr(en: "FAN MODE", zh: "风扇模式") }
-    static var syncAllFans: String { tr(en: "Sync All Fans", zh: "同步所有风扇") }
+    static var fanMode: String { tr(en: "Fan mode", zh: "风扇模式") }
+    static var fanModeUpper: String { tr(en: "Fan mode", zh: "风扇模式") }
+    static var syncAllFans: String { tr(en: "Sync all fans", zh: "同步所有风扇") }
     static var temperatureRules: String { tr(en: "Temperature rules", zh: "温控规则") }
-    static var temperatureRulesUpper: String { tr(en: "TEMPERATURE THRESHOLD RULES", zh: "温控阈值规则") }
-    static var delayDownshift: String { tr(en: "Delay Downshift", zh: "降速平滑延迟") }
-    static var rulesActiveHardwareMin: String { tr(en: "Rules Active · Hardware minimum speed", zh: "规则生效中 · 硬件最低转速") }
-    static var addThreshold: String { tr(en: "Add Threshold", zh: "添加阈值") }
-    static var resetDefaults: String { tr(en: "Reset Defaults", zh: "恢复默认") }
-    static var saveRule: String { tr(en: "Save Rule", zh: "保存规则") }
+    static var temperatureRulesUpper: String { tr(en: "Temperature rules", zh: "温控规则") }
+    static var delayDownshift: String { tr(en: "Delay downshift", zh: "降速平滑延迟") }
+    static var rulesActiveHardwareMin: String { tr(en: "Rules active · Hardware minimum speed", zh: "规则生效中 · 硬件最低转速") }
+    static var addThreshold: String { tr(en: "Add threshold", zh: "添加阈值") }
+    static var resetDefaults: String { tr(en: "Reset defaults", zh: "恢复默认") }
+    static var saveRule: String { tr(en: "Save rule", zh: "保存规则") }
     static var cancel: String { tr(en: "Cancel", zh: "取消") }
-    static var active: String { tr(en: "ACTIVE", zh: "生效") }
+    static var active: String { tr(en: "Active", zh: "生效") }
     static var speed: String { tr(en: "Speed", zh: "转速") }
     static var trigger: String { tr(en: "Trigger", zh: "触发") }
-    static var min: String { tr(en: "MIN", zh: "最小") }
-    static var max: String { tr(en: "MAX", zh: "最大") }
-    static var target: String { tr(en: "TARGET", zh: "目标") }
-    static var autoRulesInGameMode: String { tr(en: "Auto Rules in Game Mode", zh: "游戏模式下自动启用规则") }
+    static var min: String { tr(en: "Min", zh: "最小") }
+    static var max: String { tr(en: "Max", zh: "最大") }
+    static var target: String { tr(en: "Target", zh: "目标") }
+    static var autoRulesInGameMode: String { tr(en: "Auto rules in Game Mode", zh: "游戏模式下自动启用规则") }
     static var all: String { tr(en: "All", zh: "全部") }
 
-    static var softwareUpdate: String { tr(en: "Software Update", zh: "软件更新") }
-    static var checkForUpdates: String { tr(en: "Check for Updates…", zh: "检查更新…") }
+    static var softwareUpdate: String { tr(en: "Software update", zh: "软件更新") }
+    static var checkForUpdates: String { tr(en: "Check for updates…", zh: "检查更新…") }
     static var autoCheckForUpdates: String { tr(en: "Automatically check for updates", zh: "自动检查更新") }
-    static var currentVersionPrefix: String { tr(en: "Current Version: ", zh: "当前版本：") }
-    static var newVersionAvailable: String { tr(en: "New Version Available", zh: "发现新版本") }
-    static var updateNow: String { tr(en: "Update Now", zh: "立即更新") }
+    static var currentVersionPrefix: String { tr(en: "Current version", zh: "当前版本") }
+    static var newVersionAvailable: String { tr(en: "Update available", zh: "发现新版本") }
+    static var updateNow: String { tr(en: "Update now", zh: "立即更新") }
     static var showUpdateInMenuBar: String { tr(en: "Show update icon in status bar", zh: "在状态栏显示更新图标") }
-    static var simulateUpdateButton: String { tr(en: "🧪 Simulate Update Found (UI Test)", zh: "🧪 模拟检测到更新 (测试UI)") }
-    static var resetSimulatedUpdateButton: String { tr(en: "Exit Simulation (Reset State)", zh: "退出模拟测试 (重置状态)") }
+    static var simulateUpdateButton: String { tr(en: "Simulate update found (UI test)", zh: "模拟检测到更新（测试 UI）") }
+    static var resetSimulatedUpdateButton: String { tr(en: "Exit simulation", zh: "退出模拟测试") }
 
     static var trendMin: String { tr(en: "Min", zh: "最低") }
     static var trendAvg: String { tr(en: "Avg", zh: "均值") }
     static var trendMax: String { tr(en: "Max", zh: "最高") }
-    static var temperatureTrend: String { tr(en: "Temperature Trend", zh: "温度走势") }
-    static var fanRPMTrend: String { tr(en: "Fan Speed Trend", zh: "风扇转速走势") }
+    static var temperatureTrend: String { tr(en: "Temperature trend", zh: "温度走势") }
+    static var fanRPMTrend: String { tr(en: "Fan speed trend", zh: "风扇转速走势") }
 
-    static var scheduleSectionTitle: String { tr(en: "Mode Schedule", zh: "模式定时计划") }
-    static var scheduleDesc: String { tr(en: "Automatically switch fan modes on a daily schedule.", zh: "在每日设定时段自动切换风扇模式。") }
+    static var scheduleSectionTitle: String { tr(en: "Mode schedule", zh: "模式定时计划") }
+    static var scheduleDesc: String { tr(en: "Switch fan modes on a daily schedule", zh: "在每日设定时段自动切换风扇模式") }
     static var scheduleStartTime: String { tr(en: "Start", zh: "开始时间") }
     static var scheduleEndTime: String { tr(en: "End", zh: "结束时间") }
-    static var scheduledModeLabel: String { tr(en: "In-Schedule Mode", zh: "时段内模式") }
-    static var defaultModeLabel: String { tr(en: "Out-of-Schedule Mode", zh: "时段外模式") }
-    static var scheduleActiveBadge: String { tr(en: "Scheduled Active", zh: "计划生效中") }
-    static var scheduleOverriddenBadge: String { tr(en: "Temporary Override", zh: "已临时手动接管") }
+    static var scheduledModeLabel: String { tr(en: "In-schedule", zh: "时段内模式") }
+    static var defaultModeLabel: String { tr(en: "Out-of-schedule", zh: "时段外模式") }
+    static var scheduleActiveBadge: String { tr(en: "Scheduled", zh: "计划生效中") }
+    static var scheduleOverriddenBadge: String { tr(en: "Overridden", zh: "已手动接管") }
     static var crossMidnightTag: String { tr(en: "Overnight", zh: "跨午夜") }
 }
 
 struct AppImages {
-    static let rocket = "rocket.fill"
-    static let download = "arrow.down.circle.fill"
-    static let upload = "arrow.up.circle.fill"
+    static let rocket = "gauge.with.needle"
+    static let download = "arrow.down"
+    static let upload = "arrow.up"
     static let diskRead = "internaldrive"
-    static let diskWrite = "internaldrive.fill"
-    static let diskCapacity = "chart.pie.fill"
+    static let diskWrite = "internaldrive"
+    static let diskCapacity = "chart.pie"
     static let cpuUsage = "cpu"
-    static let powerUsage = "bolt.fill"
+    static let powerUsage = "bolt"
     static let chargingPower = "battery.100.bolt"
-    static let gpuUsage = "circle.grid.2x2"
-    static let memory = "memorychip.fill"
-    static let fan = "fanblades.fill"
+    static let gpuUsage = "square.grid.2x2"
+    static let memory = "memorychip"
+    static let fan = "fan"
     static let temperature = "thermometer.medium"
     static let gauge = "gauge.with.needle"
     static let checklist = "checklist"
-    static let launchAtLogin = "person.badge.key.fill"
-    static let helper = "lock.shield.fill"
+    static let launchAtLogin = "person.badge.key"
+    static let helper = "lock.shield"
     static let refresh = "arrow.clockwise"
-    static let visualEffects = "sparkles"
+    static let visualEffects = "square.2.layers.3d"
     static let cpu = "cpu"
-    static let power = "power.circle.fill"
+    static let power = "power"
     static let window = "macwindow"
-    static let info = "info.circle.fill"
-    static let close = "xmark.circle.fill"
-    static let bug = "exclamationmark.bubble.fill"
-    static let gameController = "gamecontroller.fill"
-    static let schedule = "clock.badge.checkmark"
+    static let info = "info.circle"
+    static let close = "xmark"
+    static let bug = "exclamationmark.bubble"
+    static let gameController = "gamecontroller"
+    static let schedule = "clock"
 }

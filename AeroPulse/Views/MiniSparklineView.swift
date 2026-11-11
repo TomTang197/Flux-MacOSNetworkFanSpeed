@@ -2,16 +2,15 @@ import SwiftUI
 
 struct MiniSparklineView: View {
     let points: [MetricHistoryPoint]
-    let tintColor: Color
-    var width: CGFloat = 42
-    var height: CGFloat = 14
+    var tintColor: Color = AeroPulseTheme.accentInk
+    var width: CGFloat = 44
+    var height: CGFloat = 16
 
     var body: some View {
         Canvas { context, size in
             let w = size.width
             let h = size.height
 
-            // Take the most recent 30 samples (~1 minute) for Menu Bar sparkline
             let recentPoints = points.suffix(30)
             guard recentPoints.count > 1 else { return }
 
@@ -22,7 +21,6 @@ struct MiniSparklineView: View {
             let upper = maxVal + span * 0.1
 
             var linePath = Path()
-            var lastPoint: CGPoint? = nil
             let count = recentPoints.count
 
             for (idx, pt) in recentPoints.enumerated() {
@@ -36,19 +34,13 @@ struct MiniSparklineView: View {
                 } else {
                     linePath.addLine(to: cgPt)
                 }
-                lastPoint = cgPt
             }
 
             context.stroke(
                 linePath,
-                with: .color(tintColor.opacity(0.85)),
-                style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round)
+                with: .color(tintColor),
+                style: StrokeStyle(lineWidth: 1.25, lineCap: .round, lineJoin: .round)
             )
-
-            if let last = lastPoint {
-                let dotRect = CGRect(x: last.x - 1.5, y: last.y - 1.5, width: 3, height: 3)
-                context.fill(Path(ellipseIn: dotRect), with: .color(tintColor))
-            }
         }
         .frame(width: width, height: height)
         .transaction { $0.animation = nil }

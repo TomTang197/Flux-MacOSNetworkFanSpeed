@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Content surfaces stay lightweight; the menu bar window supplies the glass.
+/// Quiet Graphite card surface for menu bar popover sections.
 struct MenuBarSection<Content: View>: View {
     @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -8,31 +8,21 @@ struct MenuBarSection<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 8) {
             content
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(reduceTransparency || reduceVisualEffects ? 1 : 0.50))
+            RoundedRectangle(cornerRadius: AeroPulseTheme.cardRadius, style: .continuous)
+                .fill(AeroPulseTheme.cardSurface.opacity(reduceTransparency || reduceVisualEffects ? 1.0 : 0.92))
         }
         .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: AeroPulseTheme.cardRadius, style: .continuous)
                 .strokeBorder(
                     contrast == .increased
-                        ? AnyShapeStyle(Color.primary.opacity(0.4))
-                        : AnyShapeStyle(
-                            LinearGradient(
-                                colors: [
-                                    Color.white.opacity(0.15),
-                                    Color.primary.opacity(0.05)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        ),
+                        ? AeroPulseTheme.textPrimary.opacity(0.32)
+                        : AeroPulseTheme.hairline,
                     lineWidth: 1
                 )
                 .allowsHitTesting(false)
@@ -50,27 +40,26 @@ struct MenuBarSectionHeading: View {
 
     var body: some View {
         Button {
-            withAnimation(reduceMotion || reduceVisualEffects ? nil : .spring(response: 0.32, dampingFraction: 0.82)) {
+            withAnimation(reduceMotion || reduceVisualEffects ? nil : AeroPulseTheme.motionPanel) {
                 isExpanded.toggle()
             }
         } label: {
-            HStack {
+            HStack(spacing: 8) {
                 Text(title)
-                    .font(.system(size: 12, weight: .semibold))
-                    .tracking(0.1)
-                    .foregroundStyle(.primary)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: 10, weight: .medium))
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                    .foregroundStyle(isHovered ? .primary : .secondary)
-                    .frame(width: 20, height: 20)
+                    .foregroundStyle(isHovered ? AeroPulseTheme.textPrimary : AeroPulseTheme.textMuted)
+                    .frame(width: 16, height: 16)
             }
             .padding(.horizontal, 4)
-            .padding(.vertical, 2)
+            .padding(.vertical, 4)
             .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(isHovered ? Color.primary.opacity(0.04) : Color.clear)
+                RoundedRectangle(cornerRadius: AeroPulseTheme.innerRadius, style: .continuous)
+                    .fill(isHovered ? AeroPulseTheme.raisedSurface : Color.clear)
             )
             .contentShape(Rectangle())
         }
@@ -86,70 +75,67 @@ struct MenuBarReadout: View, Equatable {
     let title: String
     let value: String
     var icon: String? = nil
-    var iconColor: Color? = nil
     var size: CGFloat = 20
     var subtitle: String? = nil
     var progress: Double? = nil
-    var progressColors: [Color]? = nil
 
     static func == (lhs: MenuBarReadout, rhs: MenuBarReadout) -> Bool {
         lhs.title == rhs.title &&
         lhs.value == rhs.value &&
         lhs.icon == rhs.icon &&
-        lhs.iconColor == rhs.iconColor &&
         lhs.size == rhs.size &&
         lhs.subtitle == rhs.subtitle &&
         lhs.progress == rhs.progress
     }
 
+    private func fillForProgress(_ value: Double) -> Color {
+        if value >= 0.92 { return AeroPulseTheme.negative }
+        if value >= 0.80 { return AeroPulseTheme.warning }
+        return AeroPulseTheme.accentFill
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 5) {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
                 if let icon {
                     Image(systemName: icon)
-                        .foregroundStyle(iconColor ?? .secondary)
-                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(AeroPulseTheme.textMuted)
+                        .font(.system(size: 12, weight: .regular))
+                        .frame(width: 14, height: 14)
                         .accessibilityHidden(true)
                 }
                 Text(title)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textSecondary)
             }
 
             Text(value)
-                .font(.system(size: size, weight: .semibold))
-                .tracking(-0.2)
+                .font(.system(size: size, weight: .medium))
                 .monospacedDigit()
+                .foregroundStyle(AeroPulseTheme.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .contentTransition(.identity)
 
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 11, weight: .regular, design: .monospaced))
                     .monospacedDigit()
+                    .foregroundStyle(AeroPulseTheme.textMuted)
                     .lineLimit(1)
             }
 
             if let progress {
-                Capsule()
-                    .fill(Color.secondary.opacity(0.12))
-                    .frame(height: 3.5)
-                    .overlay(alignment: .leading) {
-                        GeometryReader { proxy in
-                            Capsule()
-                                .fill(
-                                    LinearGradient(
-                                        colors: progressColors ?? [iconColor ?? .accentColor],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .frame(width: max(0, min(proxy.size.width, proxy.size.width * CGFloat(progress))))
-                        }
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(AeroPulseTheme.textPrimary.opacity(0.08))
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(fillForProgress(progress))
+                            .frame(width: max(0, min(proxy.size.width, proxy.size.width * CGFloat(progress))))
                     }
-                    .padding(.top, 2)
+                }
+                .frame(height: 4)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -161,30 +147,31 @@ struct MenuBarValueRow: View, Equatable {
     let title: String
     let value: String
     var icon: String? = nil
-    var iconColor: Color? = nil
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            HStack(spacing: 5) {
+            HStack(spacing: 8) {
                 if let icon {
                     Image(systemName: icon)
-                        .foregroundStyle(iconColor ?? .secondary)
-                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(AeroPulseTheme.textMuted)
+                        .font(.system(size: 12, weight: .regular))
+                        .frame(width: 16, height: 16)
                         .accessibilityHidden(true)
                 }
                 Text(title)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textSecondary)
             }
             .fixedSize(horizontal: true, vertical: false)
-            Spacer(minLength: 0)
+            Spacer(minLength: 4)
             Text(value)
-                .fontWeight(.medium)
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
                 .monospacedDigit()
+                .foregroundStyle(AeroPulseTheme.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 .contentTransition(.identity)
         }
-        .font(.system(size: 11.5))
         .accessibilityElement(children: .combine)
     }
 }
@@ -195,32 +182,36 @@ struct MenuBarProcessList: View, Equatable {
     var emptyText = AppStrings.tr(en: "Waiting for process data…", zh: "等待进程数据…")
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 11, weight: .regular))
+                .foregroundStyle(AeroPulseTheme.textMuted)
             if lines.isEmpty {
                 Text(emptyText)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .padding(.vertical, 2)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textMuted)
+                    .padding(.vertical, 4)
             } else {
                 ForEach(Array(lines.prefix(3)), id: \.pid) { line in
                     HStack(spacing: 8) {
                         Text(line.name)
-                            .font(.system(size: 11))
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundStyle(AeroPulseTheme.textPrimary)
                             .lineLimit(1)
                             .truncationMode(.middle)
                         Spacer(minLength: 4)
                         Text(line.value)
                             .font(.system(size: 11, weight: .medium, design: .monospaced))
                             .monospacedDigit()
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(AeroPulseTheme.textSecondary)
                             .fixedSize()
                     }
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2.5)
-                    .background(Color.secondary.opacity(0.04), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: AeroPulseTheme.innerRadius, style: .continuous)
+                            .fill(AeroPulseTheme.raisedSurface)
+                    )
                     .accessibilityElement(children: .combine)
                 }
             }

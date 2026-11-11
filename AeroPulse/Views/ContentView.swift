@@ -19,65 +19,61 @@ struct ContentView: View {
     @Environment(\.openWindow) private var openWindow
     private let defaultWindowSize = CGSize(width: 1380, height: 820)
     private let minimumWindowSize = CGSize(width: 1120, height: 680)
-    @ViewBuilder
+
     private var dashboardBackground: some View {
-        if windowInteraction.isInteracting || reduceVisualEffects {
-            Color(NSColor.windowBackgroundColor)
-                .ignoresSafeArea()
-        } else {
-            LinearGradient(
-                colors: [
-                    Color(NSColor.windowBackgroundColor),
-                    Color.blue.opacity(0.04),
-                    Color(NSColor.controlBackgroundColor).opacity(0.96),
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+        AeroPulseTheme.pageBackground
             .ignoresSafeArea()
-        }
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
+            HStack(spacing: 16) {
                 HStack(spacing: 8) {
                     Image(systemName: "wind")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(LinearGradient(colors: [.blue, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(AeroPulseTheme.accentInk)
+                        .frame(width: 16, height: 16)
                     Text(AppStrings.appName)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(AeroPulseTheme.textPrimary)
                 }
+
                 Spacer()
 
                 if updaterViewModel.isUpdateAvailable {
                     Button {
                         updaterViewModel.checkForUpdates()
                     } label: {
-                        HStack(spacing: 5) {
+                        HStack(spacing: 8) {
                             Image(systemName: "arrow.triangle.2.circlepath")
-                                .font(.system(size: 11, weight: .bold))
-                            Text("\(AppStrings.newVersionAvailable)\(updaterViewModel.availableUpdateVersion.map { " (\($0))" } ?? "")")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 12, weight: .regular))
+                            Text("\(AppStrings.newVersionAvailable)\(updaterViewModel.availableUpdateVersion.map { " · \($0)" } ?? "")")
+                                .font(.system(size: 12, weight: .medium))
+                                .monospacedDigit()
                         }
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.blue)
+                    .tint(AeroPulseTheme.accentFill)
                     .controlSize(.regular)
                 }
 
                 DashboardConnectionStatus(fanViewModel: fanViewModel)
-                Button { showsSettings = true } label: {
+
+                Button {
+                    showsSettings = true
+                } label: {
                     Label(AppStrings.settings, systemImage: "gearshape")
+                        .font(.system(size: 12, weight: .medium))
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.regular)
                 .help(AppStrings.settingsHelp)
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 10)
+            .frame(height: 52)
+
             Rectangle()
-                .fill(Color.primary.opacity(0.07))
+                .fill(AeroPulseTheme.hairline)
                 .frame(height: 1)
 
             GeometryReader { proxy in
@@ -88,18 +84,22 @@ struct ContentView: View {
                             .padding(16)
                     }
                     .frame(width: usableWidth * 0.27)
+
                     Rectangle()
-                        .fill(Color.primary.opacity(0.07))
+                        .fill(AeroPulseTheme.hairline)
                         .frame(width: 1)
+
                     ThermalDetailView(
                         fanViewModel: fanViewModel,
                         isEmbedded: true,
                         layoutWidth: usableWidth * 0.38
                     )
                     .frame(width: usableWidth * 0.38, height: proxy.size.height)
+
                     Rectangle()
-                        .fill(Color.primary.opacity(0.07))
+                        .fill(AeroPulseTheme.hairline)
                         .frame(width: 1)
+
                     ScrollView(.vertical) {
                         FanControlCard(fanViewModel: fanViewModel, isDashboard: true)
                             .padding(16)
@@ -112,13 +112,20 @@ struct ContentView: View {
         .sheet(isPresented: $showsSettings) {
             VStack(spacing: 0) {
                 HStack {
-                    Text(AppStrings.settings).font(.system(size: 17, weight: .semibold))
+                    Text(AppStrings.settings)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(AeroPulseTheme.textPrimary)
                     Spacer()
                     Button(AppStrings.done) { showsSettings = false }
                         .keyboardShortcut(.defaultAction)
                 }
-                .padding(20)
-                Divider()
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+
+                Rectangle()
+                    .fill(AeroPulseTheme.hairline)
+                    .frame(height: 1)
+
                 ScrollView {
                     SettingsView(
                         networkViewModel: networkViewModel,
@@ -132,6 +139,7 @@ struct ContentView: View {
                 }
             }
             .frame(width: 600, height: 580)
+            .background(AeroPulseTheme.pageBackground)
         }
         .frame(minWidth: minimumWindowSize.width, minHeight: minimumWindowSize.height)
         .environment(\.windowInteractionActive, windowInteraction.isInteracting)
@@ -233,35 +241,28 @@ private final class WindowTrackingView: NSView {
     }
 }
 
+/// Signature live status indicator: crisp 6px solid status dot + quiet secondary readout, no glow or pill.
 private struct DashboardConnectionStatus: View {
     @ObservedObject var fanViewModel: FanViewModel
     private let service = SMCService.shared
     @State private var connected = SMCService.shared.isConnected
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             Circle()
-                .fill(connected ? Color.green : Color.orange)
-                .frame(width: 7, height: 7)
-                .shadow(color: (connected ? Color.green : Color.orange).opacity(0.35), radius: 2)
+                .fill(connected ? AeroPulseTheme.positive : AeroPulseTheme.warning)
+                .frame(width: 6, height: 6)
             Text(connected ? AppStrings.hardwareConnected : AppStrings.hardwareDisconnected)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 12, weight: .regular))
+                .foregroundStyle(AeroPulseTheme.textSecondary)
             if !connected {
                 Button(AppStrings.retryConnection) {
                     service.reconnect()
                     connected = service.isConnected
                 }
-                .controlSize(.mini)
-                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .buttonStyle(.bordered)
             }
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 4)
-        .background(Color.primary.opacity(0.04), in: Capsule())
-        .overlay {
-            Capsule()
-                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
         }
         .onReceive(fanViewModel.$fans) { _ in connected = service.isConnected }
     }

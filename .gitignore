@@ -7,3 +7,4 @@ DerivedData/
 .sparkle_keys.env
 dist/
 .sparkle-tools/
+.codegraph/

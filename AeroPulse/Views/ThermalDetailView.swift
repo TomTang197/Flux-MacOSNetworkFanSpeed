@@ -16,11 +16,16 @@ struct ThermalDetailView: View {
         VStack(spacing: 0) {
             HStack {
                 Text(AppStrings.thermalSensors)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
+                    .frame(minHeight: 24, alignment: .leading)
                 Spacer()
                 if !isEmbedded {
                     Button { dismiss() } label: {
                         Image(systemName: AppImages.close)
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundStyle(AeroPulseTheme.textMuted)
+                            .frame(width: 24, height: 24)
                     }
                     .buttonStyle(.plain)
                     .help(AppStrings.closeThermalDetails)
@@ -28,31 +33,29 @@ struct ThermalDetailView: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
-            .padding(.bottom, 12)
+            .padding(.bottom, cpuTopologyDescription.isEmpty ? 12 : 4)
 
             if !cpuTopologyDescription.isEmpty {
                 Text(cpuTopologyDescription)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 12)
             }
 
             // Keep both summaries visible while the sensor matrix scrolls.
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
                 ThermalSummaryView(
                     title: AppStrings.cpu,
-                    icon: "cpu.fill",
-                    tint: .orange,
+                    icon: AppImages.cpu,
                     average: cpu,
                     sensors: groups.cpu,
                     isCPU: true
                 )
                 ThermalSummaryView(
                     title: AppStrings.gpu,
-                    icon: "display",
-                    tint: .purple,
+                    icon: AppImages.gpuUsage,
                     average: gpu,
                     sensors: groups.gpu
                 )
@@ -64,46 +67,46 @@ struct ThermalDetailView: View {
                 title: AppStrings.tr(en: "CPU", zh: "CPU 温度"),
                 points: fanViewModel.cpuTemperatureHistory,
                 unit: "°C",
-                tintColor: .orange,
                 secondaryPoints: fanViewModel.gpuTemperatureHistory,
-                secondaryColor: .purple,
                 secondaryTitle: AppStrings.tr(en: "GPU", zh: "GPU"),
                 metricKey: "cpu_temp",
                 secondaryMetricKey: "gpu_temp"
             )
             .padding(.horizontal, 16)
-            .padding(.top, 10)
+            .padding(.top, 12)
 
             HStack(alignment: .center, spacing: 8) {
                 Image(systemName: AppImages.fan)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.indigo)
-                Text("\(AppStrings.tr(en: "Control input", zh: "控制输入")): \(fanViewModel.controlAverageTemp) · \(controlSource(cpu: cpu, gpu: gpu))")
-                    .font(.system(size: 11, weight: .medium))
-                    .fixedSize(horizontal: false, vertical: true)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textMuted)
+                    .frame(width: 16, height: 16)
+                Text(AppStrings.tr(en: "Control input", zh: "控制输入"))
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textSecondary)
+                Spacer(minLength: 8)
+                Text("\(fanViewModel.controlAverageTemp) · \(controlSource(cpu: cpu, gpu: gpu))")
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
-            }
+            .aeroPulseRaised(cornerRadius: AeroPulseTheme.controlRadius)
             .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.vertical, 12)
             .help(AppStrings.tr(
                 en: "Temperature input for fan rules: the higher of the CPU and GPU averages. Individual sensor peaks are for display only.",
                 zh: "风扇温控规则输入温度：取 CPU 与 GPU 均值中的较高者。单个传感器极值仅供展示。"
             ))
 
             Rectangle()
-                .fill(Color.primary.opacity(0.07))
+                .fill(AeroPulseTheme.hairline)
                 .frame(height: 1)
                 .padding(.horizontal, 16)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 16) {
                     ThermalMatrixSection(
                         title: AppStrings.diePackage,
                         sensors: groups.diePackageSensors + groups.gpu.filter { $0.gpuKind == .die }
@@ -116,12 +119,11 @@ struct ThermalDetailView: View {
                         )
                     }
                 }
-                .font(.system(size: 12, weight: .medium))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(16)
             }
         }
         .frame(width: isEmbedded ? nil : 700, height: isEmbedded ? nil : 560)
+        .background(isEmbedded ? Color.clear : AeroPulseTheme.pageBackground)
     }
 
     private var cpuTopologyDescription: String {
@@ -154,6 +156,13 @@ struct ThermalDetailView: View {
 
 // Presentation-only helpers. The fan controller continues to use ThermalSensorProcessing.
 private enum ThermalPresentation {
+    enum Severity {
+        case unavailable
+        case normal
+        case elevated
+        case critical
+    }
+
     static func isValid(_ sensor: SensorInfo) -> Bool {
         sensor.isEnabled && sensor.temperature.isFinite && sensor.temperature > 0 && sensor.temperature < 150
     }
@@ -161,14 +170,20 @@ private enum ThermalPresentation {
     static func reading(_ sensor: SensorInfo, precise: Bool = false) -> String {
         guard sensor.isEnabled else { return AppStrings.tr(en: "Off", zh: "关闭") }
         guard isValid(sensor) else { return "—" }
-        return String(format: precise ? "%.1f°C" : "%.0f°", sensor.temperature)
+        return String(format: precise ? "%.1f°C" : "%.0f°C", sensor.temperature)
     }
 
-    static func color(_ sensor: SensorInfo) -> Color {
-        guard isValid(sensor) else { return .secondary }
-        if sensor.temperature >= 80 { return .red }
-        if sensor.temperature >= 60 { return .orange }
-        return .teal
+    static func severity(_ sensor: SensorInfo) -> Severity {
+        guard isValid(sensor) else { return .unavailable }
+        if sensor.temperature >= 80 { return .critical }
+        if sensor.temperature >= 60 { return .elevated }
+        return .normal
+    }
+
+    static func severityForTemperature(_ value: Double) -> Severity {
+        if value >= 80 { return .critical }
+        if value >= 60 { return .elevated }
+        return .normal
     }
 
     static func displayName(_ sensor: SensorInfo) -> String {
@@ -201,60 +216,65 @@ private enum ThermalPresentation {
 private struct ThermalSummaryView: View {
     let title: String
     let icon: String
-    let tint: Color
     let average: Double?
     let sensors: [SensorInfo]
     var isCPU = false
+
+    private func dotColor(for maxTemp: Double) -> Color {
+        switch ThermalPresentation.severityForTemperature(maxTemp) {
+        case .critical: return AeroPulseTheme.negative
+        case .elevated: return AeroPulseTheme.warning
+        case .normal, .unavailable: return AeroPulseTheme.positive
+        }
+    }
 
     var body: some View {
         let valid = sensors.filter { ThermalPresentation.isValid($0) }
         let maxTemp = valid.map(\.temperature).max()
 
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(tint)
-                    .frame(width: 20, height: 20)
-                    .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textMuted)
+                    .frame(width: 16, height: 16)
                 Text(title)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(AeroPulseTheme.textPrimary)
                 Spacer()
                 if let maxTemp {
-                    HStack(spacing: 3) {
+                    HStack(spacing: 4) {
                         Circle()
-                            .fill(maxTemp >= 80 ? Color.red : (maxTemp >= 60 ? Color.orange : Color.teal))
-                            .frame(width: 5, height: 5)
-                        Text(String(format: "▲ %.0f°", maxTemp))
-                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .fill(dotColor(for: maxTemp))
+                            .frame(width: 6, height: 6)
+                        Text(String(format: "%@ %.0f°C", AppStrings.trendMax, maxTemp))
+                            .font(.system(size: 11, weight: .regular, design: .monospaced))
                             .monospacedDigit()
+                            .foregroundStyle(AeroPulseTheme.textMuted)
                     }
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(Color.primary.opacity(0.04), in: Capsule())
-                    .help(AppStrings.tr(en: "Highest current reading among valid sensors; not a historical peak.", zh: "当前有效传感器中的最高实时读数，非历史峰值。"))
+                    .help(AppStrings.tr(en: "Highest current reading among valid sensors", zh: "当前有效传感器中的最高实时读数"))
                 }
             }
 
             Text(average.map { String(format: "%.0f°C", $0) } ?? "—°C")
-                .font(.system(size: 26, weight: .bold, design: .rounded))
+                .font(.system(size: 28, weight: .medium))
                 .monospacedDigit()
-                .foregroundStyle(tint)
+                .foregroundStyle(AeroPulseTheme.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
 
             Text(AppStrings.tr(en: "Available sensor average", zh: "可用传感器均温"))
-                .font(.system(size: 10.5))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 11, weight: .regular))
+                .foregroundStyle(AeroPulseTheme.textMuted)
                 .lineLimit(1)
                 .help(isCPU ? AppStrings.tr(
                     en: "Uses core sensor averages when performance or super core readings are available; otherwise prefers die/package sensors over efficiency-only readings. Sensor channels do not correspond one-to-one with physical CPU cores, and some cores may have no readable sensor.",
                     zh: "有性能核或超能核读数时使用核心传感器均温；缺少这些读数时优先使用核心与封装通道，避免仅用能效核温度代表整个 CPU。传感器与物理核心并非一一对应，部分核心可能没有可读温度。"
-                ) : AppStrings.tr(en: "Average of available GPU temperature channels.", zh: "当前可用 GPU 温度通道的平均值。"))
+                ) : AppStrings.tr(en: "Average of available GPU temperature channels", zh: "当前可用 GPU 温度通道的平均值"))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .liquidGlassCard(cornerRadius: 12, tint: tint, shadowOpacity: 0.05)
+        .padding(16)
+        .aeroPulseCard()
     }
 }
 
@@ -270,23 +290,26 @@ private struct ThermalMatrixSection: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             if !title.isEmpty {
-                HStack {
-                    Text(title).font(.system(size: 13, weight: .semibold))
+                HStack(alignment: .firstTextBaseline) {
+                    Text(title)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(AeroPulseTheme.textPrimary)
                     Spacer()
                     Text("\(sensors.count)")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 1.5)
-                        .background(Color.primary.opacity(0.04), in: Capsule())
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .monospacedDigit()
+                        .foregroundStyle(AeroPulseTheme.textMuted)
                 }
             }
             if sensors.isEmpty {
-                Text(AppStrings.noData).foregroundStyle(.secondary).padding(.vertical, 6)
+                Text(AppStrings.noData)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(AeroPulseTheme.textMuted)
+                    .padding(.vertical, 8)
             }
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), spacing: 8)], spacing: 8) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 148), spacing: 8)], spacing: 8) {
                 ForEach(sortedSensors) { sensor in
                     ThermalSensorTile(sensor: sensor, displayName: ThermalPresentation.displayName(sensor))
                         .equatable()
@@ -301,28 +324,53 @@ private struct ThermalSensorTile: View, Equatable {
     let displayName: String
 
     var body: some View {
-        let tempColor = ThermalPresentation.color(sensor)
-        HStack(spacing: 4) {
+        let severity = ThermalPresentation.severity(sensor)
+        let valueColor: Color = {
+            switch severity {
+            case .critical: return AeroPulseTheme.negative
+            case .elevated: return AeroPulseTheme.warning
+            case .normal: return AeroPulseTheme.textPrimary
+            case .unavailable: return AeroPulseTheme.textMuted
+            }
+        }()
+        let borderColor: Color = {
+            switch severity {
+            case .critical: return AeroPulseTheme.negative.opacity(0.36)
+            case .elevated: return AeroPulseTheme.warning.opacity(0.28)
+            case .normal, .unavailable: return AeroPulseTheme.hairline
+            }
+        }()
+
+        HStack(spacing: 8) {
+            if severity == .critical || severity == .elevated {
+                Circle()
+                    .fill(valueColor)
+                    .frame(width: 6, height: 6)
+            }
             Text(displayName)
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: 12, weight: .regular))
+                .foregroundStyle(AeroPulseTheme.textSecondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
                 .truncationMode(.middle)
-            Spacer(minLength: 2)
+            Spacer(minLength: 4)
             Text(ThermalPresentation.reading(sensor))
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .font(.system(size: 13, weight: .medium, design: .monospaced))
                 .monospacedDigit()
                 .lineLimit(1)
                 .fixedSize()
-                .foregroundStyle(tempColor == .secondary ? .secondary : tempColor)
+                .foregroundStyle(valueColor)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 9)
-        .padding(.vertical, 6)
-        .background(tempColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: AeroPulseTheme.controlRadius, style: .continuous)
+                .fill(AeroPulseTheme.cardSurface)
+        )
         .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(tempColor.opacity(0.20), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: AeroPulseTheme.controlRadius, style: .continuous)
+                .strokeBorder(borderColor, lineWidth: 1)
         }
         .help("\(displayName)\nSMC: \(sensor.id)\n\(ThermalPresentation.reading(sensor, precise: true))")
         .accessibilityElement(children: .ignore)

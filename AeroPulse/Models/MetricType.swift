@@ -38,34 +38,18 @@ enum MetricType: String, CaseIterable, Identifiable, Codable {
         }
     }
 
-    var emoji: String {
-        switch self {
-        case .download: return "⏬"
-        case .upload: return "⏫"
-        case .diskRead: return "💾"
-        case .diskWrite: return "💽"
-        case .cpu: return "🖥️"
-        case .power: return "⚡"
-        case .chargingPower: return "🔋"
-        case .gpu: return "🎮"
-        case .memory: return "🧠"
-        case .temperature: return "🌡️"
-        case .fan: return "🌀"
-        }
-    }
-
     var symbolName: String {
         switch self {
         case .download:
-            return "arrow.down.circle"
+            return AppImages.download
         case .upload:
-            return "arrow.up.circle"
+            return AppImages.upload
         case .diskRead:
-            return "internaldrive"
+            return AppImages.diskRead
         case .diskWrite:
-            return "internaldrive.fill"
+            return AppImages.diskWrite
         case .cpu:
-            return "cpu"
+            return AppImages.cpuUsage
         case .power:
             return AppImages.powerUsage
         case .chargingPower:
@@ -73,11 +57,11 @@ enum MetricType: String, CaseIterable, Identifiable, Codable {
         case .gpu:
             return AppImages.gpuUsage
         case .memory:
-            return "memorychip"
+            return AppImages.memory
         case .fan:
-            return "fanblades"
+            return AppImages.fan
         case .temperature:
-            return "thermometer"
+            return AppImages.temperature
         }
     }
 

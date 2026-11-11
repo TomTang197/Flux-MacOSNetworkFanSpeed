@@ -8,108 +8,130 @@ struct DashboardOverviewView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(AppStrings.systemOverview)
-                .font(.system(size: 14, weight: .semibold))
-                .padding(.horizontal, 2)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(AeroPulseTheme.textPrimary)
+                .frame(minHeight: 24, alignment: .leading)
 
             // 1. Network Card
-            VStack(alignment: .leading, spacing: 10) {
-                cardHeader(title: AppStrings.network, symbol: "network", tint: .blue)
-                HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
+                cardHeader(title: AppStrings.network, symbol: "network")
+                HStack(alignment: .top, spacing: 12) {
                     reading(
                         AppStrings.download,
                         value: networkViewModel.downloadSpeed,
-                        detail: "\(AppStrings.total) \(networkViewModel.downloadTotal)",
-                        icon: "arrow.down",
-                        iconColor: .blue
+                        detail: "\(AppStrings.total) \(networkViewModel.downloadTotal)"
                     )
-                    Divider().frame(height: 38)
+                    Rectangle()
+                        .fill(AeroPulseTheme.hairline)
+                        .frame(width: 1, height: 44)
                     reading(
                         AppStrings.upload,
                         value: networkViewModel.uploadSpeed,
-                        detail: "\(AppStrings.total) \(networkViewModel.uploadTotal)",
-                        icon: "arrow.up",
-                        iconColor: .teal
+                        detail: "\(AppStrings.total) \(networkViewModel.uploadTotal)"
                     )
                 }
             }
-            .padding(12)
-            .liquidGlassCard(cornerRadius: 12, tint: .blue, shadowOpacity: 0.06)
+            .padding(16)
+            .aeroPulseCard()
 
             // 2. Storage / Disk Card
-            VStack(alignment: .leading, spacing: 10) {
-                cardHeader(title: AppStrings.disk, symbol: "internaldrive.fill", tint: .indigo)
-                HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
+                cardHeader(title: AppStrings.disk, symbol: AppImages.diskRead)
+                HStack(alignment: .top, spacing: 12) {
                     reading(
                         AppStrings.read,
                         value: networkViewModel.diskReadSpeed,
-                        detail: "\(AppStrings.total) \(networkViewModel.diskReadTotal)",
-                        icon: "arrow.down",
-                        iconColor: .indigo
+                        detail: "\(AppStrings.total) \(networkViewModel.diskReadTotal)"
                     )
-                    Divider().frame(height: 38)
+                    Rectangle()
+                        .fill(AeroPulseTheme.hairline)
+                        .frame(width: 1, height: 44)
                     reading(
                         AppStrings.write,
                         value: networkViewModel.diskWriteSpeed,
-                        detail: "\(AppStrings.total) \(networkViewModel.diskWriteTotal)",
-                        icon: "arrow.up",
-                        iconColor: .purple
+                        detail: "\(AppStrings.total) \(networkViewModel.diskWriteTotal)"
                     )
                 }
-                VStack(spacing: 5) {
+
+                VStack(spacing: 8) {
                     HStack {
                         Text(AppStrings.diskUsed)
+                            .foregroundStyle(AeroPulseTheme.textSecondary)
                         Spacer()
-                        Text(networkViewModel.diskUsedPercent).monospacedDigit()
+                        Text(networkViewModel.diskUsedPercent)
+                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .monospacedDigit()
+                            .foregroundStyle(AeroPulseTheme.textPrimary)
                     }
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 12, weight: .regular))
 
                     if let fraction = diskUsedFraction {
-                        ProgressView(value: fraction)
-                            .progressViewStyle(.linear)
-                            .tint(.indigo)
-                            .accessibilityLabel("\(AppStrings.disk) \(AppStrings.diskUsed)")
-                            .accessibilityValue(networkViewModel.diskUsedPercent)
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                    .fill(AeroPulseTheme.textPrimary.opacity(0.08))
+                                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                    .fill(diskFillColor(for: fraction))
+                                    .frame(width: max(0, min(geo.size.width * fraction, geo.size.width)))
+                            }
+                        }
+                        .frame(height: 4)
+                        .accessibilityLabel("\(AppStrings.disk) \(AppStrings.diskUsed)")
+                        .accessibilityValue(networkViewModel.diskUsedPercent)
                     }
 
                     HStack {
                         Text("\(AppStrings.diskFree) \(networkViewModel.diskFreeCapacity)")
-                        Spacer(minLength: 4)
+                        Spacer(minLength: 8)
                         Text("\(AppStrings.total) \(networkViewModel.diskTotalCapacity)")
                     }
-                    .font(.system(size: 10.5)).foregroundStyle(.secondary)
+                    .font(.system(size: 11, weight: .regular, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(AeroPulseTheme.textMuted)
                 }
             }
-            .padding(12)
-            .liquidGlassCard(cornerRadius: 12, tint: .indigo, shadowOpacity: 0.06)
+            .padding(16)
+            .aeroPulseCard()
 
             // 3. System Load Card
-            VStack(alignment: .leading, spacing: 8) {
-                cardHeader(title: AppStrings.systemLoad, symbol: "cpu.fill", tint: .orange)
-                metricRow(AppStrings.cpu, value: networkViewModel.cpuUsage)
-                metricRow(AppStrings.systemGPUUsage, value: networkViewModel.gpuUsage)
-                Text(AppStrings.systemGPUDescription)
-                    .font(.system(size: 10.5)).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                metricRow(AppStrings.memory, value: networkViewModel.memoryUsage)
-                Text("\(AppStrings.memory) \(networkViewModel.memoryUsed) / \(networkViewModel.memoryTotal)")
-                    .font(.system(size: 10.5)).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 12) {
+                cardHeader(title: AppStrings.systemLoad, symbol: AppImages.cpu)
+                VStack(alignment: .leading, spacing: 8) {
+                    metricRow(AppStrings.cpu, value: networkViewModel.cpuUsage)
+                    metricRow(AppStrings.systemGPUUsage, value: networkViewModel.gpuUsage)
+                    Text(AppStrings.systemGPUDescription)
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundStyle(AeroPulseTheme.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Rectangle()
+                        .fill(AeroPulseTheme.hairline)
+                        .frame(height: 1)
+                    metricRow(AppStrings.memory, value: networkViewModel.memoryUsage)
+                    Text("\(AppStrings.memory) \(networkViewModel.memoryUsed) / \(networkViewModel.memoryTotal)")
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .monospacedDigit()
+                        .foregroundStyle(AeroPulseTheme.textMuted)
+                }
             }
-            .padding(12)
-            .liquidGlassCard(cornerRadius: 12, tint: .orange, shadowOpacity: 0.06)
+            .padding(16)
+            .aeroPulseCard()
 
             // 4. Power & Battery Card
-            VStack(alignment: .leading, spacing: 8) {
-                cardHeader(title: AppStrings.power, symbol: "bolt.fill", tint: .green)
-                metricRow(AppStrings.system, value: networkViewModel.powerUsage)
-                if !networkViewModel.powerSubtitle.isEmpty {
-                    Text(networkViewModel.powerSubtitle)
-                        .font(.system(size: 10.5)).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 12) {
+                cardHeader(title: AppStrings.power, symbol: AppImages.powerUsage)
+                VStack(alignment: .leading, spacing: 8) {
+                    metricRow(AppStrings.system, value: networkViewModel.powerUsage)
+                    if !networkViewModel.powerSubtitle.isEmpty {
+                        Text(networkViewModel.powerSubtitle)
+                            .font(.system(size: 11, weight: .regular))
+                            .foregroundStyle(AeroPulseTheme.textMuted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    metricRow(AppStrings.battery, value: networkViewModel.chargingPowerUsage)
                 }
-                metricRow(AppStrings.battery, value: networkViewModel.chargingPowerUsage)
             }
-            .padding(12)
-            .liquidGlassCard(cornerRadius: 12, tint: .green, shadowOpacity: 0.06)
+            .padding(16)
+            .aeroPulseCard()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -124,16 +146,21 @@ struct DashboardOverviewView: View {
         return value / 100
     }
 
-    private func cardHeader(title: String, symbol: String, tint: Color) -> some View {
-        HStack(spacing: 7) {
+    private func diskFillColor(for fraction: Double) -> Color {
+        if fraction >= 0.92 { return AeroPulseTheme.negative }
+        if fraction >= 0.80 { return AeroPulseTheme.warning }
+        return AeroPulseTheme.accentFill
+    }
+
+    private func cardHeader(title: String, symbol: String) -> some View {
+        HStack(spacing: 8) {
             Image(systemName: symbol)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(tint)
-                .frame(width: 20, height: 20)
-                .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(AeroPulseTheme.textMuted)
+                .frame(width: 16, height: 16)
             Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.primary)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(AeroPulseTheme.textPrimary)
             Spacer()
         }
     }
@@ -141,37 +168,39 @@ struct DashboardOverviewView: View {
     private func reading(
         _ label: String,
         value: String,
-        detail: String,
-        icon: String? = nil,
-        iconColor: Color = .secondary
+        detail: String
     ) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 3) {
-                if let icon {
-                    Image(systemName: icon)
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(iconColor)
-                }
-                Text(label).font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
-            }
+            Text(label)
+                .font(.system(size: 12, weight: .regular))
+                .foregroundStyle(AeroPulseTheme.textSecondary)
             Text(value)
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .font(.system(size: 20, weight: .medium))
                 .monospacedDigit()
+                .foregroundStyle(AeroPulseTheme.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .help(value)
-            Text(detail).font(.system(size: 10)).foregroundStyle(.secondary)
+            Text(detail)
+                .font(.system(size: 11, weight: .regular, design: .monospaced))
+                .monospacedDigit()
+                .foregroundStyle(AeroPulseTheme.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func metricRow(_ label: String, value: String) -> some View {
-        HStack {
-            Text(label).font(.system(size: 12, weight: .medium))
+        HStack(alignment: .firstTextBaseline) {
+            Text(label)
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(AeroPulseTheme.textSecondary)
             Spacer(minLength: 8)
-            Text(value).font(.system(size: 16, weight: .semibold, design: .rounded))
-                .monospacedDigit().lineLimit(1)
+            Text(value)
+                .font(.system(size: 15, weight: .medium))
+                .monospacedDigit()
+                .foregroundStyle(AeroPulseTheme.textPrimary)
+                .lineLimit(1)
         }
     }
 }
